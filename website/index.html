@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Info</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Visitor Information</h1>   
+        <form id="student-form">
+            <div class="form-group">
+                <label for="student-id">Visitor ID</label>
+                <input type="text" class="form-control" id="student-id" placeholder="Enter visitor ID" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+
+        <div id="student-info" class="mt-5" style="display: none;">
+            <h2>visitor Details</h2>
+            <div class="card" style="width: 18rem;">
+                <img src="" id="student-image" class="card-img-top" alt="Student Image">
+                <div class="card-body">
+                    <p class="card-text"><strong>Surname:</strong> <span id="student-surname"></span></p>
+                    <p class="card-text"><strong>Name:</strong> <span id="student-name"></span></p>
+                    <p class="card-text"><strong>Grade:</strong> <span id="student-grade"></span></p>
+                </div>
+            </div>
+            <form id="sign-in-form" method="post" action="/path/to/your/endpoint">
+                <input type="hidden" name="visitor_id" id="visitor-id">
+                <button type="submit" class="btn btn-primary mt-3">Track</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="noStudentModal" tabindex="-1" role="dialog" aria-labelledby="noStudentModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="noStudentModalLabel">No Student Found</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    No student data found for the given ID. Please check the ID and try again.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="errorModalLabel">Error</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="errorModalBody">
+                    <!-- Error message will be populated here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('student-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            // Get the student ID from the input
+            const studentId = document.getElementById('student-id').value;
+            
+            // Create the URL for the GET request
+            const url = `/search/${studentId}`;
+
+            // Perform the GET request to fetch student data
+            fetch(url)
+                .then(response => {
+                    // consol.log("dsfsdfds");
+                    // if (response.status === 404) {
+                    //     $('#noStudentModal').modal('show');
+                    //     return;
+                    // }
+                    if (!response.ok) {
+                        console.log(response);
+                        if (response.status === 404) {
+                            throw new Error('NOT FOUND');
+                        }
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.length === 0) {
+                        // Handle case where no data is found
+                        document.getElementById('student-info').style.display = 'none';
+                        $('#noStudentModal').modal('show');
+                        return;
+                    }
+
+                    // Assuming the response is a single student object
+                    const studentData = data;
+
+                    // Display the student data (modify as needed for your application)
+                    document.getElementById('student-image').src = studentData.image;
+                    document.getElementById('student-surname').textContent = studentData.surname;
+                    document.getElementById('student-name').textContent = studentData.name;
+                    document.getElementById('student-grade').textContent = studentData.grade;
+                    document.getElementById('visitor-id').value = studentData.id;
+
+                    document.getElementById('student-info').style.display = 'block';
+                })
+                .catch(error => {
+                    if (error.message === 'NOT FOUND') {
+                        document.getElementById('student-info').style.display = 'none';
+                        $('#noStudentModal').modal('show');
+                    } else {                               
+                        console.error('There was a problem with the fetch operation:', error);
+                        document.getElementById('student-info').style.display = 'none';
+                        alert('Error fetching student data');
+                    }
+                });
+        });
+    </script>
+        
+    <script>
+        document.getElementById('sign-in-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            // Get the student ID from the input
+            const studentId = document.getElementById('visitor-id').value;
+
+            const payload = {
+                visitor_id: studentId,
+                signed_in: true
+            };
+            
+            fetch('/track', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (response.status !== 200) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Unknown error occurred');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Sign in successful:', data);
+                // Handle successful response if needed
+            })
+            .catch(error => {
+                console.error('Error:', error.message);
+                document.getElementById('errorModalBody').textContent = error.message;
+                $('#errorModal').modal('show');
+            });
+
+        });
+    </script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
