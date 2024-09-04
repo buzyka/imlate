@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/buzyka/imlate/internal/isb/entity"
 )
@@ -16,9 +17,10 @@ type VisitorTrack struct {
 
 func (r *VisitorTrack) Store(vt *entity.VisitTrack) (*entity.VisitTrack, error) {
 	res, err := r.Connection.Exec(
-		"INSERT INTO track (visitor_id, sign_in) VALUES (?, ?)",
+		"INSERT INTO track (visitor_id, sign_in, created_at) VALUES (?, ?, ?)",
 		vt.VisitorId,
 		vt.SignedIn,
+		time.Now(),
 	)
 	if err != nil {
 		return nil, err
