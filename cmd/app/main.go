@@ -24,6 +24,10 @@ func main() {
 	})
 
 	r.GET("/", func(ctx *gin.Context) {
+		ctx.File("website/reader.html")
+	})
+
+	r.GET("/manual", func(ctx *gin.Context) {
 		ctx.File("website/index.html")
 	})
 
@@ -34,8 +38,10 @@ func main() {
 	trackerController := &tracker.TrackerController{}
 	container.MustFill(container.Global, trackerController)
 	r.POST("/track", trackerController.TrackHandler())
+	r.POST("/find-and-track", trackerController.FindAndTrackHandler())
 
 	// Start the server on port 8080
 	r.Run(":8080")
+	// r.Run(":80")
 
 }

@@ -19,6 +19,11 @@ type TrackerController struct {
 	TrackRepository entity.VisitorTrackRepository `container:"type"`
 }
 
+type TrackResponse struct {
+	Visitor *entity.Visitor `json:"visitor"`
+	TrackDate string `json:"track_date"`
+}
+
 func (tc *TrackerController) TrackHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var Request Request
@@ -53,6 +58,42 @@ func (tc *TrackerController) TrackHandler() gin.HandlerFunc {
 			"tr": Request.SignedIn,
 			"cr": track.CreatedAt.Format("2006-01-02 15:04:05"),	
 		})
+	}
+}
+
+func (tc *TrackerController) FindAndTrackHandler() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var Request Request
+		err := ctx.Bind(&Request);
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+		track := &entity.VisitTrack{
+			VisitorId: Request.VisitorID,
+			SignedIn: Request.SignedIn,
+		}
+		track.Visitor, err = tc.VisitorRepository.FindById(Request.VisitorID)
+		if err != nil || track.Visitor.Id == "" {
+			ctx.JSON(http.StatusNotFound, gin.H{
+				"error": "Visitor not exists",
+			})
+			return
+		}
+		track, err = tc.TrackRepository.Store(track)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+		response := TrackResponse{
+			Visitor: track.Visitor,
+			TrackDate: track.CreatedAt.Format("2006-01-02 15:04:05"),
+		}
+		ctx.JSON(http.StatusOK, response)
 	}
 }
 

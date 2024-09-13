@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Info</title>
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/img/favicon.png">
+
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: white;
+        }
+        #rfidInput {
+            position: absolute;
+            left: -9999px;
+        }
+    </style>
+
+</head>
+
+<body>
+    <input type="text" id="rfidInput" autofocus>
+
+    <div class="container" style="
+        padding-top: 15px;
+        padding-bottom: 15px; ">
+        <div class="row">
+            <!-- Left column  -->
+            <div class="col-6"
+                style=" background-image: url('assets/img/ISBLogo.jpg'); background-size: cover; background-position: center; min-height: 550px; ">
+
+            </div>
+
+            <!-- Right column -->
+            <div class="col-6">
+                <div class="row mb-1">
+                    <div class="col-12 ">
+                        <h2>ISB Registration</h2>
+                    </div>
+                </div>
+
+                <div class="row mb-1">
+                    <div class="col-12">
+                        <div id="cardIdDisplay">Please place the transponder on the reader.</div>
+                        <img id="readerInstructionImage" src="assets/img/reader.png" alt="RFID Reader" width="100%">
+                    </div>
+                </div>                 
+
+                <!-- Sv  Registration successful!-->
+                <div id="success-message" class="alert alert-success" role="alert"
+                    style="display: none; margin-top: 15px;">
+                    Registration successful!
+                </div>
+
+                <!-- Sv  Registration failed!-->
+                <div id="error-message" class="alert alert-danger" role="alert"
+                    style="display: none; margin-top: 15px;">
+                    Registration successful!
+                </div>
+
+                <!-- Visitor Details -->
+
+                <div id="student-info" class="row" style="display: none; padding: 10px;">
+                    <div class="col-6 ">
+                        <img src="" id="student-image" class="card-img-top" alt="Student Image" width="290">
+                    </div>
+
+                    <div class="col-6 ">
+                        <h3>Visitor Details</h3>
+                        <p class="card-text"><strong>Surname:</strong> <span id="student-surname"></span></p>
+                        <p class="card-text"><strong>Name:</strong> <span id="student-name"></span></p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="noStudentModal" tabindex="-1" role="dialog" aria-labelledby="noStudentModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="noStudentModalLabel">No Student Found</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    No student data found for the given ID. Please check the ID and try again.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="errorModalLabel">Error</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="errorModalBody">
+                    <!-- Error message will be populated here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+
+  
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        // Get hidden input field rfidInput and div cardIdDisplay
+        const rfidInput = document.getElementById('rfidInput');
+        const cardIdDisplay = document.getElementById('cardIdDisplay');
+        const readerInstructionImage = document.getElementById('readerInstructionImage');
+
+        let rfidData = '';
+
+        // Check for keydown event in hidden input field
+        rfidInput.addEventListener('keydown', function(event) {
+            // If key Enter (code 13), then process the entered string
+            if (event.key === 'Enter') {
+                 // Show card number
+                console.log("Read number: " + rfidData);
+
+                const payload = {
+                    visitor_id: rfidData,
+                    signed_in: true
+                };
+                // Clean the variable for the next input
+                rfidData = '';
+                rfidInput.value = '';
+                rfidData.length
+
+                fetch('/find-and-track', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        console.log(response);
+                        if (response.status === 404) {
+                            throw new Error('NOT FOUND');
+                        }
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.length === 0) {
+                        // Handle case where no data is found
+                        document.getElementById('student-info').style.display = 'none';
+                        $('#noStudentModal').modal('show');
+                        return;
+                    }
+                    readerInstructionImage.style.display = 'none';
+
+                    // Assuming the response is a single student object
+                    const studentData = data;
+
+                    // Display the student data (modify as needed for your application)
+                    document.getElementById('student-image').src = studentData.visitor.image;
+                    document.getElementById('student-surname').textContent = studentData.visitor.surname;
+                    document.getElementById('student-name').textContent = studentData.visitor.name;
+                    // document.getElementById('student-grade').textContent = studentData.grade;
+                    // document.getElementById('visitor-id').value = studentData.visitor.id;
+
+                    const studentInfo = document.getElementById('student-info');
+                    const successMessage = document.getElementById('success-message');
+
+                    // document.getElementById('student-info').style.display = 'flex';
+                    studentInfo.style.display = 'flex';
+                    successMessage.style.display = 'block';
+                    // Hide the success message after 5 seconds
+                    setTimeout(() => {
+                        successMessage.style.display = 'none';                         
+                        studentInfo.style.display = 'none';
+                        readerInstructionImage.style.display = 'block';
+                          }, 1500);                    
+                    
+                })
+                .catch(error => {
+                    if (error.message === 'NOT FOUND') {
+                        alertEl = document.getElementById('error-message')
+                        alertEl.textContent = 'No visitor data found for the given ID. Please please try again or contact the administrator.';
+                        readerInstructionImage.style.display = 'none';
+                        alertEl.style.display = 'block';
+                        setTimeout(() => {
+                            alertEl.style.display = 'none';
+                            readerInstructionImage.style.display = 'block';
+                          }, 1500); 
+                        // document.getElementById('student-info').style.display = 'none';
+                        // $('#noStudentModal').modal('show');
+                    } else {
+                        console.error('There was a problem with the fetch operation:', error);
+                        document.getElementById('student-info').style.display = 'none';
+                        alert('Error fetching student data');
+                    }
+                });
+
+
+            } else {
+                // Add entered characters to rfidData
+                if (event.key>='0' && event.key<='9') {
+                    rfidData += event.key;
+                }
+            }
+        });
+
+        // Фокусируем скрытое поле для автоматического ввода
+        window.addEventListener('focus', function() {
+            rfidInput.focus();
+        });
+    </script>
+</body>
+
+</html>
