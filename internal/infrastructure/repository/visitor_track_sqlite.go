@@ -51,6 +51,19 @@ func (r *VisitorTrack) GetById(id int64) (*entity.VisitTrack, error) {
 	return track, nil
 }
 
+func (r *VisitorTrack) CountEventsByVisitorIdSince(visitorId string, date time.Time) (int, error) {
+	var count int
+	err := r.Connection.QueryRow(
+		"SELECT COUNT(*) FROM track WHERE visitor_id = ? AND created_at > ?",
+		visitorId,
+		date,
+	).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func (r *VisitorTrack) writeToTheFile(vt *entity.VisitTrack) {
 	rootPath, err := getRootPath()
 	if err != nil {

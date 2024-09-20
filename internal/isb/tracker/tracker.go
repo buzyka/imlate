@@ -1,7 +1,9 @@
 package tracker
 
 import (
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/buzyka/imlate/internal/isb/entity"
 	"github.com/gin-gonic/gin"
@@ -21,6 +23,7 @@ type TrackerController struct {
 
 type TrackResponse struct {
 	Visitor *entity.Visitor `json:"visitor"`
+	TrackType string `json:"track_type"`
 	TrackDate string `json:"track_date"`
 }
 
@@ -89,8 +92,19 @@ func (tc *TrackerController) FindAndTrackHandler() gin.HandlerFunc {
 			})
 			return
 		}
+
+		eType := "sign-in"
+		startDate := time.Date(track.CreatedAt.Year(), track.CreatedAt.Month(), track.CreatedAt.Day(), 0, 0, 0, 0, time.Local)
+		eCount, err := tc.TrackRepository.CountEventsByVisitorIdSince(Request.VisitorID, startDate)
+		if err == nil {
+			if eCount % 2 == 0 {
+				eType = "sign-out"
+			}
+		}
+
 		response := TrackResponse{
 			Visitor: track.Visitor,
+			TrackType: eType,
 			TrackDate: track.CreatedAt.Format("2006-01-02 15:04:05"),
 		}
 		ctx.JSON(http.StatusOK, response)
