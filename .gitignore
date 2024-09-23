@@ -16,7 +16,7 @@
 
 tmp/
 .vscode/
-website/assets/img/
+website/assets/isb/
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
@@ -24,3 +24,14 @@ website/assets/img/
 # Go workspace file
 go.work
 go.work.sum
+# Devenv
+.devenv*
+devenv.local.nix
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
+.env
+tracker

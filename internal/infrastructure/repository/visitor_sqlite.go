@@ -14,11 +14,47 @@ type Visitor struct {
 	Connection *sql.DB `container:"type"`
 }
 
-func (r *Visitor) FindById(id string) (*entity.Visitor, error) {
+func (r *Visitor) FindByKey(key string) (*entity.VisitDetails, error) {
 	var tmpGrade sql.NullInt32
 	var tmpImage sql.NullString
 	
-	id = strings.ToUpper(id)
+	key = strings.ToUpper(key)
+	row := r.Connection.QueryRow("SELECT v.id, v.name, v.surname, v.grade, v.image, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk ON vk.visitor_id = v.id WHERE vk.key_id = ?", key)
+	
+	visitor := &entity.Visitor{}
+	visit := &entity.VisitDetails{
+		Visitor: visitor,
+	}
+
+	err := row.Scan(
+		&visitor.Id, 
+		&visitor.Name, 
+		&visitor.Surname, 
+		&tmpGrade, 
+		&tmpImage,
+		&visit.Key,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return &entity.VisitDetails{}, nil
+		}
+		return nil, err
+	}
+	if tmpGrade.Valid {
+		visitor.Grade = int(tmpGrade.Int32)
+	}
+	if tmpImage.Valid {
+		visitor.Image = tmpImage.String	
+	} else {
+		r.AddRandomImage(visitor)	
+	}
+	return visit, nil
+}
+
+func (r *Visitor) FindById(id int32) (*entity.Visitor, error) {
+	var tmpGrade sql.NullInt32
+	var tmpImage sql.NullString
+	
 	row := r.Connection.QueryRow("SELECT id, name, surname, grade, image FROM visitors WHERE id = ?", id)
 	student := &entity.Visitor{}
 	err := row.Scan(

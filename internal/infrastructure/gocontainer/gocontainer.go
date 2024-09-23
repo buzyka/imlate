@@ -3,6 +3,7 @@ package gocontainer
 import (
 	"database/sql"
 
+	"github.com/buzyka/imlate/internal/config"
 	"github.com/buzyka/imlate/internal/infrastructure/db"
 	"github.com/buzyka/imlate/internal/infrastructure/logging"
 	"github.com/buzyka/imlate/internal/infrastructure/repository"
@@ -11,12 +12,16 @@ import (
 	"go.uber.org/zap"
 )
 
-func Build() {
+func Build(cfg *config.Config) {
 	logger := logging.NewLogger(true)
-	connection, err := db.Open("storage/isb.db", logger)
+	connection, err := db.Open(cfg.DatabaseEngine, cfg.DatabaseURL, logger)
 	if err != nil {
 		panic(err.Error())
 	}
+
+	container.MustSingleton(container.Global, func () *config.Config {
+		return cfg		
+	})
 
 	container.MustSingleton(container.Global, func () *zap.SugaredLogger {
 		return logger

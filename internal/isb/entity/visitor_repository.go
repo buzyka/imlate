@@ -1,5 +1,6 @@
 package entity
 
 type VisitorRepository interface {
-	FindById(id string) (*Visitor, error)
+	FindById(id int32) (*Visitor, error)
+	FindByKey(key string) (*VisitDetails, error)
 }

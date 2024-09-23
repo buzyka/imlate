@@ -63,6 +63,7 @@
 
                         <form id="sign-in-form" method="post" action="/path/to/your/endpoint">
                             <input type="hidden" name="visitor_id" id="visitor-id">
+                            <input type="hidden" name="visit_key" id="visit-key">
                             <button type="submit" class="btn btn-primary mt-3">Track</button>
                         </form>
                     </div>
@@ -148,14 +149,14 @@
                     }
 
                     // Assuming the response is a single student object
-                    const studentData = data;
+                    const visitData = data;
 
                     // Display the student data (modify as needed for your application)
-                    document.getElementById('student-image').src = studentData.image;
-                    document.getElementById('student-surname').textContent = studentData.surname;
-                    document.getElementById('student-name').textContent = studentData.name;
-                    // document.getElementById('student-grade').textContent = studentData.grade;
-                    document.getElementById('visitor-id').value = studentData.id;
+                    document.getElementById('student-image').src = visitData.visitor.image;
+                    document.getElementById('student-surname').textContent = visitData.visitor.surname;
+                    document.getElementById('student-name').textContent = visitData.visitor.name;
+                    document.getElementById('visitor-id').value = visitData.visitor.id;
+                    document.getElementById('visit-key').value = visitData.key;
 
                     document.getElementById('student-info').style.display = 'flex';
                 })
@@ -178,9 +179,11 @@
 
             // Get the student ID from the input
             const studentId = document.getElementById('visitor-id').value;
+            const visitKey = document.getElementById('visit-key').value;
 
             const payload = {
-                visitor_id: studentId,
+                visitor_id: Number(studentId),
+                visit_key: visitKey,
                 signed_in: true
             };
 

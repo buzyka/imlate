@@ -1,7 +1,9 @@
 CREATE TABLE IF NOT EXISTS visitors (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    surname TEXT NOT NULL,
-    grade INTEGER NULL,
-    image TEXT NULL
-);
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    surname VARCHAR(255) NULL,
+    email VARCHAR(255) NULL,
+    is_student TINYINT(1) DEFAULT 0,
+    grade INT NULL,
+    image VARCHAR(255) NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -1,7 +1,6 @@
 package tracker
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -12,8 +11,9 @@ import (
 
 
 type Request struct {
-	VisitorID string `json:"visitor_id"`
-	SignedIn bool `json:"signed_in"`
+	VisitorID int32 `json:"visitor_id"`
+	VisitKey  string `json:"visit_key"`
+	SignedIn  bool `json:"signed_in"`
 }
 
 type TrackerController struct {
@@ -39,7 +39,8 @@ func (tc *TrackerController) TrackHandler() gin.HandlerFunc {
 		}
 		track := &entity.VisitTrack{
 			VisitorId: Request.VisitorID,
-			SignedIn: Request.SignedIn,
+			VisitKey:  Request.VisitKey,
+			SignedIn:  Request.SignedIn,
 		}
 		track.Visitor, err = tc.VisitorRepository.FindById(Request.VisitorID)
 		if err != nil {
@@ -58,6 +59,7 @@ func (tc *TrackerController) TrackHandler() gin.HandlerFunc {
 		ctx.JSON(http.StatusOK, gin.H{
 			"message": "tracked",
 			"id": Request.VisitorID,
+			"vk": Request.VisitKey,
 			"tr": Request.SignedIn,
 			"cr": track.CreatedAt.Format("2006-01-02 15:04:05"),	
 		})
@@ -75,16 +77,18 @@ func (tc *TrackerController) FindAndTrackHandler() gin.HandlerFunc {
 			return
 		}
 		track := &entity.VisitTrack{
-			VisitorId: Request.VisitorID,
+			VisitKey: Request.VisitKey,
 			SignedIn: Request.SignedIn,
 		}
-		track.Visitor, err = tc.VisitorRepository.FindById(Request.VisitorID)
-		if err != nil || track.Visitor.Id == "" {
+		visitDetails, err := tc.VisitorRepository.FindByKey(Request.VisitKey)
+		if err != nil || visitDetails.Visitor == nil {
 			ctx.JSON(http.StatusNotFound, gin.H{
 				"error": "Visitor not exists",
 			})
 			return
 		}
+		track.Visitor = visitDetails.Visitor
+		track.VisitorId = visitDetails.Visitor.Id
 		track, err = tc.TrackRepository.Store(track)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -92,10 +96,11 @@ func (tc *TrackerController) FindAndTrackHandler() gin.HandlerFunc {
 			})
 			return
 		}
+	
 
 		eType := "sign-in"
 		startDate := time.Date(track.CreatedAt.Year(), track.CreatedAt.Month(), track.CreatedAt.Day(), 0, 0, 0, 0, time.Local)
-		eCount, err := tc.TrackRepository.CountEventsByVisitorIdSince(Request.VisitorID, startDate)
+		eCount, err := tc.TrackRepository.CountEventsByVisitorIdSince(track.VisitorId, startDate)
 		if err == nil {
 			if eCount % 2 == 0 {
 				eType = "sign-out"

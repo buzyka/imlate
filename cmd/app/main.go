@@ -1,17 +1,32 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
+	"github.com/buzyka/imlate/internal/config"
 	"github.com/buzyka/imlate/internal/infrastructure/gocontainer"
+	"github.com/buzyka/imlate/internal/infrastructure/util"
 	"github.com/buzyka/imlate/internal/isb/search"
 	"github.com/buzyka/imlate/internal/isb/tracker"
 	"github.com/gin-gonic/gin"
 	"github.com/golobby/container/v3"
+	"github.com/subosito/gotenv"
 )
 
 func main() {
-	gocontainer.Build()
+	if rootPath, err := util.GetRootPath(); err == nil {
+		if util.FileExists(rootPath + "/.env") {
+			_ = gotenv.Load(rootPath + "/.env")
+		}
+	}
+
+	cfg, err := config.NewFromEnv()
+	if err != nil {
+		panic(fmt.Sprintf("Error loading config from env: %v\n", err))
+	}
+	
+	gocontainer.Build(&cfg)
 	r := gin.Default()
 
 	r.Static("/assets", "./website/assets")

@@ -17,8 +17,9 @@ type VisitorTrack struct {
 
 func (r *VisitorTrack) Store(vt *entity.VisitTrack) (*entity.VisitTrack, error) {
 	res, err := r.Connection.Exec(
-		"INSERT INTO track (visitor_id, sign_in, created_at) VALUES (?, ?, ?)",
+		"INSERT INTO track (visitor_id, key_id, sign_in, created_at) VALUES (?, ?, ?, ?)",
 		vt.VisitorId,
+		vt.VisitKey,
 		vt.SignedIn,
 		time.Now(),
 	)
@@ -30,28 +31,40 @@ func (r *VisitorTrack) Store(vt *entity.VisitTrack) (*entity.VisitTrack, error) 
 		return nil, err
 	}
 	vt1, err1 := r.GetById(id)
+	if err1 != nil {
+		return nil, err1
+	}
 	vt.Id = vt1.Id
+	vt.VisitKey = vt1.VisitKey
 	vt.CreatedAt = vt1.CreatedAt
 	r.writeToTheFile(vt)
 	return vt, err1
 }
 
 func (r *VisitorTrack) GetById(id int64) (*entity.VisitTrack, error) {
-	row := r.Connection.QueryRow("SELECT t.id, t.visitor_id, t.sign_in, t.created_at FROM track AS t WHERE id = ?", id)
+	var createdAtRaw []byte
+
+	row := r.Connection.QueryRow("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.created_at FROM track AS t WHERE id = ?", id)
 	track := &entity.VisitTrack{}
 	err := row.Scan(
 		&track.Id,
 		&track.VisitorId,
+		&track.VisitKey,
 		&track.SignedIn,
-		&track.CreatedAt,
+		&createdAtRaw,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	track.CreatedAt, err = time.Parse("2006-01-02 15:04:05", string(createdAtRaw))
 	if err != nil {
 		return nil, err
 	}
 	return track, nil
 }
 
-func (r *VisitorTrack) CountEventsByVisitorIdSince(visitorId string, date time.Time) (int, error) {
+func (r *VisitorTrack) CountEventsByVisitorIdSince(visitorId int32, date time.Time) (int, error) {
 	var count int
 	err := r.Connection.QueryRow(
 		"SELECT COUNT(*) FROM track WHERE visitor_id = ? AND created_at > ?",
@@ -74,7 +87,7 @@ func (r *VisitorTrack) writeToTheFile(vt *entity.VisitTrack) {
     filePath := rootPath + "/output/data.csv"
 
     // The new row to be added
-    newRow := []string{vt.CreatedAt.Format("2006-01-02 15:04:05"), vt.VisitorId, vt.Visitor.Name, vt.Visitor.Surname}
+    newRow := []string{vt.CreatedAt.Format("2006-01-02 15:04:05"), string(vt.VisitorId), vt.Visitor.Name, vt.Visitor.Surname}
 
     // Open the file in append mode or create it if it doesn't exist
     file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)

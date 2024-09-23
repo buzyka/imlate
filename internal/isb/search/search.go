@@ -14,7 +14,7 @@ type SearchController struct {
 func (sc SearchController) SearchHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		id := ctx.Param("id")
-		student, err := sc.StudentRepository.FindById(id)
+		visit, err := sc.StudentRepository.FindByKey(id)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -22,10 +22,10 @@ func (sc SearchController) SearchHandler() gin.HandlerFunc {
 			return
 		}
 
-		if student.Id == "" {
+		if visit.Visitor == nil {
 			ctx.Status(http.StatusNotFound)
 			return
 		}
-		ctx.JSON(http.StatusOK, student)
+		ctx.JSON(http.StatusOK, visit)
 	}
 }
