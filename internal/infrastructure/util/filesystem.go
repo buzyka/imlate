@@ -15,7 +15,7 @@ func FileExists(filename string) bool {
 }
 
 func GetRootPath() (string, error) {
-	rootDirMarker := "/migrations"
+	rootDirMarker := "/website"
 	if cwd, err := os.Getwd(); err == nil {
 		for {
 			if info, errDir := os.Stat(cwd + rootDirMarker); errDir == nil && info.IsDir() {

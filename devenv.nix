@@ -43,7 +43,7 @@
         go mod download
     '';
 
-    scripts.build-proxy.exec = ''
+    scripts.build-app.exec = ''
       go build -o tracker cmd/app/main.go
     '';
 
@@ -79,10 +79,10 @@
       done
     '';
 
-    scripts.start-proxy.exec = ''
+    scripts.start-app.exec = ''
       
-      if [ ! -f ./ai-proxy ]; then
-        install-mod && build-proxy
+      if [ ! -f ./tracker ]; then
+        install-mod && build-app
       fi
       go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
@@ -95,7 +95,7 @@
     '';
 
     processes.tracker.exec = ''
-        start-proxy
+        start-app
     '';
     
     enterShell = ''

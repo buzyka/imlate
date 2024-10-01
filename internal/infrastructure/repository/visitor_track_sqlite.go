@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/buzyka/imlate/internal/isb/entity"
@@ -17,11 +18,10 @@ type VisitorTrack struct {
 
 func (r *VisitorTrack) Store(vt *entity.VisitTrack) (*entity.VisitTrack, error) {
 	res, err := r.Connection.Exec(
-		"INSERT INTO track (visitor_id, key_id, sign_in, created_at) VALUES (?, ?, ?, ?)",
+		"INSERT INTO track (visitor_id, key_id, sign_in, created_at) VALUES (?, ?, ?,  NOW())",
 		vt.VisitorId,
 		vt.VisitKey,
 		vt.SignedIn,
-		time.Now(),
 	)
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func (r *VisitorTrack) writeToTheFile(vt *entity.VisitTrack) {
     filePath := rootPath + "/output/data.csv"
 
     // The new row to be added
-    newRow := []string{vt.CreatedAt.Format("2006-01-02 15:04:05"), string(vt.VisitorId), vt.Visitor.Name, vt.Visitor.Surname}
+    newRow := []string{vt.CreatedAt.Format("2006-01-02 15:04:05"), strconv.Itoa(int(vt.Visitor.Id)), vt.Visitor.Name, vt.Visitor.Surname}
 
     // Open the file in append mode or create it if it doesn't exist
     file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)

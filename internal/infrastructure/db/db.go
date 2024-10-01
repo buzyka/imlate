@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/buzyka/imlate/internal/infrastructure/util"
@@ -65,26 +64,15 @@ func MigrateDown(dataSourceName string) error {
 
 func getMigrationSourceURL() string {
 	migrationSourceURL := "file://"
-
-	if path, err := getRootPath(); err == nil {
-		migrationSourceURL += path + "/migrations"
+	if cwd, err := os.Getwd(); err == nil {
+		if info, errDir := os.Stat(cwd + "/migrations"); errDir == nil && info.IsDir() {
+			migrationSourceURL += "migrations"
+		} else {
+			if path, err := util.GetRootPath(); err == nil {
+				migrationSourceURL += path + string(os.PathSeparator) + "migrations"
+			}
+		}
 	}
 
 	return migrationSourceURL
-}
-
-func getRootPath() (string, error) {
-	if cwd, err := os.Getwd(); err == nil {
-		for {
-			if info, errDir := os.Stat(cwd + "/migrations"); errDir == nil && info.IsDir() {
-				return cwd, nil
-			}
-			parent := filepath.Dir(cwd)
-			if parent == cwd {
-				break
-			}
-			cwd = parent
-		}
-	}
-	return "", os.ErrNotExist
 }

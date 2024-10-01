@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Info</title>
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/img/favicon.png">
+
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: white;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container" style="
+        padding-top: 15px;
+        padding-bottom: 15px; ">
+        <div class="row">
+            <!-- Left column  -->
+            <div class="col-6"
+                style=" background-image: url('assets/img/ISBLogo.jpg'); background-size: cover; background-position: center; min-height: 550px; ">
+
+            </div>
+
+            <!-- Right column -->
+            <div class="col-6">
+                <div class="row mb-1">
+                    <div class="col-12 ">
+                        <h2>ISB Registration</h2>
+                    </div>
+                </div>
+
+                <div class="row mb-1">
+                    <div class="col-12">
+                        <form id="student-form">
+                            <div style="display: flex; gap: 3px; width: 100%;">
+                                <input type="text" class="form-control" id="student-id" placeholder="PLease enter ID"
+                                    style="flex: 1;" required>
+                                <button type="submit" class="btn btn-primary">Submit</button>
+
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Visitor Details -->
+                <div id="student-info" class="row" style="display: none; padding: 10px;">
+                    <div class="col-12" style="display: flex; width: 100%;">
+                        <form id="sign-in-form1" style="display: flex; align-items: center; width: 100%;">
+                            <input type="hidden" name="visitor_id" id="visitor-id">
+                            <input type="text" class="form-control" id="rfid" placeholder="Please enter ChipCod"
+                                style="flex: 1; width: 30%;" required>
+                            <button type="submit" class="btn btn-primary">Track Chip-Cod</button>
+                        </form>
+                    </div>
+
+                    <div class="col-6 ">
+                        <img src="photo1.png" id="student-image" class="card-img-top" alt="Student Image" width="290">
+                    </div>
+
+                    <div class="col-6 ">
+
+
+                        <h3>Visitor Details</h3>
+                        <p class="card-text"><strong>Surname:</strong> <span id="student-surname"></span></p>
+                        <p class="card-text"><strong>Name:</strong> <span id="student-name"></span></p>
+
+                    </div>
+                </div>
+
+                <!-- Sv  Registration successful!-->
+                <div id="success-message" class="alert alert-success" role="alert"
+                    style="display: none; margin-top: 15px;">
+                    Registration successful!
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <!-- Modal -->
+    <div class="modal fade" id="noStudentModal" tabindex="-1" role="dialog" aria-labelledby="noStudentModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="noStudentModalLabel">No Student Found</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    No student data found for the given ID. Please check the ID and try again.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="errorModalLabel">Error</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="errorModalBody">
+                    <!-- Error message will be populated here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('student-form').addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            // Get the student ID from the input 
+            const studentId = document.getElementById('student-id').value;
+
+            // Create the URL for the GET request
+            const url = `/search/${studentId}`;
+
+            // Perform the GET request to fetch student data
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        console.log(response);
+                        if (response.status === 404) {
+                            throw new Error('NOT FOUND');
+                        }
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.length === 0) {
+                        // Handle case where no data is found
+                        document.getElementById('student-info').style.display = 'none';
+                        $('#noStudentModal').modal('show');
+                        return;
+                    }
+
+                    // Assuming the response is a single student object
+                    const studentData = data;
+
+                    document.getElementById('rfid').value = "";
+                    document.getElementById('visitor-id').value = "";
+
+                    // Display the student data (modify as needed for your application)
+                    document.getElementById('student-image').src = studentData.visitor.image;
+                    document.getElementById('student-surname').textContent = studentData.visitor.surname;
+                    document.getElementById('student-name').textContent = studentData.visitor.name;
+                    document.getElementById('visitor-id').value = studentData.visitor.id;
+
+                    document.getElementById('student-info').style.display = 'flex';
+                    document.getElementById("rfid").focus();
+
+                })
+                .catch(error => {
+                    if (error.message === 'NOT FOUND') {
+                        document.getElementById('student-info').style.display = 'none';
+                        $('#noStudentModal').modal('show');
+                    } else {
+                        console.error('There was a problem with the fetch operation:', error);
+                        document.getElementById('student-info').style.display = 'none';
+                        alert('Error fetching student data');
+                    }
+                });
+        });
+    </script>
+
+    <script>
+        document.getElementById('sign-in-form1').addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            // Get the student ID from the input
+            const studentId = document.getElementById('visitor-id').value;
+            const rfid = document.getElementById('rfid').value;
+
+            const payload = {
+                visitor_id: Number(studentId),
+                visitor_key: rfid
+            };
+
+            fetch('/api/add-key', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+                .then(response => {
+                    if (response.status !== 200) {
+                        return response.json().then(data => {
+                            throw new Error(data.error || 'Unknown error occurred');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Sign in successful:', data);
+                    // Handle successful response if needed
+                    // SV Message for successful registration
+                    const successMessage = document.getElementById('success-message');
+                    successMessage.style.display = 'block';
+                    const studentInfo = document.getElementById('student-info');
+                    document.getElementById('rfid').value = "";
+                    document.getElementById('visitor-id').value = "";
+                    studentInfo.style.display = 'none';
+                    document.getElementById('student-id').value = "";
+                    // SV Hide the success message after 3 seconds
+                    setTimeout(() => {
+                        successMessage.style.display = 'none';
+                    }, 900);  // 3000 milliseconds = 3 seconds
+
+                })
+                .catch(error => {
+                    console.error('Error:', error.message);
+                    document.getElementById('errorModalBody').textContent = error.message;
+                    $('#errorModal').modal('show');
+                });
+
+        });
+    </script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+
+</html>

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/buzyka/imlate/internal/config"
@@ -20,7 +19,7 @@ import (
 func TestOpenWithIncorrectURLWillPanic(t *testing.T) {
 	logger := zaptest.NewLogger(t).Sugar()
 	assert.Panics(t, func() {
-		Open("notURL", logger) //nolint:errcheck
+		Open("mysql", "notURL", logger) //nolint:errcheck
 	})
 }
 
@@ -32,7 +31,7 @@ func TestOpenWithIncorrectConnectionWillReturnError(t *testing.T) {
 		zapcore.DebugLevel,
 	)).Sugar()
 
-	_, err := Open("user:password@/db_name", logger)
+	_, err := Open("mysql", "user:password@/db_name", logger)
 
 	assert.NotNil(t, err)
 	assert.Contains(t, logBuffer.String(), "Error opening a connection to the database")
@@ -47,7 +46,7 @@ func TestOpen(t *testing.T) {
 	)).Sugar()
 	cfg, _ := prepareTestEnv(t)
 
-	db, err := Open(cfg.DatabaseURL, logger)
+	db, err := Open("mysql", cfg.DatabaseURL, logger)
 
 	assert.Nil(t, err)
 	assert.NotNil(t, db)
@@ -81,7 +80,7 @@ func TestOpenWillApplyMigrations(t *testing.T) {
 	cfg, logger := prepareTestEnv(t)
 	MigrateDown(cfg.DatabaseURL) //nolint:errcheck
 
-	_, err := Open(cfg.DatabaseURL, logger)
+	_, err := Open("mysql", cfg.DatabaseURL, logger)
 	assert.Nil(t, err)
 	err = MigrateUp(cfg.DatabaseURL)
 	assert.NotNil(t, err)
@@ -102,38 +101,10 @@ func TestOpenWithFailedMigrationWillReturnError(t *testing.T) {
 
 	testCase.createTestMigration(`CREATE TABLE ...`)
 
-	_, err := Open(cfg.DatabaseURL, logger)
+	_, err := Open("mysql", cfg.DatabaseURL, logger)
 
 	assert.Error(t, err)
 	assert.Contains(t, logBuffer.String(), "Error running migrations")
-}
-
-func TestGetRootPathWillFindRootPath(t *testing.T) {
-	expectedPath, err := os.Getwd()
-	assert.Nil(t, err)
-	for i := 0; i < 3; i++ {
-		expectedPath = filepath.Dir(expectedPath)
-	}
-
-	foundPath, err := getRootPath()
-
-	assert.Nil(t, err)
-	assert.Equal(t, expectedPath, foundPath)
-}
-
-func TestGetRootPathWithIncorrectWorkingDirWillReturnError(t *testing.T) {
-	path, err := os.Getwd()
-	assert.Nil(t, err)
-	path = filepath.Dir(path)
-	path = filepath.Dir(path)
-	path = filepath.Dir(path)
-	path = filepath.Dir(path)
-	err = os.Chdir(path)
-	assert.Nil(t, err)
-
-	_, err = getRootPath()
-
-	assert.NotNil(t, err)
 }
 
 func prepareTestEnv(t *testing.T) (*config.Config, *zap.SugaredLogger) {
@@ -174,7 +145,7 @@ func (tc *MigrationTestCase) tearDown() {
 }
 
 func (tc *MigrationTestCase) removeTestMigration() {
-	rootPath, er := getRootPath()
+	rootPath, er := util.GetRootPath()
 	assert.Nil(tc.t, er)
 	migrationPath := rootPath + "/migrations/" + tc.testMigrationFile
 	if util.FileExists(migrationPath) {
@@ -184,7 +155,7 @@ func (tc *MigrationTestCase) removeTestMigration() {
 }
 
 func (tc *MigrationTestCase) createTestMigration(content string) {
-	rootPath, er := getRootPath()
+	rootPath, er := util.GetRootPath()
 	assert.Nil(tc.t, er)
 	migrationPath := rootPath + "/migrations/" + tc.testMigrationFile
 	file, err := os.Create(migrationPath)

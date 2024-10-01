@@ -81,6 +81,26 @@ func (r *Visitor) FindById(id int32) (*entity.Visitor, error) {
 	return student, nil
 }
 
+func (r *Visitor) AddKeyToVisitor(visitor *entity.Visitor, key string) error {
+	details, err := r.FindByKey(key)
+	if err != nil{
+		return fmt.Errorf("Search by key error: %s", err.Error())
+	}
+
+	if details.Visitor != nil && details.Visitor.Id > 0{
+		if details.Visitor.Id == visitor.Id {
+			return nil
+		}
+		return fmt.Errorf("Key already assigned to another visitor")
+	}
+
+	_, err = r.Connection.Exec("INSERT INTO visitor_key (visitor_id, key_id) VALUES (?, ?)", visitor.Id, key)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *Visitor) AddRandomImage(student *entity.Visitor) {
 	source := rand.NewSource(time.Now().UnixNano())
     rmd := rand.New(source)
