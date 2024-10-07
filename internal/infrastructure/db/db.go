@@ -2,54 +2,49 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
+	"os"
 	"time"
 
-	"os"
-	"path/filepath"
-
-	// "time"
-
+	"github.com/buzyka/imlate/internal/infrastructure/util"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/mysql"
 	_ "github.com/golang-migrate/migrate/v4/database/sqlite3"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
 )
 
-const dbEngine = "sqlite3"
+var dbEngine string = "mysql"
 
-func Open(dataSourceName string, logger *zap.SugaredLogger) (*sql.DB, error) {
+// List of supported engines
+var supportedEngines = []string{"mysql", "sqlite3"}
+
+func Open(engine string, dataSourceName string, logger *zap.SugaredLogger) (*sql.DB, error) {
+	if !util.InArray(engine, supportedEngines) {
+		panic(fmt.Sprintf("Unsupported database engine: %s", engine))
+	}
+	dbEngine = engine
 	db, err := sql.Open(dbEngine, dataSourceName)
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
-	db.SetMaxOpenConns(5)
 	db.SetConnMaxLifetime(time.Minute * 3)
-	// if err := MigrateUp(dataSourceName); err != nil && err.Error() != "no change" {
-	// 	logger.Errorf("Error running migrations: %s", err.Error())
-	// 	return db, err
-	// }
-	// initMe(db)
+	db.SetConnMaxIdleTime(time.Minute)
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(10)
+	if err := db.Ping(); err != nil {
+		logger.Errorf("Error opening a connection to the database: %s;  with error message: %s", dataSourceName, err.Error())
+		return db, err
+	}
+	if err := MigrateUp(dataSourceName); err != nil && err.Error() != "no change" {
+		logger.Errorf("Error running migrations: %s", err.Error())
+		return db, err
+	}
 	logger.Info("[DB] Connection established; Migrations applied")
 	return db, nil
 }
-
-// func initMe(connection *sql.DB) {
-// 	if _, err := connection.Exec("PRAGMA journal_mode=WAL;"); err != nil {
-// 		panic("Pragma error: " + err.Error())
-// 	}
-// 	_, err := connection.Exec(`
-// 		CREATE TABLE IF NOT EXISTS visitors (
-// 			id TEXT PRIMARY KEY,
-// 			name TEXT NOT NULL,
-// 			surname TEXT NOT NULL,
-// 			grade INTEGER NULL,
-// 			image TEXT NULL
-// 			);`)
-// 	if err != nil {
-// 		panic("Migration error: " + err.Error())	
-// 	}
-// }
 
 func MigrateUp(dataSourceName string) error {
 	m, err := migrate.New(getMigrationSourceURL(), dbEngine+"://"+dataSourceName)
@@ -59,36 +54,25 @@ func MigrateUp(dataSourceName string) error {
 	return m.Up()
 }
 
-// func MigrateDown(dataSourceName string) error {
-// 	m, err := migrate.New(getMigrationSourceURL(), dbEngine+"://"+dataSourceName)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return m.Down()
-// }
+func MigrateDown(dataSourceName string) error {
+	m, err := migrate.New(getMigrationSourceURL(), dbEngine+"://"+dataSourceName)
+	if err != nil {
+		return err
+	}
+	return m.Down()
+}
 
 func getMigrationSourceURL() string {
 	migrationSourceURL := "file://"
-
-	if path, err := getRootPath(); err == nil {
-		migrationSourceURL += path + "/migrations"
+	if cwd, err := os.Getwd(); err == nil {
+		if info, errDir := os.Stat(cwd + "/migrations"); errDir == nil && info.IsDir() {
+			migrationSourceURL += "migrations"
+		} else {
+			if path, err := util.GetRootPath(); err == nil {
+				migrationSourceURL += path + string(os.PathSeparator) + "migrations"
+			}
+		}
 	}
 
 	return migrationSourceURL
-}
-
-func getRootPath() (string, error) {
-	if cwd, err := os.Getwd(); err == nil {
-		for {
-			if info, errDir := os.Stat(cwd + "/migrations"); errDir == nil && info.IsDir() {
-				return cwd, nil
-			}
-			parent := filepath.Dir(cwd)
-			if parent == cwd {
-				break
-			}
-			cwd = parent
-		}
-	}
-	return "", os.ErrNotExist
 }

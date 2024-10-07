@@ -44,28 +44,34 @@
                                 <input type="text" class="form-control" id="student-id" placeholder="PLease enter ID"
                                     style="flex: 1;" required>
                                 <button type="submit" class="btn btn-primary">Submit</button>
+
                             </div>
                         </form>
                     </div>
                 </div>
 
                 <!-- Visitor Details -->
-
                 <div id="student-info" class="row" style="display: none; padding: 10px;">
+                    <div class="col-12" style="display: flex; width: 100%;">
+                        <form id="sign-in-form1" style="display: flex; align-items: center; width: 100%;">
+                            <input type="hidden" name="visitor_id" id="visitor-id">
+                            <input type="text" class="form-control" id="rfid" placeholder="Please enter ChipCod"
+                                style="flex: 1; width: 30%;" required>
+                            <button type="submit" class="btn btn-primary">Track Chip-Cod</button>
+                        </form>
+                    </div>
+
                     <div class="col-6 ">
                         <img src="photo1.png" id="student-image" class="card-img-top" alt="Student Image" width="290">
                     </div>
 
                     <div class="col-6 ">
+
+
                         <h3>Visitor Details</h3>
                         <p class="card-text"><strong>Surname:</strong> <span id="student-surname"></span></p>
                         <p class="card-text"><strong>Name:</strong> <span id="student-name"></span></p>
 
-                        <form id="sign-in-form" method="post" action="/path/to/your/endpoint">
-                            <input type="hidden" name="visitor_id" id="visitor-id">
-                            <input type="hidden" name="visit_key" id="visit-key">
-                            <button type="submit" class="btn btn-primary mt-3">Track</button>
-                        </form>
                     </div>
                 </div>
 
@@ -78,6 +84,7 @@
             </div>
         </div>
     </div>
+    <!-- Modal -->
     <div class="modal fade" id="noStudentModal" tabindex="-1" role="dialog" aria-labelledby="noStudentModalLabel"
         aria-hidden="true">
         <div class="modal-dialog" role="document">
@@ -122,7 +129,7 @@
         document.getElementById('student-form').addEventListener('submit', function (event) {
             event.preventDefault();
 
-            // Get the student ID from the input
+            // Get the student ID from the input 
             const studentId = document.getElementById('student-id').value;
 
             // Create the URL for the GET request
@@ -149,16 +156,20 @@
                     }
 
                     // Assuming the response is a single student object
-                    const visitData = data;
+                    const studentData = data;
+
+                    document.getElementById('rfid').value = "";
+                    document.getElementById('visitor-id').value = "";
 
                     // Display the student data (modify as needed for your application)
-                    document.getElementById('student-image').src = visitData.visitor.image;
-                    document.getElementById('student-surname').textContent = visitData.visitor.surname;
-                    document.getElementById('student-name').textContent = visitData.visitor.name;
-                    document.getElementById('visitor-id').value = visitData.visitor.id;
-                    document.getElementById('visit-key').value = visitData.key;
+                    document.getElementById('student-image').src = studentData.visitor.image;
+                    document.getElementById('student-surname').textContent = studentData.visitor.surname;
+                    document.getElementById('student-name').textContent = studentData.visitor.name;
+                    document.getElementById('visitor-id').value = studentData.visitor.id;
 
                     document.getElementById('student-info').style.display = 'flex';
+                    document.getElementById("rfid").focus();
+
                 })
                 .catch(error => {
                     if (error.message === 'NOT FOUND') {
@@ -174,21 +185,20 @@
     </script>
 
     <script>
-        document.getElementById('sign-in-form').addEventListener('submit', function (event) {
+        document.getElementById('sign-in-form1').addEventListener('submit', function (event) {
             event.preventDefault();
 
             // Get the student ID from the input
             const studentId = document.getElementById('visitor-id').value;
-            const visitKey = document.getElementById('visit-key').value;
+            const rfid = document.getElementById('rfid').value;
 
             const payload = {
                 visitor_id: Number(studentId),
-                visit_key: visitKey,
-                signed_in: true
+                visitor_key: rfid
             };
 
-            fetch('/track', {
-                method: 'POST',
+            fetch('/api/add-key', {
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json'
                 },
@@ -205,17 +215,20 @@
                 .then(data => {
                     console.log('Sign in successful:', data);
                     // Handle successful response if needed
-                    // Show success message
+                    // SV Message for successful registration
                     const successMessage = document.getElementById('success-message');
                     successMessage.style.display = 'block';
                     const studentInfo = document.getElementById('student-info');
+                    document.getElementById('rfid').value = "";
+                    document.getElementById('visitor-id').value = "";
                     studentInfo.style.display = 'none';
                     document.getElementById('student-id').value = "";
-                    // Hide the success message after 3 seconds
+                    // SV Hide the success message after 3 seconds
                     setTimeout(() => {
-                        successMessage.style.display = 'none'; 
-                          }, 900);
-                    })
+                        successMessage.style.display = 'none';
+                    }, 900);  // 3000 milliseconds = 3 seconds
+
+                })
                 .catch(error => {
                     console.error('Error:', error.message);
                     document.getElementById('errorModalBody').textContent = error.message;
