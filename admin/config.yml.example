@@ -1,0 +1,208 @@
+
+# The configuration will be written to the database table goadmin_site when the application
+# is first started. Subsequent startup will give priority to loading configuration from
+# goadmin_site. If you want to modify, you can click the configuration center entry button in the
+# upper right corner of the website to finish the modification.
+
+# Database settings, support the configuration of multiple databases, currently supported
+# database drivers are: sqlite/mssql/mysql/postgresql.
+# The default database connection name is default, and the connection object can be obtained
+# through a custom database connection name in the framework.
+# In the data table model, you can also obtain the corresponding data by specifying the
+# corresponding connection name.
+database:
+  default:
+    driver: mysql
+    host: localhost
+    port: 3306
+    user: user
+    pwd: password
+    name: db-name    
+    max_idle_con: 5
+    max_open_con: 10
+    # params are additional parameters required by the driver.
+    # params:
+    #   character: utf8mb4
+
+    # If DSN is set, all the above configurations except Driver will be invalid and the
+    # configured DSN shall prevail
+    # dsn: "user:pwd@tcp(localhost:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local"
+
+# Unique ID of this application.
+app_id: ZYyvYqimiWEj
+
+# Defined website domain name, used for cookie authentication for domain name restriction.
+# domain: 
+# Language of the website
+language: en
+# Global url prefix
+prefix: admin
+# UI theme
+theme: sword
+# File storage settings, set the storage path and routing prefix of uploaded files.
+store:
+  path: ./website/uploads
+  prefix: uploads
+
+# Title of the website
+title: GoAdmin
+# Website LOGO text, will be displayed above the sidebar, can be custom HTML.
+logo: <b>Go</b>Admin
+# The website LOGO shrinks the text, and it will display the reduced sidebar above the
+# sidebar, which can be customized HTML.
+mini_logo: <b>G</b>A
+# Index page url.
+index: /
+# Login page url.
+login_url: /login
+
+# Whether it is debug mode.
+debug: true
+# Develop environment: EnvLocal/EnvTest/EnvProd
+env: local
+
+# Local storage path of info log.
+info_log: /home/buzyka/www/isb/admin/logs/info.log
+# Local storage path of error log.
+error_log: /home/buzyka/www/isb/admin/logs/error.log
+# Local storage path of access log.
+access_log: /home/buzyka/www/isb/admin/logs/access.log
+
+# Whether to close the assets access log.
+# access_assets_log_off: false
+# Whether to close the sql log.
+# sql_log: false
+# Whether to close the access log.
+# access_log_off: false
+# Whether to close the info log.
+# info_log_off: false
+# Whether to close the error log.
+# error_log_off: false
+
+# Color theme, effective when the theme is adminlte.
+# color_scheme: skin-black
+
+# The duration of the session, in seconds, the default is two hours. You need to log
+# in again after not logging in for two hours.
+session_life_time: 7200
+
+# Assets url when using CDN.
+# asset_url: 
+
+# File upload engine.
+file_upload_engine:
+  name: local
+
+# Custom head HTML.
+# custom_head_html: 
+# Custom foot HTML.
+# custom_foot_html: 
+# Custom footer info HTML.
+# footer_info: 
+
+# Title of the login page.
+# login_title: GoAdmin
+# Logo of the login page.
+# login_logo: 
+
+# Custom auth user table.
+# auth_user_table: goadmin_users
+
+# Whether to not restrict multi-IP login, if you need multi-browser login, please set to true.
+# no_limit_login_ip: false
+
+# Whether to close the website.
+# site_off: false
+
+# Whether to hide the configuration center entrance.
+# hide_config_center_entrance: false
+# Whether to prohibit configuration modification.
+# prohibit_config_modification: false
+# Whether to hide the application center entrance.
+# hide_app_info_entrance: false
+# Whether to hide the tool entrance.
+# hide_tool_entrance: false
+# Whether to hide the entrance to the plug-in center.
+# hide_plugin_entrance: false
+
+# Custom 404 page HTML.
+# custom_404_html: 
+# Custom 403 page HTML.
+# custom_403_html: 
+# Customize 500 pages HTML.
+# custom_500_html: 
+
+# Whether to open admin api.
+# open_admin_api: false
+# Whether to hide the user center entrance.
+# hide_visitor_user_center_entrance: false
+
+# Excluded theme components that need to be loaded.
+# exclude_theme_components:
+# - ""
+
+# The local path of the boot file
+bootstrap_file_path: /home/buzyka/www/isb/admin/bootstrap.go
+# The local path of the go.mod file
+go_mod_file_path: /home/buzyka/www/isb/admin/go.mod
+
+# Whether to allow deletion of operation log.
+allow_del_operation_log: false
+# Whether to close the operation log.
+operation_log_off: false
+
+# The local path of the resource file.
+# This configuration item needs to be set when the theme mode with resource file separation is selected.
+asset_root_path: ./public/
+
+# URL formats.
+# url_format:
+#   info: /info/:__prefix
+#   detail: /info/:__prefix/detail
+#   create: /new/:__prefix
+#   delete: /delete/:__prefix
+#   export: /export/:__prefix
+#   edit: /edit/:__prefix
+#   show_edit: /info/:__prefix/edit
+#   show_create: /info/:__prefix/new
+#   update: /update/:__prefix
+
+# Logger configuration is used to set the behavior and settings of the logger.
+# More details: https://pkg.go.dev/go.uber.org/zap
+logger:
+# Encoder configuration is used to set the behavior and settings of the log encoder.
+  encoder:
+    # Time key
+    time_key: ts
+    # Level key
+    level_key: level
+    # Name key
+    name_key: logger
+    # Caller key
+    caller_key: caller
+    # Message key
+    message_key: msg
+    # Stacktrace key
+    stacktrace_key: stacktrace
+    # Level format
+    level: capitalColor
+    # Time format
+    time: ISO8601
+    # Duration
+    duration: seconds
+    # Caller format
+    caller: short
+    # Encoding format (console/json)
+    encoding: console
+
+  # Rotate configuration is used to set the behavior and settings of log rotation.
+  rotate:
+    # Maximum age to retain old log files
+    max_age: 10
+    # Maximum number of old log files to retain
+    max_backups: 5
+    # Maximum size of a log file before it's rotated
+    max_size: 30
+    # Compression setting for rotated log files
+    compress: false
+

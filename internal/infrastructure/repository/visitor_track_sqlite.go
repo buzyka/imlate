@@ -4,12 +4,14 @@ import (
 	"database/sql"
 	"encoding/csv"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
 	"time"
 
 	"github.com/buzyka/imlate/internal/isb/entity"
+	"github.com/buzyka/imlate/internal/isb/stat"
 )
 
 type VisitorTrack struct {
@@ -77,6 +79,101 @@ func (r *VisitorTrack) CountEventsByVisitorIdSince(visitorId int32, date time.Ti
 	return count, nil
 }
 
+func (r *VisitorTrack) GetDailyStat(date time.Time) (*stat.DailyGeneral, error) {
+	type DailyStat struct {
+		TrackDate   time.Time
+		VisitorCount int
+	}
+
+	var visitorCount int
+	err := r.Connection.QueryRow("SELECT COUNT(*) FROM visitors WHERE is_student = 0").Scan(&visitorCount)
+	if err != nil {
+        return nil, err
+    }
+
+	query := `
+        SELECT 
+            DATE(t.created_at) AS track_date,
+            COUNT(DISTINCT t.visitor_id) AS tracked_visitor_count
+        FROM track t 
+        WHERE t.created_at >= ? 
+        GROUP BY track_date
+        ORDER BY track_date;
+    `
+	sevenDaysAgo := date.AddDate(0, 0, -8)
+    rows, err := r.Connection.Query(query, sevenDaysAgo.Format("2006-01-02"))
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+
+	stats := make(map[string]int)
+    for rows.Next() {
+		var trackDateStr string 
+		var count int
+        err := rows.Scan(&trackDateStr, &count)
+        if err != nil {
+            return nil, err
+        }
+		stats[trackDateStr] = count
+    }
+
+	today, ok := stats[date.Format("2006-01-02")];
+	if !ok {
+		today = 0
+	}
+	yesterday, ok := stats[date.AddDate(0, 0, -1).Format("2006-01-02")];
+	if !ok {
+		yesterday = 0
+	}
+
+	result := &stat.DailyGeneral{
+		TotalVisitors: visitorCount,
+		RegisteredVisitors: today,
+	}
+ 
+	result.PercentComparingToYesterdayTrend, result.PercentComparingToYesterday = compareValues(today, yesterday)
+
+	var days int;
+	var sum int;
+	for i := 8; i > 1; i-- {
+		ds, ok := stats[date.AddDate(0, 0, -i).Format("2006-01-02")];
+		if ok {
+			days++
+			sum += ds
+		}
+	}
+	if days > 0 {
+		average := int(math.Round(float64(sum) / float64(days)))
+		result.PercentComparingToLastWeekTrend, result.PercentComparingToLastWeek = compareValues(today, average)
+	} else {
+		result.PercentComparingToLastWeek = 0
+		result.PercentComparingToLastWeekTrend = stat.TrendEQUAL
+	}	
+
+	return result, nil
+
+	// return &stat.DailyGeneral{
+	// 	TotalVisitors: 10,
+	// 	RegisteredVisitors: 5,
+	// 	PercentComparingToYesterday: 25.5,
+	// 	PercentComparingToYesterdayTrend: stat.TrendDOWN,
+	// 	PercentComparingToLastWeek: 15.2678,
+	// 	PercentComparingToLastWeekTrend: stat.TrendEQUAL,
+	// }, nil
+}
+
+func compareValues(a, b int) (trend string, percent float64) {	
+	if a > b {
+		return stat.TrendUP, float64(a - b) / float64(a) * 100
+	}
+	if a < b {
+		return stat.TrendDOWN, float64(b - a) / float64(a) * 100
+	}
+	return stat.TrendEQUAL, 0
+}
+
 func (r *VisitorTrack) writeToTheFile(vt *entity.VisitTrack) {
 	rootPath, err := getRootPath()
 	if err != nil {
@@ -92,7 +189,7 @@ func (r *VisitorTrack) writeToTheFile(vt *entity.VisitTrack) {
     // Open the file in append mode or create it if it doesn't exist
     file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
     if err != nil {
-        panic(fmt.Sprint("failed to open file: %s", err))
+        panic(fmt.Sprintf("failed to open file: %s", err))
     }
     defer file.Close()
 
@@ -102,7 +199,7 @@ func (r *VisitorTrack) writeToTheFile(vt *entity.VisitTrack) {
 
     // Write the new row to the CSV file
     if err := writer.Write(newRow); err != nil {
-        panic(fmt.Sprint("failed to write to file: %s", err))
+        panic(fmt.Sprintf("failed to write to file: %s", err))
     }
 }
 

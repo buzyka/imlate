@@ -17,6 +17,11 @@
 tmp/
 .vscode/
 website/assets/isb/
+website/uploads/
+
+admin/logs/*
+admin/adm.ini
+admin/config.yml
 
 # Dependency directories (remove the comment below to include it)
 # vendor/

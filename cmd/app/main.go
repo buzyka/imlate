@@ -4,6 +4,16 @@ import (
 	"fmt"
 	"net/http"
 
+
+	_ "github.com/GoAdminGroup/go-admin/adapter/gin"              // web framework adapter
+	_ "github.com/GoAdminGroup/go-admin/modules/db/drivers/mysql" // sql driver	
+	_ "github.com/GoAdminGroup/themes/sword"                      // ui theme
+
+	"github.com/GoAdminGroup/go-admin/engine"
+	"github.com/GoAdminGroup/go-admin/template"
+	"github.com/GoAdminGroup/go-admin/template/chartjs"
+	"github.com/GoAdminGroup/go-admin/tests/tables"
+	"github.com/buzyka/imlate/admin/pages"
 	"github.com/buzyka/imlate/internal/config"
 	"github.com/buzyka/imlate/internal/infrastructure/gocontainer"
 	"github.com/buzyka/imlate/internal/infrastructure/util"
@@ -34,6 +44,9 @@ func main() {
 
 	r.Static("/assets", "./website/assets")
 	r.Static("/output", "./output")
+
+	// Add Administration routes
+	NewAdmin(r)
 
 	// Define gita simple GET route
 	r.GET("/ping", func(ctx *gin.Context) {
@@ -69,4 +82,22 @@ func main() {
 
 	// Start the server on port 8080
 	r.Run("0.0.0.0:8080")
+}
+
+func NewAdmin(r *gin.Engine) {
+	r.Static("/uploads", "./website/uploads")
+
+	template.AddComp(chartjs.NewChart())
+
+	eng := engine.Default()
+	if err := eng.AddConfigFromYAML("./admin/config.yml").
+		AddGenerators(tables.Generators).
+		Use(r); err != nil {
+		panic(err)
+	}
+
+	eng.HTML("GET", "/admin", pages.GetDashBoard)
+	eng.HTMLFile("GET", "admin/hello", "./admin/html/hello.tmpl", map[string]interface{}{
+		"msg": "Hello world",
+	})
 }

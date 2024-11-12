@@ -10,9 +10,9 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/mysql"
-	_ "github.com/golang-migrate/migrate/v4/database/sqlite3"
+	// _ "github.com/golang-migrate/migrate/v4/database/sqlite3"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	_ "github.com/mattn/go-sqlite3"
+	// _ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
 )
 
@@ -74,5 +74,6 @@ func getMigrationSourceURL() string {
 		}
 	}
 
+	fmt.Println("Migration source URL: ", migrationSourceURL)
 	return migrationSourceURL
 }
