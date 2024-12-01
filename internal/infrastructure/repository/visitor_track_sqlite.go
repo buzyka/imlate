@@ -121,7 +121,14 @@ func (r *VisitorTrack) GetDailyStat(date time.Time) (*stat.DailyGeneral, error) 
 
 	today, ok := stats[date.Format("2006-01-02")];
 	if !ok {
-		today = 0
+		return &stat.DailyGeneral{
+			TotalVisitors: visitorCount,
+			RegisteredVisitors: 0,
+			PercentComparingToYesterday: 0,
+			PercentComparingToYesterdayTrend: stat.TrendEQUAL,
+			PercentComparingToLastWeek: 0,
+			PercentComparingToLastWeekTrend: stat.TrendEQUAL,
+		},  nil
 	}
 	yesterday, ok := stats[date.AddDate(0, 0, -1).Format("2006-01-02")];
 	if !ok {
