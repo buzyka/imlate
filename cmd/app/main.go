@@ -60,7 +60,8 @@ func main() {
 	
 	apiRouteGroup := r.Group("/api")
 	trackerController := &tracker.TrackerController{}
-	container.MustFill(container.Global, trackerController)	
+	container.MustFill(container.Global, trackerController)
+	r.POST("/change-time", trackerController.ChangeTimeHandler())
 	r.POST("/track", trackerController.TrackHandler())
 	r.POST("/find-and-track", trackerController.FindAndTrackHandler())
 	visitorController := &visitor.VisitorController{}
