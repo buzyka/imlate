@@ -8,11 +8,23 @@ import (
 
 var localIPs = []string{"127.0.0.1", "::1"}
 
+type ISAMSConfig struct {
+	DefaultRegistrationPeriodName string
+}
+
 type Config struct {
 	Debug                                  bool     `env:"DEBUG" envDefault:"false"`
 	Environment                            string   `env:"ENVIRONMENT" envDefault:"production"` // possible values: development, staging, production.
 	DatabaseEngine						   string   `env:"DATABASE_ENGINE" envDefault:"mysql"`
 	DatabaseURL                            string   `env:"DATABASE_URL" envDefault:"trackme:trackme@/tracker"`
+
+	ISAMSDefaultRegistrationPeriodName string   `env:"ISAMS_DEFAULT_REGISTRATION_PERIOD_NAME" envDefault:"AM"`
+}
+
+func (c *Config) GetISAMSConfig() *ISAMSConfig {
+	return &ISAMSConfig{
+		DefaultRegistrationPeriodName: c.ISAMSDefaultRegistrationPeriodName,
+	}
 }
 
 type MysqlDBConfig struct {

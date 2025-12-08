@@ -1,15 +1,13 @@
 module github.com/buzyka/imlate
 
-go 1.22.0
-
-toolchain go1.22.1
+go 1.24.0
 
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/golang-migrate/migrate/v4 v4.18.1
 	github.com/golobby/container/v3 v3.3.2
 	github.com/mattn/go-sqlite3 v1.14.22
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.0
 )
 
@@ -47,6 +45,7 @@ require (
 	golang.org/x/arch v0.8.0 // indirect
 	golang.org/x/crypto v0.27.0 // indirect
 	golang.org/x/net v0.29.0 // indirect
+	golang.org/x/oauth2 v0.31.0
 	golang.org/x/sys v0.25.0 // indirect
 	golang.org/x/text v0.18.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect

@@ -1,0 +1,2 @@
+ALTER TABLE visitors
+  ADD COLUMN isams_school_id   VARCHAR(255) NULL DEFAULT NULL;
