@@ -134,19 +134,28 @@
 
         // Check for keydown event in hidden input field
         rfidInput.addEventListener('keydown', function(event) {
+            
             // If key Enter (code 13), then process the entered string
             if (event.key === 'Enter') {
-                 // Show card number
-                console.log("Read number: " + rfidData);
+                event.preventDefault();
+                
+                // Get the value from the input field directly
+                rfidData = rfidInput.value.trim();
+
+                // Check if rfidData is not empty
+                if (!rfidData) {
+                    rfidInput.value = '';
+                    return;
+                }
 
                 const payload = {
                     visit_key: rfidData,
                     signed_in: true
                 };
+                
                 // Clean the variable for the next input
-                rfidData = '';
                 rfidInput.value = '';
-                rfidData.length
+                rfidData = '';
 
                 fetch('/find-and-track', {
                     method: 'POST',
@@ -157,7 +166,6 @@
                 })
                 .then(response => {
                     if (!response.ok) {
-                        console.log(response);
                         if (response.status === 404) {
                             throw new Error('NOT FOUND');
                         }
@@ -223,18 +231,10 @@
                         // document.getElementById('student-info').style.display = 'none';
                         // $('#noStudentModal').modal('show');
                     } else {
-                        console.error('There was a problem with the fetch operation:', error);
                         document.getElementById('student-info').style.display = 'none';
                         alert('Error fetching student data');
                     }
                 });
-
-
-            } else {
-                // Add entered characters to rfidData
-                if (event.key>='0' && event.key<='9') {
-                    rfidData += event.key;
-                }
             }
         });
 
@@ -242,6 +242,16 @@
         window.addEventListener('focus', function() {
             rfidInput.focus();
         });
+        
+        // Set initial focus
+        rfidInput.focus();
+        
+        // Keep focus on RFID input
+        setInterval(function() {
+            if (document.activeElement !== rfidInput) {
+                rfidInput.focus();
+            }
+        }, 1000);
     </script>
 </body>
 

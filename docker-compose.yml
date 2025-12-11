@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: imlate-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: tracker
+      MYSQL_USER: trackme
+      MYSQL_PASSWORD: trackme
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: >
+      --port=3306
+      --mysqlx=0
+      --group_concat_max_len=320000
+      --log_bin_trust_function_creators=1
+      --sql_mode=STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "trackme", "-ptrackme"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - imlate-network
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    container_name: imlate-app
+    environment:
+      ENVIRONMENT: development
+      DATABASE_HOST: mysql
+      DATABASE_PORT: 3306
+      DATABASE_USERNAME: trackme
+      DATABASE_PASSWORD: trackme
+      DATABASE_NAME: tracker
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+      - go_modules:/go/pkg/mod
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - imlate-network
+    command: >
+      bash -c "
+        echo 'Waiting for MySQL to be ready...' &&
+        sleep 5 &&
+        migrate -database 'mysql://trackme:trackme@tcp(mysql:3306)/tracker' -path /app/migrations up &&
+        echo 'Migrations applied successfully' &&
+        go run cmd/app/main.go
+      "
+
+volumes:
+  mysql_data:
+    driver: local
+  go_modules:
+    driver: local
+
+networks:
+  imlate-network:
+    driver: bridge

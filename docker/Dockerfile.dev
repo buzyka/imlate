@@ -1,0 +1,44 @@
+# Development Dockerfile based on Debian 12
+FROM golang:1.25-bookworm
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install development dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    make \
+    gcc \
+    g++ \
+    libc6-dev \
+    libsqlite3-dev \
+    default-mysql-client \
+    bash \
+    curl \
+    vim \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Go development tools with pinned versions compatible with Go 1.23
+RUN go install github.com/swaggo/swag/cmd/swag@latest && \
+    go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1 && \
+    go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest && \
+    go install github.com/air-verse/air@latest
+
+# Add Go binaries to PATH
+ENV PATH="/go/bin:${PATH}"
+
+WORKDIR /app
+
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Expose port
+EXPOSE 8080
+
+# Default command for development (can be overridden)
+CMD ["go", "run", "cmd/app/main.go"]
