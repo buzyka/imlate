@@ -82,28 +82,28 @@ func (r *VisitorTrack) writeToTheFile(vt *entity.VisitTrack) {
 	if err != nil {
 		return
 	}
-	
+
 	// The path to the CSV file
-    filePath := rootPath + "/output/data.csv"
+	filePath := rootPath + "/output/data.csv"
 
-    // The new row to be added
-    newRow := []string{vt.CreatedAt.Format("2006-01-02 15:04:05"), strconv.Itoa(int(vt.Visitor.Id)), vt.Visitor.Name, vt.Visitor.Surname}
+	// The new row to be added
+	newRow := []string{vt.CreatedAt.Format("2006-01-02 15:04:05"), strconv.Itoa(int(vt.Visitor.Id)), vt.Visitor.Name, vt.Visitor.Surname}
 
-    // Open the file in append mode or create it if it doesn't exist
-    file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-    if err != nil {
-        panic(fmt.Sprint("failed to open file: %s", err))
-    }
-    defer file.Close()
+	// Open the file in append mode or create it if it doesn't exist
+	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(fmt.Sprintf("failed to open file: %s", err))
+	}
+	defer file.Close()
 
-    // Create a new CSV writer
-    writer := csv.NewWriter(file)
-    defer writer.Flush()
+	// Create a new CSV writer
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
 
-    // Write the new row to the CSV file
-    if err := writer.Write(newRow); err != nil {
-        panic(fmt.Sprint("failed to write to file: %s", err))
-    }
+	// Write the new row to the CSV file
+	if err := writer.Write(newRow); err != nil {
+		panic(fmt.Sprintf("failed to write to file: %s", err))
+	}
 }
 
 func getRootPath() (string, error) {
