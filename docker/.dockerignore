@@ -1,0 +1,24 @@
+# Ignore Docker development files in production builds
+docker-dev.sh
+DOCKER.md
+docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env.local
+.env.*.local
+
+# Test coverage
+coverage-report.out
+coverage-report.html
+
+# Development
+*.log
+tmp/

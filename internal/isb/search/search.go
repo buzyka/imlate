@@ -22,7 +22,7 @@ func (sc SearchController) SearchHandler() gin.HandlerFunc {
 			return
 		}
 
-		if visit.Visitor == nil {
+		if visit == nil || visit.Visitor == nil {
 			ctx.Status(http.StatusNotFound)
 			return
 		}
