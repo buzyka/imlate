@@ -14,6 +14,58 @@ type Visitor struct {
 	Connection *sql.DB `container:"type"`
 }
 
+func (r *Visitor) GetAll() ([]*entity.Visitor, error) {
+	rows, err := r.Connection.Query("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, updated_at FROM visitors ORDER BY id ASC")
+	if  err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	visitors := []*entity.Visitor{}
+	for rows.Next() {
+		var tmpGrade sql.NullInt32
+		var tmpImage sql.NullString
+		var tmpErpID sql.NullInt64
+		var tmpErpSchoolID sql.NullString
+		var tmpUpdatedAt sql.NullTime
+		
+		visitor := &entity.Visitor{}
+		err := rows.Scan(
+			&visitor.Id, 
+			&visitor.Name, 
+			&visitor.Surname, 
+			&visitor.IsStudent,
+			&tmpGrade, 
+			&tmpImage,
+			&tmpErpID,
+			&tmpErpSchoolID,
+			&tmpUpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if tmpGrade.Valid {
+			visitor.Grade = int(tmpGrade.Int32)
+		}
+		if tmpImage.Valid {
+			visitor.Image = tmpImage.String	
+		} else {
+			r.AddRandomImage(visitor)	
+		}
+		if tmpErpID.Valid {
+			visitor.ErpID = tmpErpID.Int64
+		}
+		if tmpErpSchoolID.Valid {
+			visitor.ErpSchoolID = tmpErpSchoolID.String
+		}
+		if tmpUpdatedAt.Valid {
+			visitor.UpdatedAt = tmpUpdatedAt.Time
+		}
+		visitors =  append(visitors, visitor)
+	}
+	return visitors, nil
+}
+
 func (r *Visitor) FindByKey(key string) (*entity.VisitDetails, error) {
 	var tmpGrade sql.NullInt32
 	var tmpImage sql.NullString
@@ -100,6 +152,96 @@ func (r *Visitor) AddKeyToVisitor(visitor *entity.Visitor, key string) error {
 	}
 	return nil
 }
+
+func (r *Visitor) AddVisitor(visitor *entity.Visitor) error {
+	if visitor.Id > 0 {
+		return r.updateVisitor(visitor)
+	} else {
+		return r.insertVisitor(visitor)
+	}
+}
+
+func (r *Visitor) updateVisitor(visitor *entity.Visitor) error {	
+	var id sql.NullInt32
+	if visitor.Id > 0 {
+		id = sql.NullInt32{
+			Int32: visitor.Id,
+			Valid: true,
+		}
+	}
+
+	var erpID sql.NullInt64
+	if visitor.ErpID != 0 {
+		erpID = sql.NullInt64{
+			Int64: int64(visitor.ErpID),
+			Valid: true,
+		}
+	}
+
+	var erpSchoolID sql.NullString
+	if visitor.ErpSchoolID != "" {
+		erpSchoolID = sql.NullString{
+			String: visitor.ErpSchoolID,
+			Valid:  true,
+		}
+	}
+
+	_,  err := r.Connection.Exec(
+		"UPDATE visitors SET name = ?, surname = ?, is_student = ?, grade = ?, image = ?, isams_id = ?, isams_school_id = ?, updated_at = ? WHERE id = ?",		
+		visitor.Name, 
+		visitor.Surname, 
+		visitor.IsStudent,
+		visitor.Grade, 
+		visitor.Image, 
+		erpID, 
+		erpSchoolID,
+		visitor.UpdatedAt,
+		id,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *Visitor) insertVisitor(visitor *entity.Visitor) error {
+	var erpID sql.NullInt64
+	if visitor.ErpID != 0 {
+		erpID = sql.NullInt64{
+			Int64: int64(visitor.ErpID),
+			Valid: true,
+		}
+	}
+
+	var erpSchoolID sql.NullString
+	if visitor.ErpSchoolID != "" {
+		erpSchoolID = sql.NullString{
+			String: visitor.ErpSchoolID,
+			Valid:  true,
+		}
+	}
+	result,  err := r.Connection.Exec(
+		"INSERT INTO visitors (name, surname, is_student, grade, image, isams_id, isams_school_id, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",		
+		visitor.Name, 
+		visitor.Surname, 
+		visitor.IsStudent,
+		visitor.Grade, 
+		visitor.Image, 
+		erpID, 
+		erpSchoolID,
+		visitor.UpdatedAt,
+	)
+	if err != nil {
+		return err
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return fmt.Errorf("visitor has not be saved correctly: %s", err.Error())
+	}
+	visitor.Id = int32(id)
+	return nil
+}
+
 
 func (r *Visitor) AddRandomImage(student *entity.Visitor) {
 	source := rand.NewSource(time.Now().UnixNano())

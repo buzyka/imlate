@@ -10,6 +10,7 @@ import (
 	"github.com/buzyka/imlate/internal/isb/search"
 	"github.com/buzyka/imlate/internal/isb/tracker"
 	"github.com/buzyka/imlate/internal/isb/visitor"
+	"github.com/buzyka/imlate/internal/usecase/synchroniser"
 	"github.com/gin-gonic/gin"
 	"github.com/golobby/container/v3"
 	"github.com/subosito/gotenv"
@@ -31,6 +32,8 @@ func main() {
 	
 	gocontainer.Build(&cfg)
 	r := gin.Default()
+
+	syncERPData()
 
 	r.Static("/assets", "./website/assets")
 	r.Static("/output", "./output")
@@ -69,4 +72,13 @@ func main() {
 
 	// Start the server on port 8080
 	r.Run("0.0.0.0:8080")
+}
+
+func syncERPData() {
+	fmt.Println("Starting ERP data sync...")
+	sync := synchroniser.StudentSync{}
+	container.MustFill(container.Global, &sync)
+	if err := sync.SyncAllStudents();  err != nil {
+		fmt.Printf("Error during ERP data sync: %v\n", err)
+	}
 }

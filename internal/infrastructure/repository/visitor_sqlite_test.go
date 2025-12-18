@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/buzyka/imlate/internal/isb/entity"
@@ -517,4 +518,229 @@ func TestFindByKey_CaseInsensitive(t *testing.T) {
 	assert.NotNil(t, result.Visitor)
 	assert.Equal(t, "MIXEDCASE", result.Key)
 	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetAll_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	repo := &Visitor{Connection: db}
+
+	now := time.Now()
+	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "updated_at"}).
+		AddRow(1, "John", "Doe", true, 10, "img.jpg", 1001, "S1001", now).
+		AddRow(2, "Jane", "Doe", false, nil, nil, nil, nil, nil)
+
+	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, updated_at FROM visitors ORDER BY id ASC").
+		WillReturnRows(rows)
+
+	visitors, err := repo.GetAll()
+	assert.NoError(t, err)
+	assert.Len(t, visitors, 2)
+
+	assert.Equal(t, int32(1), visitors[0].Id)
+	assert.Equal(t, "John", visitors[0].Name)
+	assert.Equal(t, 10, visitors[0].Grade)
+	assert.Equal(t, "img.jpg", visitors[0].Image)
+	assert.Equal(t, int64(1001), visitors[0].ErpID)
+	assert.Equal(t, "S1001", visitors[0].ErpSchoolID)
+	assert.Equal(t, now, visitors[0].UpdatedAt)
+
+	assert.Equal(t, int32(2), visitors[1].Id)
+	assert.Equal(t, "Jane", visitors[1].Name)
+	assert.Equal(t, 0, visitors[1].Grade)
+	assert.NotEmpty(t, visitors[1].Image) // Random image should be assigned
+	assert.Equal(t, int64(0), visitors[1].ErpID)
+	assert.Equal(t, "", visitors[1].ErpSchoolID)
+}
+
+func TestGetAll_QueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	repo := &Visitor{Connection: db}
+
+	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, updated_at FROM visitors ORDER BY id ASC").
+		WillReturnError(errors.New("query error"))
+
+	visitors, err := repo.GetAll()
+	assert.Error(t, err)
+	assert.Nil(t, visitors)
+}
+
+func TestGetAll_ScanError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	repo := &Visitor{Connection: db}
+
+	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "updated_at"}).
+		AddRow("invalid", "John", "Doe", true, 10, "img.jpg", 1001, "S1001", time.Now())
+
+	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, updated_at FROM visitors ORDER BY id ASC").
+		WillReturnRows(rows)
+
+	visitors, err := repo.GetAll()
+	assert.Error(t, err)
+	assert.Nil(t, visitors)
+}
+
+func TestAddVisitor_Insert_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	repo := &Visitor{Connection: db}
+
+	now := time.Now()
+	visitor := &entity.Visitor{
+		Name:        "John",
+		Surname:     "Doe",
+		IsStudent:   true,
+		Grade:       10,
+		Image:       "img.jpg",
+		ErpID:       1001,
+		ErpSchoolID: "S1001",
+		UpdatedAt:   now,
+	}
+
+	mock.ExpectExec("INSERT INTO visitors").
+		WithArgs("John", "Doe", true, 10, "img.jpg", 1001, "S1001", now).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	err = repo.AddVisitor(visitor)
+	assert.NoError(t, err)
+	assert.Equal(t, int32(1), visitor.Id)
+}
+
+func TestAddVisitor_Insert_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	repo := &Visitor{Connection: db}
+
+	visitor := &entity.Visitor{Name: "John"}
+
+	mock.ExpectExec("INSERT INTO visitors").
+		WillReturnError(errors.New("insert error"))
+
+	err = repo.AddVisitor(visitor)
+	assert.Error(t, err)
+}
+
+func TestAddVisitor_Insert_LastInsertIdError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	repo := &Visitor{Connection: db}
+
+	visitor := &entity.Visitor{Name: "John"}
+
+	mock.ExpectExec("INSERT INTO visitors").
+		WillReturnResult(sqlmock.NewErrorResult(errors.New("last insert id error")))
+
+	err = repo.AddVisitor(visitor)
+	assert.Error(t, err)
+}
+
+func TestAddVisitor_Update_Success(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	repo := &Visitor{Connection: db}
+
+	now := time.Now()
+	visitor := &entity.Visitor{
+		Id:          1,
+		Name:        "John",
+		Surname:     "Doe",
+		IsStudent:   true,
+		Grade:       10,
+		Image:       "img.jpg",
+		ErpID:       1001,
+		ErpSchoolID: "S1001",
+		UpdatedAt:   now,
+	}
+
+	mock.ExpectExec("UPDATE visitors").
+		WithArgs("John", "Doe", true, 10, "img.jpg", 1001, "S1001", now, 1).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	err = repo.AddVisitor(visitor)
+	assert.NoError(t, err)
+}
+
+func TestAddVisitor_Update_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	repo := &Visitor{Connection: db}
+
+	visitor := &entity.Visitor{Id: 1, Name: "John"}
+
+	mock.ExpectExec("UPDATE visitors").
+		WillReturnError(errors.New("update error"))
+
+	err = repo.AddVisitor(visitor)
+	assert.Error(t, err)
+}
+
+func TestAddVisitor_Update_NullFields(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	repo := &Visitor{Connection: db}
+
+	visitor := &entity.Visitor{
+		Id:          1,
+		Name:        "John",
+		Surname:     "Doe",
+		IsStudent:   false,
+		Grade:       0,
+		Image:       "",
+		ErpID:       0,
+		ErpSchoolID: "",
+		UpdatedAt:   time.Time{},
+	}
+
+	mock.ExpectExec("UPDATE visitors").
+		WithArgs("John", "Doe", false, 0, "", sql.NullInt64{}, sql.NullString{}, time.Time{}, 1).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	err = repo.AddVisitor(visitor)
+	assert.NoError(t, err)
+}
+
+func TestAddVisitor_Insert_NullFields(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	repo := &Visitor{Connection: db}
+
+	visitor := &entity.Visitor{
+		Name:        "John",
+		Surname:     "Doe",
+		IsStudent:   false,
+		Grade:       0,
+		Image:       "",
+		ErpID:       0,
+		ErpSchoolID: "",
+		UpdatedAt:   time.Time{},
+	}
+
+	mock.ExpectExec("INSERT INTO visitors").
+		WithArgs("John", "Doe", false, 0, "", sql.NullInt64{}, sql.NullString{}, time.Time{}).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	err = repo.AddVisitor(visitor)
+	assert.NoError(t, err)
 }
