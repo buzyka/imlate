@@ -2,7 +2,6 @@ package synchroniser
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/buzyka/imlate/internal/domain/erp"
@@ -84,10 +83,6 @@ func (s *StudentSync) SaveStudent(student isams.Student) error {
 	// Check if visitor needs to be updated or added
 	// and set visitor.Id if exists
 	if !s.IsUpToDate(visitor) {
-		// TODO remove it after testing
-		if student.FullName != nil {
-			fmt.Println(*student.FullName)
-		}
 		return s.VisitorRepo.AddVisitor(visitor)
 	}
 	return nil

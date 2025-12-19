@@ -3,6 +3,7 @@ module github.com/buzyka/imlate
 go 1.25
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/caarlos0/env/v6 v6.10.1
 	github.com/gin-gonic/gin v1.11.0
 	github.com/go-sql-driver/mysql v1.9.3
@@ -12,11 +13,17 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/subosito/gotenv v1.6.0
 	go.uber.org/zap v1.27.1
+	golang.org/x/oauth2 v0.34.0
+)
+
+require (
+	github.com/google/uuid v1.6.0 // indirect
+	github.com/jonboulle/clockwork v0.5.0 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 )
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	github.com/DATA-DOG/go-sqlmock v1.5.2 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.14.2 // indirect
 	github.com/bytedance/sonic/loader v0.4.0 // indirect
@@ -24,6 +31,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/gabriel-vasile/mimetype v1.4.11 // indirect
 	github.com/gin-contrib/sse v1.1.0 // indirect
+	github.com/go-co-op/gocron/v2 v2.19.0
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.28.0 // indirect
@@ -47,7 +55,6 @@ require (
 	golang.org/x/arch v0.23.0 // indirect
 	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/net v0.48.0 // indirect
-	golang.org/x/oauth2 v0.34.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
