@@ -22,7 +22,7 @@ func TestGetDatabaseURLFromEnvVariableWillSetCorrectConnectionString(t *testing.
 				"DATABASE_PASSWORD": "pwd",
 				"DATABASE_NAME":     "my_db",
 			},
-			expectedURL: "user1:pwd@tcp(host.com:3307)/my_db",
+			expectedURL: "user1:pwd@tcp(host.com:3307)/my_db?parseTime=true",
 		},
 		{
 			name: "db port omitted used default one",
@@ -33,7 +33,7 @@ func TestGetDatabaseURLFromEnvVariableWillSetCorrectConnectionString(t *testing.
 				"DATABASE_PASSWORD": "pwd",
 				"DATABASE_NAME":     "my_db",
 			},
-			expectedURL: "user1:pwd@tcp(host.com:3306)/my_db",
+			expectedURL: "user1:pwd@tcp(host.com:3306)/my_db?parseTime=true",
 		},
 		{
 			name: "db host and port omitted used default one",
@@ -44,7 +44,7 @@ func TestGetDatabaseURLFromEnvVariableWillSetCorrectConnectionString(t *testing.
 				"DATABASE_PASSWORD": "pwd",
 				"DATABASE_NAME":     "my_db",
 			},
-			expectedURL: "user1:pwd@/my_db",
+			expectedURL: "user1:pwd@/my_db?parseTime=true",
 		},
 	}
 	for _, tc := range tests {
@@ -106,7 +106,7 @@ func TestGetDatabaseURLFromEnvVariableWithNotCorrectConfigurationWillSetDefaultD
 			cfg, err := NewFromEnv()
 
 			assert.Nil(t, err)
-			assert.Equal(t, "trackme:trackme@/tracker", cfg.DatabaseURL)
+			assert.Equal(t, "trackme:trackme@/tracker?parseTime=true", cfg.DatabaseURL)
 		})
 	}
 }
