@@ -201,6 +201,40 @@ func TestGetById_Success(t *testing.T) {
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestGetById_RFC3339(t *testing.T) {
+	// Setup
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	repo := &VisitorTrack{
+		Connection: db,
+	}
+
+	expectedTime := time.Date(2025, 12, 27, 11, 6, 22, 0, time.UTC)
+	rfc3339Time := "2025-12-27T11:06:22Z"
+
+	rows := sqlmock.NewRows([]string{"id", "visitor_id", "key_id", "sign_in", "created_at"}).
+		AddRow(5, 456, "KEY789", false, rfc3339Time)
+
+	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.created_at FROM track AS t WHERE id = ?").
+		WithArgs(int64(5)).
+		WillReturnRows(rows)
+
+	// Execute
+	result, err := repo.GetById(5)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, 5, result.Id)
+	assert.Equal(t, int32(456), result.VisitorId)
+	assert.Equal(t, "KEY789", result.VisitKey)
+	assert.Equal(t, false, result.SignedIn)
+	assert.Equal(t, expectedTime.Unix(), result.CreatedAt.Unix())
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestGetById_NotFound(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()

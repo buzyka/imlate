@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/buzyka/imlate/internal/config"
+	"github.com/buzyka/imlate/internal/infrastructure/cron"
 	"github.com/buzyka/imlate/internal/infrastructure/gocontainer"
 	"github.com/buzyka/imlate/internal/infrastructure/util"
 	"github.com/buzyka/imlate/internal/isb/search"
@@ -30,6 +31,15 @@ func main() {
 	}
 	
 	gocontainer.Build(&cfg)
+
+	// Start cron jobs
+	stopCron, err := cron.RunCron()
+	if err != nil {
+		panic(fmt.Sprintf("Error starting cron jobs: %v\n", err))
+	}
+	defer stopCron()
+
+	// Start Gin server
 	r := gin.Default()
 
 	r.Static("/assets", "./website/assets")
