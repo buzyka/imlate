@@ -22,6 +22,7 @@ const (
 	RegistrationPeriodsEndpoint = "/api/registration/periods"
 	RegistrationStatusEndpoint = "/api/registration/register/{registrationPeriodId}/students/{schoolId}"
 	AbsenceCodesEndpoint = "/api/registration/absencecodes"
+	YearGroupsDivisionsEndpoint = "/api/school/yeargroups/{yearGroupId}/divisions"
 )
 
 const (

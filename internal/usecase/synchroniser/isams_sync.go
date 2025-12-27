@@ -13,17 +13,37 @@ import (
 const PageSize = 100
 
 type StudentSync struct {
-	ERPFactory      erp.Factory                `container:"type"`
-	VisitorRepo     provider.VisitorRepository `container:"type"`
-	currentVisitors []*entity.Visitor
+	ERPFactory         erp.Factory                `container:"type"`
+	VisitorRepo        provider.VisitorRepository `container:"type"`
+	currentVisitors    []*entity.Visitor
+	ctx                context.Context
+	currentClient      erp.Client
+	yearGroupDevisions map[int32][]int32
 }
 
-func (s *StudentSync) SyncAllStudents() error {
-	ctx := context.Background()
+func (s *StudentSync) cleanUpSyncSession() {
+	s.currentClient = nil
+	s.ctx = nil
+	s.yearGroupDevisions = nil
+}
+
+func (s *StudentSync) startSyncSession(ctx context.Context) error {
 	ERPClient, err := s.ERPFactory.NewClient(ctx)
 	if err != nil {
 		return err
 	}
+	s.currentClient = ERPClient
+	s.yearGroupDevisions = make(map[int32][]int32)
+	return nil
+}
+
+func (s *StudentSync) SyncAllStudents() error {
+	ctx := context.Background()
+	err := s.startSyncSession(ctx)
+	if err != nil {
+		return err
+	}
+	defer s.cleanUpSyncSession()
 
 	s.currentVisitors, err = s.VisitorRepo.GetAll()
 	if err != nil {
@@ -33,7 +53,7 @@ func (s *StudentSync) SyncAllStudents() error {
 	var pageNumber int32 = 1
 
 	for {
-		resp, err := ERPClient.GetStudents(pageNumber, PageSize)
+		resp, err := s.currentClient.GetStudents(pageNumber, PageSize)
 		if err != nil {
 			return err
 		}
@@ -57,9 +77,15 @@ func (s *StudentSync) SaveStudent(student isams.Student) error {
 		fullName = *student.FullName
 	}
 
-	var grade int
+	var grade, yearGroup int
 	if student.YearGroup != nil {
 		grade = *student.YearGroup
+		yearGroup = *student.YearGroup
+	}
+
+	devisions, err := s.getDivisionsByYearGroup(int32(yearGroup))
+	if err != nil {
+		return err
 	}
 
 	var UpdatedAt time.Time
@@ -71,13 +97,15 @@ func (s *StudentSync) SaveStudent(student isams.Student) error {
 	}
 
 	visitor := &entity.Visitor{
-		Name:        "",
-		Surname:     fullName,
-		IsStudent:   true,
-		Grade:       grade,
-		ErpID:       student.ID,
-		ErpSchoolID: student.SchoolID,
-		UpdatedAt:   UpdatedAt,
+		Name:           "",
+		Surname:        fullName,
+		IsStudent:      true,
+		Grade:          grade,
+		ErpID:          student.ID,
+		ErpSchoolID:    student.SchoolID,
+		ErpYearGroupID: int32(yearGroup),
+		ErpDivisions:   devisions,
+		UpdatedAt:      UpdatedAt,
 	}
 
 	// Check if visitor needs to be updated or added
@@ -95,7 +123,7 @@ func (s *StudentSync) IsUpToDate(newVisitor *entity.Visitor) bool {
 			switch {
 			case newVisitor.UpdatedAt.IsZero():
 				return true
-			case currentVisitor.UpdatedAt.Equal(newVisitor.UpdatedAt):
+			case currentVisitor.UpdatedAt.Equal(newVisitor.UpdatedAt) && currentVisitor.GetSyncHash() == newVisitor.GetSyncHash():
 				return true
 			default:
 				return false
@@ -106,4 +134,21 @@ func (s *StudentSync) IsUpToDate(newVisitor *entity.Visitor) bool {
 		newVisitor.UpdatedAt = time.Now().Truncate(time.Second)
 	}
 	return false
+}
+
+func (s *StudentSync) getDivisionsByYearGroup(erpID int32) ([]int32, error) {
+	if divisions, ok := s.yearGroupDevisions[erpID]; ok {
+		return divisions, nil
+	}
+
+	resp, err := s.currentClient.GetYearGroupDivisions(erpID)
+	if err != nil {
+		return nil, err
+	}
+	var divisions []int32
+	for _, division := range resp.Divisions {
+		divisions = append(divisions, division.ID)
+	}
+	s.yearGroupDevisions[erpID] = divisions
+	return divisions, nil
 }
