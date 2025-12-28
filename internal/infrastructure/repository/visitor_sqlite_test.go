@@ -16,7 +16,7 @@ func TestFindByKey_Success(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{
 		Connection: db,
@@ -61,7 +61,7 @@ func TestFindByKey_NotFound(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{
 		Connection: db,
@@ -85,7 +85,7 @@ func TestFindByKey_DatabaseError(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{
 		Connection: db,
@@ -110,7 +110,7 @@ func TestFindByKey_NullGrade(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{
 		Connection: db,
@@ -138,7 +138,7 @@ func TestFindByKey_NullImage(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{
 		Connection: db,
@@ -168,7 +168,7 @@ func TestFindById_Success(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{
 		Connection: db,
@@ -204,7 +204,7 @@ func TestFindById_NotFound(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{
 		Connection: db,
@@ -228,7 +228,7 @@ func TestFindById_DatabaseError(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{
 		Connection: db,
@@ -253,7 +253,7 @@ func TestFindById_NullValues(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{
 		Connection: db,
@@ -284,7 +284,7 @@ func TestAddKeyToVisitor_Success(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{
 		Connection: db,
@@ -318,7 +318,7 @@ func TestAddKeyToVisitor_SameVisitor(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{
 		Connection: db,
@@ -350,7 +350,7 @@ func TestAddKeyToVisitor_DifferentVisitor(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{
 		Connection: db,
@@ -375,7 +375,7 @@ func TestAddKeyToVisitor_DifferentVisitor(t *testing.T) {
 
 	// Assert
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Key already assigned to another visitor")
+	assert.Contains(t, err.Error(), "key already assigned to another visitor")
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -383,7 +383,7 @@ func TestAddKeyToVisitor_SearchError(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{
 		Connection: db,
@@ -405,7 +405,7 @@ func TestAddKeyToVisitor_SearchError(t *testing.T) {
 
 	// Assert
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Search by key error")
+	assert.Contains(t, err.Error(), "search by key error")
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -413,7 +413,7 @@ func TestAddKeyToVisitor_InsertError(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{
 		Connection: db,
@@ -448,7 +448,7 @@ func TestAddRandomImage(t *testing.T) {
 	// Setup
 	db, _, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{
 		Connection: db,
@@ -473,7 +473,7 @@ func TestAddRandomImage_MultipleCalls(t *testing.T) {
 	// Setup
 	db, _, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{
 		Connection: db,
@@ -494,8 +494,8 @@ func TestAddRandomImage_MultipleCalls(t *testing.T) {
 
 	// Extract numbers from paths
 	var num1, num2 int
-	fmt.Sscanf(visitor1.Image, "/assets/img/teachers/%d.jpg", &num1)
-	fmt.Sscanf(visitor2.Image, "/assets/img/teachers/%d.jpg", &num2)
+	_, _ = fmt.Sscanf(visitor1.Image, "/assets/img/teachers/%d.jpg", &num1)
+	_, _ = fmt.Sscanf(visitor2.Image, "/assets/img/teachers/%d.jpg", &num2)
 
 	assert.True(t, num1 >= 1 && num1 <= 11, "Image number should be between 1 and 11")
 	assert.True(t, num2 >= 1 && num2 <= 11, "Image number should be between 1 and 11")
@@ -505,7 +505,7 @@ func TestFindByKey_CaseInsensitive(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{
 		Connection: db,
@@ -533,7 +533,7 @@ func TestFindByKey_CaseInsensitive(t *testing.T) {
 func TestGetAll_Success(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{Connection: db}
 
@@ -568,7 +568,7 @@ func TestGetAll_Success(t *testing.T) {
 func TestGetAll_QueryError(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{Connection: db}
 
@@ -583,7 +583,7 @@ func TestGetAll_QueryError(t *testing.T) {
 func TestGetAll_ScanError(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{Connection: db}
 
@@ -601,7 +601,7 @@ func TestGetAll_ScanError(t *testing.T) {
 func TestAddVisitor_Insert_Success(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{Connection: db}
 
@@ -629,7 +629,7 @@ func TestAddVisitor_Insert_Success(t *testing.T) {
 func TestAddVisitor_Insert_Error(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{Connection: db}
 
@@ -645,7 +645,7 @@ func TestAddVisitor_Insert_Error(t *testing.T) {
 func TestAddVisitor_Insert_LastInsertIdError(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{Connection: db}
 
@@ -661,7 +661,7 @@ func TestAddVisitor_Insert_LastInsertIdError(t *testing.T) {
 func TestAddVisitor_Update_Success(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{Connection: db}
 
@@ -689,7 +689,7 @@ func TestAddVisitor_Update_Success(t *testing.T) {
 func TestAddVisitor_Update_Error(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{Connection: db}
 
@@ -705,7 +705,7 @@ func TestAddVisitor_Update_Error(t *testing.T) {
 func TestAddVisitor_Update_NullFields(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{Connection: db}
 
@@ -732,7 +732,7 @@ func TestAddVisitor_Update_NullFields(t *testing.T) {
 func TestAddVisitor_Insert_NullFields(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &Visitor{Connection: db}
 

@@ -20,7 +20,7 @@ func main() {
 	envFiles := []string{".env"}
 	if rootPath, err := util.GetRootPath(); err == nil {
 		if util.FileExists(rootPath + "/.env") {
-			envFiles = append(envFiles, rootPath + "/.env")
+			envFiles = append(envFiles, rootPath+"/.env")
 		}
 	}
 	_ = gotenv.Load(envFiles...)
@@ -29,7 +29,7 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("Error loading config from env: %v\n", err))
 	}
-	
+
 	gocontainer.Build(&cfg)
 
 	// Start cron jobs
@@ -67,10 +67,10 @@ func main() {
 	searchController := &search.SearchController{}
 	container.MustFill(container.Global, searchController)
 	r.GET("/search/:id", searchController.SearchHandler())
-	
+
 	apiRouteGroup := r.Group("/api")
 	trackerController := &tracker.TrackerController{}
-	container.MustFill(container.Global, trackerController)	
+	container.MustFill(container.Global, trackerController)
 	r.POST("/track", trackerController.TrackHandler())
 	r.POST("/find-and-track", trackerController.FindAndTrackHandler())
 	visitorController := &visitor.VisitorController{}
@@ -78,5 +78,7 @@ func main() {
 	apiRouteGroup.PATCH("/add-key", visitorController.AddKeyHandler())
 
 	// Start the server on port 8080
-	r.Run("0.0.0.0:8080")
+	if err := r.Run("0.0.0.0:8080"); err != nil {
+		panic(err)
+	}
 }

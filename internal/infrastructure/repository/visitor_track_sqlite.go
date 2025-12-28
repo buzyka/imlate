@@ -97,7 +97,7 @@ func (r *VisitorTrack) writeToTheFile(vt *entity.VisitTrack) {
 	if err != nil {
 		panic(fmt.Sprintf("failed to open file: %s", err))
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Create a new CSV writer
 	writer := csv.NewWriter(file)

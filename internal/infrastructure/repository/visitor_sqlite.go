@@ -20,7 +20,7 @@ func (r *Visitor) GetAll() ([]*entity.Visitor, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	visitors := []*entity.Visitor{}
 	for rows.Next() {
@@ -185,14 +185,14 @@ func (r *Visitor) FindById(id int32) (*entity.Visitor, error) {
 func (r *Visitor) AddKeyToVisitor(visitor *entity.Visitor, key string) error {
 	details, err := r.FindByKey(key)
 	if err != nil {
-		return fmt.Errorf("Search by key error: %s", err.Error())
+		return fmt.Errorf("search by key error: %s", err.Error())
 	}
 
 	if details.Visitor != nil && details.Visitor.Id > 0 {
 		if details.Visitor.Id == visitor.Id {
 			return nil
 		}
-		return fmt.Errorf("Key already assigned to another visitor")
+		return fmt.Errorf("key already assigned to another visitor")
 	}
 
 	_, err = r.Connection.Exec("INSERT INTO visitor_key (visitor_id, key_id) VALUES (?, ?)", visitor.Id, key)
