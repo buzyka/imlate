@@ -18,13 +18,13 @@ type StudentSync struct {
 	currentVisitors    []*entity.Visitor
 	ctx                context.Context
 	currentClient      erp.Client
-	yearGroupDevisions map[int32][]int32
+	yearGroupDivisions map[int32][]int32
 }
 
 func (s *StudentSync) cleanUpSyncSession() {
 	s.currentClient = nil
 	s.ctx = nil
-	s.yearGroupDevisions = nil
+	s.yearGroupDivisions = nil
 }
 
 func (s *StudentSync) startSyncSession(ctx context.Context) error {
@@ -33,7 +33,7 @@ func (s *StudentSync) startSyncSession(ctx context.Context) error {
 		return err
 	}
 	s.currentClient = ERPClient
-	s.yearGroupDevisions = make(map[int32][]int32)
+	s.yearGroupDivisions = make(map[int32][]int32)
 	return nil
 }
 
@@ -83,7 +83,7 @@ func (s *StudentSync) SaveStudent(student isams.Student) error {
 		yearGroup = *student.YearGroup
 	}
 
-	devisions, err := s.getDivisionsByYearGroup(int32(yearGroup))
+	divisions, err := s.getDivisionsByYearGroup(int32(yearGroup))
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func (s *StudentSync) SaveStudent(student isams.Student) error {
 		ErpID:          student.ID,
 		ErpSchoolID:    student.SchoolID,
 		ErpYearGroupID: int32(yearGroup),
-		ErpDivisions:   devisions,
+		ErpDivisions:   divisions,
 		UpdatedAt:      UpdatedAt,
 	}
 
@@ -137,7 +137,7 @@ func (s *StudentSync) IsUpToDate(newVisitor *entity.Visitor) bool {
 }
 
 func (s *StudentSync) getDivisionsByYearGroup(erpID int32) ([]int32, error) {
-	if divisions, ok := s.yearGroupDevisions[erpID]; ok {
+	if divisions, ok := s.yearGroupDivisions[erpID]; ok {
 		return divisions, nil
 	}
 
@@ -149,6 +149,6 @@ func (s *StudentSync) getDivisionsByYearGroup(erpID int32) ([]int32, error) {
 	for _, division := range resp.Divisions {
 		divisions = append(divisions, division.ID)
 	}
-	s.yearGroupDevisions[erpID] = divisions
+	s.yearGroupDivisions[erpID] = divisions
 	return divisions, nil
 }

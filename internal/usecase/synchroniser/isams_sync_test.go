@@ -292,7 +292,7 @@ func TestSaveStudent_IsUpToDate_NoUpdate(t *testing.T) {
 	sync := &StudentSync{
 		VisitorRepo: mockRepo,
 		currentClient: mockClient,
-		yearGroupDevisions: make(map[int32][]int32),
+		yearGroupDivisions: make(map[int32][]int32),
 	}
 
 	updatedAt, _ := time.Parse(time.RFC3339, "2023-01-01T12:00:00Z")
@@ -332,7 +332,7 @@ func TestSaveStudent_IsUpToDate_UpdateNeeded(t *testing.T) {
 	sync := &StudentSync{
 		VisitorRepo: mockRepo,
 		currentClient: mockClient,
-		yearGroupDevisions: make(map[int32][]int32),
+		yearGroupDivisions: make(map[int32][]int32),
 	}
 
 	oldTime, _ := time.Parse(time.RFC3339, "2022-01-01T12:00:00Z")
@@ -371,7 +371,7 @@ func TestSaveStudent_NewVisitor(t *testing.T) {
 	sync := &StudentSync{
 		VisitorRepo: mockRepo,
 		currentClient: mockClient,
-		yearGroupDevisions: make(map[int32][]int32),
+		yearGroupDivisions: make(map[int32][]int32),
 	}
 	sync.currentVisitors = []*entity.Visitor{}
 
@@ -400,7 +400,7 @@ func TestSaveStudent_InvalidTimeFormat(t *testing.T) {
 	sync := &StudentSync{
 		VisitorRepo: mockRepo,
 		currentClient: mockClient,
-		yearGroupDevisions: make(map[int32][]int32),
+		yearGroupDivisions: make(map[int32][]int32),
 	}
 	sync.currentVisitors = []*entity.Visitor{}
 
@@ -462,7 +462,7 @@ func TestSaveStudent_GetDivisionsError(t *testing.T) {
 	sync := &StudentSync{
 		VisitorRepo: mockRepo,
 		currentClient: mockClient,
-		yearGroupDevisions: make(map[int32][]int32),
+		yearGroupDivisions: make(map[int32][]int32),
 	}
 
 	yearGroup := 10
@@ -483,7 +483,7 @@ func TestGetDivisionsByYearGroup_Cache(t *testing.T) {
 	mockClient := new(MockERPClient)
 	sync := &StudentSync{
 		currentClient: mockClient,
-		yearGroupDevisions: make(map[int32][]int32),
+		yearGroupDivisions: make(map[int32][]int32),
 	}
 
 	yearGroup := int32(10)
@@ -512,7 +512,7 @@ func TestGetDivisionsByYearGroup_Error(t *testing.T) {
 	mockClient := new(MockERPClient)
 	sync := &StudentSync{
 		currentClient: mockClient,
-		yearGroupDevisions: make(map[int32][]int32),
+		yearGroupDivisions: make(map[int32][]int32),
 	}
 
 	yearGroup := int32(10)
