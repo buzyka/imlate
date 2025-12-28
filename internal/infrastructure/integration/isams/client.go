@@ -2,9 +2,7 @@ package isams
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"net/http/httputil"
 	"strings"
 
 	"golang.org/x/oauth2"
@@ -80,8 +78,5 @@ type Client struct {
 
 
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
-	if resp, err :=httputil.DumpRequestOut(req, true); err == nil {
-		fmt.Printf("Request: %s\n", string(resp))
-	}
 	return c.HTTPClient.Do(req)
 }

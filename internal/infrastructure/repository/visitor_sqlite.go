@@ -302,7 +302,7 @@ func (r *Visitor) insertVisitor(visitor *entity.Visitor) error {
 	}
 	id, err := result.LastInsertId()
 	if err != nil {
-		return fmt.Errorf("visitor has not be saved correctly: %s", err.Error())
+		return fmt.Errorf("visitor has not been saved correctly: %s", err.Error())
 	}
 	visitor.Id = int32(id)
 	return nil

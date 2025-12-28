@@ -69,4 +69,4 @@ func Build(cfg *config.Config) {
 			Connection: connection,
 		}
 	})
-}	
+}
