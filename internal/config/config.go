@@ -2,19 +2,24 @@ package config
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/caarlos0/env/v6"
 )
 
 type Config struct {
-	Debug          bool   `env:"DEBUG" envDefault:"false"`
-	Environment    string `env:"ENVIRONMENT" envDefault:"production"` // possible values: development, staging, production.
-	DatabaseEngine string `env:"DATABASE_ENGINE" envDefault:"mysql"`
-	DatabaseURL    string `env:"DATABASE_URL" envDefault:"trackme:trackme@/tracker?parseTime=true"`
+	Debug          			bool   `env:"DEBUG" envDefault:"false"`
+	Environment    			string `env:"ENVIRONMENT" envDefault:"production"` // possible values: development, staging, production.
+	DatabaseEngine 			string `env:"DATABASE_ENGINE" envDefault:"mysql"`
+	DatabaseURL    			string `env:"DATABASE_URL" envDefault:"trackme:trackme@/tracker?parseTime=true"`
 
-	ISAMSBaseURL         string `env:"ISAMS_BASE_URL"`
-	ISAMSAPIClientID     string `env:"ISAMS_API_CLIENT_ID"`
-	ISAMSAPIClientSecret string `env:"ISAMS_API_CLIENT_SECRET"`
+	ISAMSBaseURL         	string `env:"ISAMS_BASE_URL"`
+	ISAMSAPIClientID     	string `env:"ISAMS_API_CLIENT_ID"`
+	ISAMSAPIClientSecret 	string `env:"ISAMS_API_CLIENT_SECRET"`
+
+	ERPTimeZone 		 	string `env:"ERP_LOCAL_TIMEZONE"`
+
+	erpLocation 			*time.Location
 }
 
 type MysqlDBConfig struct {
@@ -43,6 +48,14 @@ func NewFromEnv() (Config, error) {
 	case "sqlite":
 		if url, ok := getDatabaseURLForSqliteFromEnv(); ok {
 			cfg.DatabaseURL = url
+		}
+	}
+
+	cfg.erpLocation = time.Local
+
+	if cfg.ERPTimeZone != "" {
+		if erpLoc, err := time.LoadLocation(cfg.ERPTimeZone); err == nil {
+			cfg.erpLocation = erpLoc
 		}
 	}
 
@@ -78,4 +91,8 @@ func getDatabaseURLForMysqlFromEnv() (url string, ok bool) {
 	}
 	url += "/" + cfg.DatabaseName + "?parseTime=true"
 	return url, true
+}
+
+func (c *Config) ERPTimeLocation() *time.Location {
+	return c.erpLocation
 }
