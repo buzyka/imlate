@@ -50,6 +50,9 @@ golf:
 	@./docker/docker-dev.sh golf
 
 # Database
+migrate-create:
+	@./docker/docker-dev.sh migrate-create $(name)
+
 migrate-up:
 	@./docker/docker-dev.sh migrate-up
 

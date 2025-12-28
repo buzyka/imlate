@@ -25,7 +25,7 @@ func TestOpen_Success(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Cleanup
-	db.Close()
+	_ = db.Close()
 }
 
 func TestOpen_MemoryDatabase(t *testing.T) {
@@ -54,7 +54,7 @@ func TestOpen_MemoryDatabase(t *testing.T) {
 	assert.Equal(t, "test_value", name)
 
 	// Cleanup
-	db.Close()
+	_ = db.Close()
 }
 
 func TestOpen_ConnectionPoolSettings(t *testing.T) {
@@ -77,7 +77,7 @@ func TestOpen_ConnectionPoolSettings(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Cleanup
-	db.Close()
+	_ = db.Close()
 }
 
 func TestOpen_MaxOpenConnections(t *testing.T) {
@@ -97,7 +97,7 @@ func TestOpen_MaxOpenConnections(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Cleanup
-	db.Close()
+	_ = db.Close()
 }
 
 func TestMigrateUp_Success(t *testing.T) {
@@ -144,8 +144,8 @@ func TestGetRootPath_NoMigrationsDirectory(t *testing.T) {
 	// Setup - Change to temp directory without migrations
 	tempDir := t.TempDir()
 	originalWd, _ := os.Getwd()
-	os.Chdir(tempDir)
-	defer os.Chdir(originalWd)
+	_ = os.Chdir(tempDir)
+	defer func() { _ = os.Chdir(originalWd) }()
 
 	// Execute
 	path, err := getRootPath()
@@ -159,7 +159,7 @@ func TestGetRootPath_NoMigrationsDirectory(t *testing.T) {
 func TestOpen_WithNilLogger(t *testing.T) {
 	// Execute & Assert - Should panic with nil logger
 	assert.Panics(t, func() {
-		Open(":memory:", nil)
+		_, _ = Open(":memory:", nil)
 	})
 }
 
@@ -178,7 +178,7 @@ func TestOpen_EmptyDatabaseURL(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Cleanup
-	db.Close()
+	_ = db.Close()
 }
 
 func TestOpen_MultipleConnections(t *testing.T) {
@@ -210,8 +210,8 @@ func TestOpen_MultipleConnections(t *testing.T) {
 	assert.Error(t, err) // Should error because table doesn't exist
 
 	// Cleanup
-	db1.Close()
-	db2.Close()
+	_ = db1.Close()
+	_ = db2.Close()
 }
 
 func TestOpen_PersistentDatabase(t *testing.T) {
@@ -229,7 +229,7 @@ func TestOpen_PersistentDatabase(t *testing.T) {
 	assert.NoError(t, err)
 	_, err = db1.Exec("INSERT INTO persistent_test (value) VALUES (?)", "test_data")
 	assert.NoError(t, err)
-	db1.Close()
+	_ = db1.Close()
 
 	// Execute - Second connection to same file
 	db2, err := Open(dbPath, logger)
@@ -242,7 +242,7 @@ func TestOpen_PersistentDatabase(t *testing.T) {
 	assert.Equal(t, "test_data", value)
 
 	// Cleanup
-	db2.Close()
+	_ = db2.Close()
 }
 
 func TestOpen_ConnectionLifetime(t *testing.T) {
@@ -262,7 +262,7 @@ func TestOpen_ConnectionLifetime(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Cleanup
-	db.Close()
+	_ = db.Close()
 }
 
 func TestGetMigrationSourceURL_Integration(t *testing.T) {
@@ -288,7 +288,7 @@ func TestOpen_WALMode(t *testing.T) {
 	// Execute
 	db, err := Open(dbPath, logger)
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// The code has commented out WAL mode, but we can test the database works
 	var journalMode string
@@ -306,7 +306,7 @@ func TestOpen_StatementCache(t *testing.T) {
 	// Execute
 	db, err := Open(":memory:", logger)
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Create table
 	_, err = db.Exec("CREATE TABLE cache_test (id INTEGER PRIMARY KEY, value TEXT)")
@@ -315,7 +315,7 @@ func TestOpen_StatementCache(t *testing.T) {
 	// Execute same query multiple times (statement caching test)
 	stmt, err := db.Prepare("INSERT INTO cache_test (value) VALUES (?)")
 	assert.NoError(t, err)
-	defer stmt.Close()
+	defer func() { _ = stmt.Close() }()
 
 	for i := 0; i < 10; i++ {
 		_, err = stmt.Exec("test")
@@ -344,5 +344,5 @@ func TestOpen_LoggerIntegration(t *testing.T) {
 	// zaptest will fail the test if there are unexpected errors
 
 	// Cleanup
-	db.Close()
+	_ = db.Close()
 }

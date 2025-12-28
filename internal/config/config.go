@@ -6,13 +6,15 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
-var localIPs = []string{"127.0.0.1", "::1"}
-
 type Config struct {
-	Debug                                  bool     `env:"DEBUG" envDefault:"false"`
-	Environment                            string   `env:"ENVIRONMENT" envDefault:"production"` // possible values: development, staging, production.
-	DatabaseEngine						   string   `env:"DATABASE_ENGINE" envDefault:"mysql"`
-	DatabaseURL                            string   `env:"DATABASE_URL" envDefault:"trackme:trackme@/tracker"`
+	Debug          bool   `env:"DEBUG" envDefault:"false"`
+	Environment    string `env:"ENVIRONMENT" envDefault:"production"` // possible values: development, staging, production.
+	DatabaseEngine string `env:"DATABASE_ENGINE" envDefault:"mysql"`
+	DatabaseURL    string `env:"DATABASE_URL" envDefault:"trackme:trackme@/tracker?parseTime=true"`
+
+	ISAMSBaseURL         string `env:"ISAMS_BASE_URL"`
+	ISAMSAPIClientID     string `env:"ISAMS_API_CLIENT_ID"`
+	ISAMSAPIClientSecret string `env:"ISAMS_API_CLIENT_SECRET"`
 }
 
 type MysqlDBConfig struct {
@@ -41,8 +43,8 @@ func NewFromEnv() (Config, error) {
 	case "sqlite":
 		if url, ok := getDatabaseURLForSqliteFromEnv(); ok {
 			cfg.DatabaseURL = url
-		}			
-	}	
+		}
+	}
 
 	return cfg, nil
 }
@@ -57,7 +59,6 @@ func getDatabaseURLForSqliteFromEnv() (url string, ok bool) {
 	}
 	return cfg.DatabasePath, true
 }
-
 
 func getDatabaseURLForMysqlFromEnv() (url string, ok bool) {
 	cfg := &MysqlDBConfig{}
@@ -75,6 +76,6 @@ func getDatabaseURLForMysqlFromEnv() (url string, ok bool) {
 			url += fmt.Sprintf("tcp(%s:3306)", cfg.Host)
 		}
 	}
-	url += "/" + cfg.DatabaseName
+	url += "/" + cfg.DatabaseName + "?parseTime=true"
 	return url, true
 }

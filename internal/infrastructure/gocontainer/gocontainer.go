@@ -1,16 +1,28 @@
 package gocontainer
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/buzyka/imlate/internal/config"
+	"github.com/buzyka/imlate/internal/domain/erp"
+	"github.com/buzyka/imlate/internal/domain/provider"
 	"github.com/buzyka/imlate/internal/infrastructure/db"
+	"github.com/buzyka/imlate/internal/infrastructure/integration/isams"
 	"github.com/buzyka/imlate/internal/infrastructure/logging"
 	"github.com/buzyka/imlate/internal/infrastructure/repository"
 	"github.com/buzyka/imlate/internal/isb/entity"
 	"github.com/golobby/container/v3"
 	"go.uber.org/zap"
 )
+
+type ERPFactory struct {
+	f *isams.ClientFactory
+}
+
+func (ef *ERPFactory) NewClient(ctx context.Context) (erp.Client, error) {
+	return ef.f.NewClient(ctx)
+}
 
 func Build(cfg *config.Config) {
 	logger := logging.NewLogger(true)
@@ -39,6 +51,21 @@ func Build(cfg *config.Config) {
 
 	container.MustSingleton(container.Global, func () entity.VisitorTrackRepository {
 		return &repository.VisitorTrack{
+			Connection: connection,
+		}
+	})
+
+	container.MustSingleton(container.Global, func () erp.Factory {
+		f := &isams.ClientFactory{
+			BaseURL:    cfg.ISAMSBaseURL,
+			ClientID:   cfg.ISAMSAPIClientID,
+			ClientSecret:     cfg.ISAMSAPIClientSecret,
+		}
+		return &ERPFactory{f: f}
+	})
+
+	container.MustSingleton(container.Global, func () provider.VisitorRepository {
+		return &repository.Visitor{
 			Connection: connection,
 		}
 	})

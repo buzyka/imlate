@@ -59,7 +59,10 @@ func (r *VisitorTrack) GetById(id int64) (*entity.VisitTrack, error) {
 
 	track.CreatedAt, err = time.Parse("2006-01-02 15:04:05", string(createdAtRaw))
 	if err != nil {
-		return nil, err
+		track.CreatedAt, err = time.Parse(time.RFC3339, string(createdAtRaw))
+		if err != nil {
+			return nil, err
+		}
 	}
 	return track, nil
 }
@@ -94,7 +97,7 @@ func (r *VisitorTrack) writeToTheFile(vt *entity.VisitTrack) {
 	if err != nil {
 		panic(fmt.Sprintf("failed to open file: %s", err))
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Create a new CSV writer
 	writer := csv.NewWriter(file)
