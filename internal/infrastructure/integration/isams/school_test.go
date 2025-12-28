@@ -18,7 +18,7 @@ func TestClient_GetYearGroupDivisions_Success(t *testing.T) {
 		assert.Equal(t, "application/json", r.Header.Get("Accept"))
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"divisions": [
 				{
 					"id": 1,
@@ -77,7 +77,7 @@ func TestClient_GetYearGroupsDivisions_StatusError(t *testing.T) {
 func TestClient_GetYearGroupsDivisions_JSONError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`invalid json`))
+		_, _ = w.Write([]byte(`invalid json`))
 	}))
 	defer server.Close()
 

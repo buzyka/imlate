@@ -97,7 +97,7 @@ func (c *Client) GetStudents(page, pageSize int32) (*StudentsResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to get students: %s", resp.Status)
@@ -125,7 +125,7 @@ func (c *Client) GetStudentByID(id int32) (*Student, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to get student: %s", resp.Status)

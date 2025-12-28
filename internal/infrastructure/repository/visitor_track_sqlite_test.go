@@ -15,7 +15,7 @@ func TestStore_Success(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &VisitorTrack{
 		Connection: db,
@@ -68,7 +68,7 @@ func TestStore_InsertError(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &VisitorTrack{
 		Connection: db,
@@ -99,7 +99,7 @@ func TestStore_LastInsertIdError(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &VisitorTrack{
 		Connection: db,
@@ -130,7 +130,7 @@ func TestStore_GetByIdError(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &VisitorTrack{
 		Connection: db,
@@ -172,7 +172,7 @@ func TestGetById_Success(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &VisitorTrack{
 		Connection: db,
@@ -205,7 +205,7 @@ func TestGetById_RFC3339(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &VisitorTrack{
 		Connection: db,
@@ -239,7 +239,7 @@ func TestGetById_NotFound(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &VisitorTrack{
 		Connection: db,
@@ -263,7 +263,7 @@ func TestGetById_DatabaseError(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &VisitorTrack{
 		Connection: db,
@@ -288,7 +288,7 @@ func TestGetById_InvalidTimeFormat(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &VisitorTrack{
 		Connection: db,
@@ -315,7 +315,7 @@ func TestCountEventsByVisitorIdSince_Success(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &VisitorTrack{
 		Connection: db,
@@ -342,7 +342,7 @@ func TestCountEventsByVisitorIdSince_ZeroCount(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &VisitorTrack{
 		Connection: db,
@@ -369,7 +369,7 @@ func TestCountEventsByVisitorIdSince_DatabaseError(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &VisitorTrack{
 		Connection: db,
@@ -396,7 +396,7 @@ func TestCountEventsByVisitorIdSince_ScanError(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &VisitorTrack{
 		Connection: db,
@@ -424,7 +424,7 @@ func TestStore_SignedInFalse(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &VisitorTrack{
 		Connection: db,
@@ -471,7 +471,7 @@ func TestCountEventsByVisitorIdSince_LargeCount(t *testing.T) {
 	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := &VisitorTrack{
 		Connection: db,

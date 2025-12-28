@@ -25,7 +25,7 @@ func RunCron() (StopCronFunc, error) {
 	go s.Start()
 
 	return func() {
-		s.Shutdown()
+		_ = s.Shutdown()
 	}, nil
 }
 
@@ -38,13 +38,13 @@ func registerJobs(s gocron.Scheduler) error {
 			false,
 		),
 		gocron.NewTask(
-			func () {
+			func() {
 				var log *zap.SugaredLogger
 				container.MustResolve(container.Global, &log)
 				log.Infof("Starting ERP data sync... TIME: %s", time.Now().Format(time.RFC3339))
 				sync := synchroniser.StudentSync{}
 				container.MustFill(container.Global, &sync)
-				if err := sync.SyncAllStudents();  err != nil {
+				if err := sync.SyncAllStudents(); err != nil {
 					log.Errorf("Error during ERP data sync: %v\n", err)
 				}
 			},

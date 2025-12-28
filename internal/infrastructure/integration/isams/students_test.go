@@ -16,7 +16,7 @@ func TestClient_GetStudents_Success(t *testing.T) {
 		assert.Equal(t, "application/json", r.Header.Get("Accept"))
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"count": 1,
 			"page": 1,
 			"pageSize": 10,
@@ -78,7 +78,7 @@ func TestClient_GetStudents_StatusError(t *testing.T) {
 func TestClient_GetStudents_JSONError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`invalid json`))
+		_, _ = w.Write([]byte(`invalid json`))
 	}))
 	defer server.Close()
 
@@ -110,7 +110,7 @@ func TestClient_GetStudentByID_Success(t *testing.T) {
 		assert.Equal(t, "application/json", r.Header.Get("Accept"))
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"id": 123,
 			"fullName": "John Doe",
 			"schoolId": "S123"
@@ -161,7 +161,7 @@ func TestClient_GetStudentByID_StatusError(t *testing.T) {
 func TestClient_GetStudentByID_JSONError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`invalid json`))
+		_, _ = w.Write([]byte(`invalid json`))
 	}))
 	defer server.Close()
 

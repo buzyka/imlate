@@ -6,8 +6,6 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
-var localIPs = []string{"127.0.0.1", "::1"}
-
 type Config struct {
 	Debug          bool   `env:"DEBUG" envDefault:"false"`
 	Environment    string `env:"ENVIRONMENT" envDefault:"production"` // possible values: development, staging, production.

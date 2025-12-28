@@ -17,7 +17,7 @@ func TestClientFactory_NewClient_Success(t *testing.T) {
 		if r.URL.Path == "/auth/connect/token" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"access_token":"test_token","token_type":"Bearer","expires_in":3600}`))
+			_, _ = w.Write([]byte(`{"access_token":"test_token","token_type":"Bearer","expires_in":3600}`))
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)
@@ -46,7 +46,7 @@ func TestClientFactory_NewClient_TokenError(t *testing.T) {
 	// Create a test server that returns error for token request
 	tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"error":"invalid_client"}`))
+		_, _ = w.Write([]byte(`{"error":"invalid_client"}`))
 	}))
 	defer tokenServer.Close()
 
@@ -71,7 +71,7 @@ func TestClientFactory_NewClient_TrimsTrailingSlash(t *testing.T) {
 		if r.URL.Path == "/auth/connect/token" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"access_token":"test_token","token_type":"Bearer","expires_in":3600}`))
+			_, _ = w.Write([]byte(`{"access_token":"test_token","token_type":"Bearer","expires_in":3600}`))
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)
@@ -99,7 +99,7 @@ func TestClientFactory_getTokenSource_ReusesExistingTokenSource(t *testing.T) {
 	tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"access_token":"test_token","token_type":"Bearer","expires_in":3600}`))
+		_, _ = w.Write([]byte(`{"access_token":"test_token","token_type":"Bearer","expires_in":3600}`))
 	}))
 	defer tokenServer.Close()
 
@@ -134,7 +134,7 @@ func TestClientFactory_getTokenSource_CreatesNewTokenSource(t *testing.T) {
 	tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"access_token":"test_token","token_type":"Bearer","expires_in":3600}`))
+		_, _ = w.Write([]byte(`{"access_token":"test_token","token_type":"Bearer","expires_in":3600}`))
 	}))
 	defer tokenServer.Close()
 
@@ -169,7 +169,7 @@ func TestClient_Do_Success(t *testing.T) {
 	// Create a test server for the actual request
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"success"}`))
+		_, _ = w.Write([]byte(`{"status":"success"}`))
 	}))
 	defer testServer.Close()
 
@@ -186,7 +186,7 @@ func TestClient_Do_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func TestClient_Do_ErrorRequest(t *testing.T) {

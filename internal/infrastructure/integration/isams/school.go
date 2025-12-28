@@ -8,11 +8,11 @@ import (
 )
 
 type Division struct {
-	ID          int32    `json:"id"`
+	ID          int32  `json:"id"`
 	Code        string `json:"code"`
 	LastUpdated string `json:"lastUpdated"`
 	Name        string `json:"name"`
-	Order       int32    `json:"order"`
+	Order       int32  `json:"order"`
 }
 
 type YearGroupsDivisionsResponse struct {
@@ -32,8 +32,8 @@ func (c *Client) GetYearGroupDivisions(yearGroupID int32) (*YearGroupsDivisionsR
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
-	
+	defer func() { _ = resp.Body.Close() }()
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to get year group divisions: %s", resp.Status)
 	}
