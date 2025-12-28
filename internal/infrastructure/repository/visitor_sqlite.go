@@ -76,7 +76,7 @@ func (r *Visitor) FindByKey(key string) (*entity.VisitDetails, error) {
 	var tmpDivisions sql.NullString
 
 	key = strings.ToUpper(key)
-	row := r.Connection.QueryRow("SELECT v.id, v.name, v.surname, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk ON vk.visitor_id = v.id WHERE vk.key_id = ?", key)
+	row := r.Connection.QueryRow("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk ON vk.visitor_id = v.id WHERE vk.key_id = ?", key)
 
 	visitor := &entity.Visitor{}
 	visit := &entity.VisitDetails{
@@ -87,6 +87,7 @@ func (r *Visitor) FindByKey(key string) (*entity.VisitDetails, error) {
 		&visitor.Id,
 		&visitor.Name,
 		&visitor.Surname,
+		&visitor.IsStudent,
 		&tmpGrade,
 		&tmpImage,
 		&tmpErpID,
@@ -135,12 +136,13 @@ func (r *Visitor) FindById(id int32) (*entity.Visitor, error) {
 	var tmpYearGroup sql.NullInt32
 	var tmpDivisions sql.NullString
 
-	row := r.Connection.QueryRow("SELECT id, name, surname, grade, image, isams_id, isams_school_id, year_group, divisions FROM visitors WHERE id = ?", id)
+	row := r.Connection.QueryRow("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions FROM visitors WHERE id = ?", id)
 	student := &entity.Visitor{}
 	err := row.Scan(
 		&student.Id,
 		&student.Name,
 		&student.Surname,
+		&student.IsStudent,
 		&tmpGrade,
 		&tmpImage,
 		&tmpErpID,
