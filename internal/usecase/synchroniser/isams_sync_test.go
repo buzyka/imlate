@@ -63,6 +63,22 @@ func (m *MockERPClient) GetRegistrationStatusForStudent(studentSchoolID string, 
 	return args.Get(0).(*isams.RegistrationStatus), args.Error(1)
 }
 
+func (m *MockERPClient) GetRegistrationAbsenceCodes() (*isams.RegistrationAbsenceCodesResponse, error) {
+	args := m.Called()
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*isams.RegistrationAbsenceCodesResponse), args.Error(1)
+}
+
+func (m *MockERPClient) GetRegistrationPresentCodes() (*isams.RegistrationPresentCodeResponse, error) {
+	args := m.Called()
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*isams.RegistrationPresentCodeResponse), args.Error(1)
+}
+
 // MockVisitorRepository
 type MockVisitorRepository struct {
 	mock.Mock
