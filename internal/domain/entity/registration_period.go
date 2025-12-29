@@ -7,11 +7,11 @@ type Schedule struct {
 }
 
 type RegistrationPeriod struct {
-	ID          int32
-	Name        string
-	Finish		time.Time
-	Start		time.Time
-	Time 	    time.Time
+	ID     int32
+	Name   string
+	Finish time.Time
+	Start  time.Time
+	Time   time.Time
 }
 
 func (s *Schedule) AddPeriod(period *RegistrationPeriod) {

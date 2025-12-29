@@ -3,6 +3,7 @@ package tracking
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/buzyka/imlate/internal/config"
 	"github.com/buzyka/imlate/internal/domain/entity"
@@ -17,11 +18,18 @@ type StudentTracker struct {
 }
 
 func (s *StudentTracker) Track(ctx context.Context, visitor *entity.Visitor) error {
-	// Get periods for visitor for today
-	schedule, err := s.getPeriods(ctx, visitor.ErpDivisions)
+	erpClient, err := s.ERPFactory.NewClient(ctx)
 	if err != nil {
 		return err
 	}
+	// Get periods for visitor for today
+	schedule, err := s.getPeriods(erpClient, visitor.ErpDivisions)
+	if err != nil {
+		return err
+	}
+
+	studentAttendance := entity.NewStudentAttendance(visitor, schedule)
+	s.fillAttendanceInfo(erpClient, studentAttendance)
 
 	// Get today student registration info
 
@@ -38,11 +46,7 @@ func (s *StudentTracker) Track(ctx context.Context, visitor *entity.Visitor) err
 	return nil
 }
 
-func (s *StudentTracker) getPeriods(ctx context.Context, divisions []int32) (*entity.Schedule, error) {
-	erpClient, err := s.ERPFactory.NewClient(ctx)
-	if err != nil {
-		return nil, err
-	}
+func (s *StudentTracker) getPeriods(erpClient erp.Client, divisions []int32) (*entity.Schedule, error) {
 	schedule := &entity.Schedule{}
 	for _, division := range divisions {
 		resp, err := erpClient.GetCurrentRegistrationPeriodsForDivision(division)
@@ -78,5 +82,39 @@ func (s *StudentTracker) addPeriodsFromResponse(schedule *entity.Schedule, resp 
 			Finish:   finishDate,
 		}
 		schedule.AddPeriod(period)
+	}
+}
+
+func (s *StudentTracker) fillAttendanceInfo(erpClient erp.Client, studentAttendance *entity.StudentAttendance) {
+	for _, period := range studentAttendance.Schedule().Periods {
+		status, err := erpClient.GetRegistrationStatusForStudent(studentAttendance.Student().ErpSchoolID, period.ID)
+		if err != nil {
+			continue
+		}
+
+		var leaveTime *time.Time
+		if status.LeavingOrLeftDateTime != nil && *status.LeavingOrLeftDateTime != "" {			
+			parsedTime, err := util.ParseTimeStrToLocal(*status.LeavingOrLeftDateTime)
+			if err == nil {
+				leaveTime = &parsedTime
+			}
+		}
+
+		studentAttendance.SetAttendanceStatus( &entity.AttendanceItem{
+			AbsenceCodeID:          status.AbsenceCodeID,
+			AlertSent:              status.AlertSent,
+			IsFutureAbsence:        status.IsFutureAbsence,
+			IsLate:                 status.IsLate,
+			IsOutOfSchool:          status.IsOutOfSchool,
+			IsPresent:              status.IsPresent,
+			IsRegistered:           status.IsRegistered,
+			LeavingOrLeftDateTime:  leaveTime,
+			NumberOfMinutesLate:    status.NumberOfMinutesLate,
+			ParentNotificationSent: status.ParentNotificationSent,
+			PresentCodeID:          status.PresentCodeID,
+			RegistrationComment:    status.RegistrationComment,
+			RegistrationPeriodID:   entity.RegistrationPeriodID(period.ID),
+			SchoolID:               status.SchoolID,
+		})
 	}
 }

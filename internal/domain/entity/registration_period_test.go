@@ -171,3 +171,29 @@ func TestSchedule_GetPeriodByTime(t *testing.T) {
 		assert.Nil(t, p)
 	})
 }
+
+func TestSchedule_IsBeforeFirstPeriod(t *testing.T) {
+	now := time.Now()
+	p1 := &RegistrationPeriod{ID: 1, Start: now.Add(1 * time.Hour)}
+	s := &Schedule{}
+	s.AddPeriod(p1)
+
+	assert.True(t, s.IsBeforeFirstPeriod(now))
+	assert.False(t, s.IsBeforeFirstPeriod(now.Add(2*time.Hour)))
+
+	empty := &Schedule{}
+	assert.False(t, empty.IsBeforeFirstPeriod(now))
+}
+
+func TestSchedule_IsAfterLastPeriod(t *testing.T) {
+	now := time.Now()
+	p1 := &RegistrationPeriod{ID: 1, Finish: now.Add(1 * time.Hour)}
+	s := &Schedule{}
+	s.AddPeriod(p1)
+
+	assert.True(t, s.IsAfterLastPeriod(now.Add(2*time.Hour)))
+	assert.False(t, s.IsAfterLastPeriod(now))
+
+	empty := &Schedule{}
+	assert.False(t, empty.IsAfterLastPeriod(now))
+}
