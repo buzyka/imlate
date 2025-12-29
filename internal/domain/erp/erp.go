@@ -14,4 +14,5 @@ type Client interface {
 	GetStudents(page, pageSize int32) (*isams.StudentsResponse, error)
 	GetYearGroupDivisions(yearGroupID int32) (*isams.YearGroupsDivisionsResponse, error)
 	GetCurrentRegistrationPeriodsForDivision(divisionID int32) (*isams.RegistrationPeriodsResponse, error)
+	GetRegistrationStatusForStudent(studentSchoolID string, periodID int32) (*isams.RegistrationStatus, error)
 }
