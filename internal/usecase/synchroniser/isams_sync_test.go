@@ -55,6 +55,14 @@ func (m *MockERPClient) GetCurrentRegistrationPeriodsForDivision(divisionID int3
 	return args.Get(0).(*isams.RegistrationPeriodsResponse), args.Error(1)
 }
 
+func (m *MockERPClient) GetRegistrationStatusForStudent(studentSchoolID string, periodID int32) (*isams.RegistrationStatus, error) {
+	args := m.Called(studentSchoolID, periodID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*isams.RegistrationStatus), args.Error(1)
+}
+
 // MockVisitorRepository
 type MockVisitorRepository struct {
 	mock.Mock
