@@ -1,10 +1,13 @@
 package tracker
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/buzyka/imlate/internal/isb/entity"
+	"github.com/buzyka/imlate/internal/domain/entity"
+	"github.com/buzyka/imlate/internal/domain/provider"
+	"github.com/buzyka/imlate/internal/usecase/tracking"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,8 +20,9 @@ type Request struct {
 }
 
 type TrackerController struct {
-	VisitorRepository entity.VisitorRepository `container:"type"`
-	TrackRepository entity.VisitorTrackRepository `container:"type"`
+	VisitorRepository provider.VisitorRepository `container:"type"`
+	TrackRepository provider.VisitorTrackRepository `container:"type"`
+	StudentTracker *tracking.StudentTracker `container:"type"`
 }
 
 type TrackResponse struct {
@@ -104,6 +108,18 @@ func (tc *TrackerController) FindAndTrackHandler() gin.HandlerFunc {
 		if err == nil {
 			if eCount % 2 == 0 {
 				eType = "sign-out"
+			}
+		}
+
+		fmt.Println("---------------LLLL")
+
+		if 	track.Visitor.IsStudent {
+			fmt.Println("----- STUDEENt")
+			if err := tc.StudentTracker.Track(ctx, track.Visitor); err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+				return
 			}
 		}
 

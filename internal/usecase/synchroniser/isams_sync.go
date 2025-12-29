@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/erp"
 	"github.com/buzyka/imlate/internal/domain/provider"
 	"github.com/buzyka/imlate/internal/infrastructure/integration/isams"
-	"github.com/buzyka/imlate/internal/isb/entity"
 )
 
 const PageSize = 100

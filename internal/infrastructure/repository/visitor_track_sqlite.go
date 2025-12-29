@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/buzyka/imlate/internal/isb/entity"
+	"github.com/buzyka/imlate/internal/domain/entity"
 )
 
 type VisitorTrack struct {

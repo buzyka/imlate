@@ -11,7 +11,7 @@ import (
 	"github.com/buzyka/imlate/internal/infrastructure/integration/isams"
 	"github.com/buzyka/imlate/internal/infrastructure/logging"
 	"github.com/buzyka/imlate/internal/infrastructure/repository"
-	"github.com/buzyka/imlate/internal/isb/entity"
+	"github.com/buzyka/imlate/internal/usecase/tracking"
 	"github.com/golobby/container/v3"
 	"go.uber.org/zap"
 )
@@ -43,13 +43,13 @@ func Build(cfg *config.Config) {
 		return connection
 	})
 
-	container.MustSingleton(container.Global, func () entity.VisitorRepository {
+	container.MustSingleton(container.Global, func () provider.VisitorRepository {
 		return &repository.Visitor{
 			Connection: connection,
 		}
 	})
 
-	container.MustSingleton(container.Global, func () entity.VisitorTrackRepository {
+	container.MustSingleton(container.Global, func () provider.VisitorTrackRepository {
 		return &repository.VisitorTrack{
 			Connection: connection,
 		}
@@ -68,5 +68,11 @@ func Build(cfg *config.Config) {
 		return &repository.Visitor{
 			Connection: connection,
 		}
+	})
+
+	container.MustSingleton(container.Global, func () *tracking.StudentTracker {
+		tracker := &tracking.StudentTracker{}
+		container.MustFill(container.Global, tracker)
+		return tracker
 	})
 }
