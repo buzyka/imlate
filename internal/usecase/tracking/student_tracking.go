@@ -28,6 +28,9 @@ func (s *StudentTracker) Track(ctx context.Context, visitor *entity.Visitor) err
 		return err
 	}
 
+	// ac := entity.GetRegistrationCodeDictionary()
+	// fmt.Println(fmt.Sprintf("%#v", ac))
+
 	studentAttendance := entity.NewStudentAttendance(visitor, schedule)
 	s.fillAttendanceInfo(erpClient, studentAttendance)
 
