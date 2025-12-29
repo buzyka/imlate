@@ -15,4 +15,6 @@ type Client interface {
 	GetYearGroupDivisions(yearGroupID int32) (*isams.YearGroupsDivisionsResponse, error)
 	GetCurrentRegistrationPeriodsForDivision(divisionID int32) (*isams.RegistrationPeriodsResponse, error)
 	GetRegistrationStatusForStudent(studentSchoolID string, periodID int32) (*isams.RegistrationStatus, error)
+	GetRegistrationAbsenceCodes() (*isams.RegistrationAbsenceCodesResponse, error)
+	GetRegistrationPresentCodes() (*isams.RegistrationPresentCodeResponse, error)
 }

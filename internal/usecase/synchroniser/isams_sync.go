@@ -33,7 +33,6 @@ func (s *StudentSync) startSyncSession(ctx context.Context) error {
 		return err
 	}
 	s.currentClient = ERPClient
-	s.yearGroupDivisions = make(map[int32][]int32)
 	return nil
 }
 
@@ -44,6 +43,7 @@ func (s *StudentSync) SyncAllStudents() error {
 		return err
 	}
 	defer s.cleanUpSyncSession()
+	s.yearGroupDivisions = make(map[int32][]int32)
 
 	s.currentVisitors, err = s.VisitorRepo.GetAll()
 	if err != nil {
@@ -69,6 +69,50 @@ func (s *StudentSync) SyncAllStudents() error {
 		pageNumber++
 	}
 	return nil
+}
+
+func (s *StudentSync) SyncRegistrationCodesDictionaries() error {
+	ctx := context.Background()
+	err := s.startSyncSession(ctx)
+	if err != nil {
+		return err
+	}
+	defer s.cleanUpSyncSession()
+
+	codesDict := &entity.RegistrationCodeDictionary{
+		Codes: make(map[int32]*entity.RegistrationCode),
+		UploadedAt: time.Now().Truncate(time.Second),
+	}
+
+
+	// Absence codes
+	absenceCodesResp, err := s.currentClient.GetRegistrationAbsenceCodes()
+	if err != nil {
+		return err
+	}
+	for _, code := range absenceCodesResp.AbsenceCodes {
+		codesDict.Codes[code.ID] = &entity.RegistrationCode{
+			ID:            code.ID,
+			Name:          code.Name,
+			IsAbsenceCode: true,
+		}
+	}
+
+	// Present codes
+	presentCodesResp, err := s.currentClient.GetRegistrationPresentCodes()
+	if err != nil {
+		return err
+	}
+	for _, code := range presentCodesResp.PresentCodes {
+		codesDict.Codes[code.ID] = &entity.RegistrationCode{
+			ID:            code.ID,
+			Name:          code.Name,
+			IsAbsenceCode: false,
+		}
+	}
+
+	entity.SetRegistrationCodeDictionary(codesDict)
+	return nil	
 }
 
 func (s *StudentSync) SaveStudent(student isams.Student) error {
