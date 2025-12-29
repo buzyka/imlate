@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/buzyka/imlate/internal/isb/entity"
+	"github.com/buzyka/imlate/internal/domain/entity"
 )
 
 type Visitor struct {
