@@ -3,7 +3,7 @@ package visitor
 import (
 	"net/http"
 
-	"github.com/buzyka/imlate/internal/isb/entity"
+	"github.com/buzyka/imlate/internal/domain/provider"
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,7 +13,7 @@ type AddKeyRequest struct {
 }
 
 type VisitorController struct {
-	VisitorRepository entity.VisitorRepository `container:"type"`
+	VisitorRepository provider.VisitorRepository `container:"type"`
 }
 
 func (vc *VisitorController) AddKeyHandler() gin.HandlerFunc {

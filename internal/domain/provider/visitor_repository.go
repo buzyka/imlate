@@ -1,6 +1,7 @@
 package provider
 
-import "github.com/buzyka/imlate/internal/isb/entity"
+import "github.com/buzyka/imlate/internal/domain/entity"
+
 
 type VisitorRepository interface {	
 	GetAll() ([]*entity.Visitor, error)
