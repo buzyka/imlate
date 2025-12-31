@@ -3,10 +3,12 @@ package tracker
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/provider"
+	"github.com/buzyka/imlate/internal/infrastructure/util"
 	"github.com/buzyka/imlate/internal/usecase/tracking"
 	"github.com/gin-gonic/gin"
 )
@@ -129,6 +131,40 @@ func (tc *TrackerController) FindAndTrackHandler() gin.HandlerFunc {
 			TrackDate: track.CreatedAt.Format("2006-01-02 15:04:05"),
 		}
 		ctx.JSON(http.StatusOK, response)
+	}
+}
+
+func (tc *TrackerController) ChangeTimeHandler() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var Request struct {
+			TimeStr string `json:"time"`
+		}
+		err := ctx.Bind(&Request)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+		re := regexp.MustCompile(`^([01]\d|2[0-3]):[0-5]\d$`)
+		if !re.MatchString(Request.TimeStr) {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid time format",
+			})
+			return
+		}
+		var hour, minute int
+		_, err = fmt.Sscanf(Request.TimeStr, "%d:%d", &hour, &minute)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+		util.SetCurrentTime(hour, minute)
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": fmt.Sprintf("Changed time to: %d:%d", hour, minute),
+		})
 	}
 }
 
