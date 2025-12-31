@@ -16,14 +16,14 @@ const (
 )
 
 const (
-	StudentsEndpoint = "/api/students"
-	StudentByIDEndpoint = "/api/students/{schoolId}"
-	RegisterEndpoint = "/api/registration/register/{registrationPeriodId}/students/{schoolId}"
-	RegistrationPeriodsEndpoint = "/api/registration/periods"
-	RegistrationStatusEndpoint = "/api/registration/register/{registrationPeriodId}/students/{schoolId}"
-	AbsenceCodesEndpoint = "/api/registration/absencecodes"
+	StudentsEndpoint                 = "/api/students"
+	StudentByIDEndpoint              = "/api/students/{schoolId}"
+	RegisterEndpoint                 = "/api/registration/register/{registrationPeriodId}/students/{schoolId}"
+	RegistrationPeriodsEndpoint      = "/api/registration/periods"
+	RegistrationStatusEndpoint       = "/api/registration/register/{registrationPeriodId}/students/{schoolId}"
+	AbsenceCodesEndpoint             = "/api/registration/absencecodes"
 	RegistrationPresentCodesEndpoint = "/api/registration/presentcodes"
-	YearGroupsDivisionsEndpoint = "/api/school/yeargroups/{yearGroupId}/divisions"
+	YearGroupsDivisionsEndpoint      = "/api/school/yeargroups/{yearGroupId}/divisions"
 )
 
 const (
@@ -72,13 +72,10 @@ func (f *ClientFactory) getTokenSource(ctx context.Context, cfg clientcredential
 	return tokenSource
 }
 
-
-
 type Client struct {
 	BaseURL    string
 	HTTPClient *http.Client
 }
-
 
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	reqDump, _ := httputil.DumpRequestOut(req, true)

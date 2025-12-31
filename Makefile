@@ -1,4 +1,4 @@
-.PHONY: help start stop restart status logs install-mod build-app got gotc gol golf migrate-up migrate-down mysql clean rebuild
+.PHONY: help start stop restart status logs install-mod build-app got gotc gol golf migrate-up migrate-down mysql clean rebuild restart-app
 
 # Default target
 help:
@@ -68,6 +68,9 @@ clean:
 
 rebuild:
 	@./docker/docker-dev.sh rebuild
+
+restart-app:
+	@./docker/docker-dev.sh restart-app
 
 # Shell access
 shell:

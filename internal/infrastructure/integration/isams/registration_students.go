@@ -30,6 +30,20 @@ type RegistrationStatus struct {
 	ParentNotificationSent bool      `json:"parentNotificationSent"`
 }
 
+type RegistrationStatusRequest struct {
+	IsPresent bool `json:"isPresent"`
+	IsLate    bool `json:"isLate"`
+
+	PresentCodeID *int32 `json:"presentCodeId,omitempty"`
+	AbsenceCodeID *int32 `json:"absenceCodeId,omitempty"`
+
+	LeavingOrLeftDateTime *string `json:"leavingOrLeftDateTime,omitempty"`
+
+	NumberOfMinutesLate int32 `json:"numberOfMinutesLate,omitempty"`
+
+	RegistrationComment *string `json:"registrationComment,omitempty"`
+}
+
 func (c *Client) GetRegistrationStatusForStudent(studentSchoolID string, periodID int32) (*RegistrationStatus, error) {
 	url := RegistrationStatusEndpoint
 	url = strings.Replace(url, "{registrationPeriodId}", fmt.Sprintf("%d", periodID), 1)
@@ -56,4 +70,32 @@ func (c *Client) GetRegistrationStatusForStudent(studentSchoolID string, periodI
 		return nil, err
 	}
 	return status, nil
+}
+
+func (c *Client) PutRegistration(schoolID string, periodID int32, request RegistrationStatusRequest) error {
+	url := RegistrationStatusEndpoint
+	url = strings.Replace(url, "{registrationPeriodId}", fmt.Sprintf("%d", periodID), 1)
+	url = strings.Replace(url, "{schoolId}", schoolID, 1)
+	reqBody, err := json.Marshal(request)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("PUT", c.BaseURL+url, strings.NewReader(string(reqBody)))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to update registration status: %s", resp.Status)
+	}
+	return nil
 }
