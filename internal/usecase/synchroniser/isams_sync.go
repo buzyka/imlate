@@ -93,9 +93,16 @@ func (s *StudentSync) SyncRegistrationCodesDictionaries() error {
 	for _, code := range absenceCodesResp.AbsenceCodes {
 		codesDict.Codes[code.ID] = &entity.RegistrationCode{
 			ID:            code.ID,
+			Code:		   code.Code,
 			Name:          code.Name,
 			IsAbsenceCode: true,
 		}
+	}
+	entity.SetAbsenceCodeDictionary(codesDict)
+
+	codesDict = &entity.RegistrationCodeDictionary{
+		Codes: make(map[int32]*entity.RegistrationCode),
+		UploadedAt: time.Now().Truncate(time.Second),
 	}
 
 	// Present codes
@@ -106,12 +113,13 @@ func (s *StudentSync) SyncRegistrationCodesDictionaries() error {
 	for _, code := range presentCodesResp.PresentCodes {
 		codesDict.Codes[code.ID] = &entity.RegistrationCode{
 			ID:            code.ID,
+			Code:		   code.Code,
 			Name:          code.Name,
 			IsAbsenceCode: false,
 		}
 	}
 
-	entity.SetRegistrationCodeDictionary(codesDict)
+	entity.SetPresentsCodeDictionary(codesDict)
 	return nil	
 }
 

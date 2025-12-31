@@ -79,6 +79,11 @@ func (m *MockERPClient) GetRegistrationPresentCodes() (*isams.RegistrationPresen
 	return args.Get(0).(*isams.RegistrationPresentCodeResponse), args.Error(1)
 }
 
+func (m *MockERPClient) PutRegistration(schoolID string, periodID int32, request isams.RegistrationStatusRequest) error {
+	args := m.Called(schoolID, periodID, request)
+	return args.Error(0)
+}
+
 // MockVisitorRepository
 type MockVisitorRepository struct {
 	mock.Mock

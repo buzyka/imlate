@@ -34,7 +34,18 @@ func (s *StudentTracker) Track(ctx context.Context, visitor *entity.Visitor) err
 	studentAttendance := entity.NewStudentAttendance(visitor, schedule)
 	s.fillAttendanceInfo(erpClient, studentAttendance)
 
-	// Get today student registration info
+	na, shouldUpdate := studentAttendance.TrackInMainRegistration(util.Now())
+	if shouldUpdate {
+		// Update ERP with new attendance info
+		err = erpClient.PutRegistration(
+			studentAttendance.Student().ErpSchoolID, 
+			int32(na.Period.ID),
+			s.PrepareRegistrationStatusRequest(na.Attendance),
+		)
+		if err != nil {
+			return err
+		}
+	}
 
 	// Is it first login of the day? (set status for AM)
 
@@ -47,6 +58,24 @@ func (s *StudentTracker) Track(ctx context.Context, visitor *entity.Visitor) err
 	fmt.Printf("---Tracking periods: %d\n", len(schedule.Periods))
 	
 	return nil
+}
+
+func (s *StudentTracker) PrepareRegistrationStatusRequest(item *entity.AttendanceItem) isams.RegistrationStatusRequest {
+	var leavingDateTime *string
+	if item.LeavingOrLeftDateTime != nil {
+		leavingDateTimeStr := util.FromLocalTimeToTimeStr(*item.LeavingOrLeftDateTime, s.cfg.ERPTimeLocation())
+		leavingDateTime = &leavingDateTimeStr
+	}
+	req := isams.RegistrationStatusRequest{
+		IsPresent: item.IsPresent,
+		IsLate: item.IsLate,
+		PresentCodeID: item.PresentCodeID,
+		AbsenceCodeID:          item.AbsenceCodeID,
+		LeavingOrLeftDateTime:  leavingDateTime,
+		NumberOfMinutesLate:    item.NumberOfMinutesLate,
+		RegistrationComment:    item.RegistrationComment,
+	}
+	return req
 }
 
 func (s *StudentTracker) getPeriods(erpClient erp.Client, divisions []int32) (*entity.Schedule, error) {

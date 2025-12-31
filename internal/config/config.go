@@ -19,6 +19,10 @@ type Config struct {
 
 	ERPTimeZone 		 	string `env:"ERP_LOCAL_TIMEZONE"`
 
+	ERPFirstRegistrationPeriodName string `env:"ERP_FIRST_REGISTRATION_PERIOD_NAME" envDefault:"AM"`
+	ERPDefaultPresentCodeName	string `env:"ERP_DEFAULT_PRESENT_CODE_NAME" envDefault:"/"`
+	ERPDefaultLateCodeName		string `env:"ERP_DEFAULT_LATE_CODE_NAME" envDefault:"C"`
+
 	erpLocation 			*time.Location
 }
 
