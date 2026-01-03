@@ -28,9 +28,6 @@ func (s *StudentTracker) Track(ctx context.Context, visitor *entity.Visitor) err
 		return err
 	}
 
-	// ac := entity.GetRegistrationCodeDictionary()
-	// fmt.Println(fmt.Sprintf("%#v", ac))
-
 	studentAttendance := entity.NewStudentAttendance(visitor, schedule)
 	s.fillAttendanceInfo(erpClient, studentAttendance)
 
@@ -44,6 +41,21 @@ func (s *StudentTracker) Track(ctx context.Context, visitor *entity.Visitor) err
 		)
 		if err != nil {
 			return err
+		}
+
+		naList, shouldUpdate := studentAttendance.TrackForbyPeriodsForPresent(util.Now())
+		if shouldUpdate {
+			for _, na := range naList {
+				// Update ERP with new attendance info
+				err = erpClient.PutRegistration(
+					studentAttendance.Student().ErpSchoolID, 
+					int32(na.Period.ID),
+					s.PrepareRegistrationStatusRequest(na.Attendance),
+				)
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
 

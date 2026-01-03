@@ -19,3 +19,7 @@ func ERPDefaultPresentCodeName() string {
 func ERPDefaultLateCodeName() string {
 	return GetGlobalConfig().ERPDefaultLateCodeName
 }
+
+func ERPDefaultLessonAbsenceCodeName() string {
+	return GetGlobalConfig().ERPDefaultLessonAbsenceCodeName
+}
