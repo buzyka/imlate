@@ -2,8 +2,11 @@ package synchroniser
 
 import (
 	"context"
+	"os"
+	"strings"
 	"time"
 
+	"github.com/buzyka/imlate/internal/config"
 	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/erp"
 	"github.com/buzyka/imlate/internal/domain/provider"
@@ -13,6 +16,7 @@ import (
 const PageSize = 100
 
 type StudentSync struct {
+	Config				*config.Config             `container:"type"`
 	ERPFactory         erp.Factory                `container:"type"`
 	VisitorRepo        provider.VisitorRepository `container:"type"`
 	currentVisitors    []*entity.Visitor
@@ -121,6 +125,46 @@ func (s *StudentSync) SyncRegistrationCodesDictionaries() error {
 
 	entity.SetPresentsCodeDictionary(codesDict)
 	return nil	
+}
+
+func (s *StudentSync) SyncStudentPhotos() error {
+	ctx := context.Background()
+	err := s.startSyncSession(ctx)
+	if err != nil {
+		return err
+	}
+	defer s.cleanUpSyncSession()
+
+	visitors, err := s.VisitorRepo.GetAll()
+	if err != nil {
+		return err
+	}
+	for _, visitor := range visitors {
+		if !visitor.IsStudent {
+			continue
+		}
+		photoResp, err := s.currentClient.GetStudentPhoto(visitor.ErpSchoolID)
+		if err != nil {
+			if strings.Contains(err.Error(), "Not Found") {
+				continue
+			}
+			return err
+		}
+		if photoResp.Data == nil {
+			continue
+		}
+		filePath := s.Config.StudentsImagePhotoDir
+		fileName := visitor.ErpSchoolID + photoResp.Extension
+		if err := os.WriteFile(filePath + "/" + fileName, photoResp.Data, 0644); err != nil {
+			return err
+		} else {
+			visitor.Image = s.Config.StudentsImagePhotoURLPrefix + "/" + fileName
+			if err := s.VisitorRepo.AddVisitor(visitor); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (s *StudentSync) SaveStudent(student isams.Student) error {

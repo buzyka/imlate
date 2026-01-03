@@ -18,4 +18,5 @@ type Client interface {
 	GetRegistrationAbsenceCodes() (*isams.RegistrationAbsenceCodesResponse, error)
 	GetRegistrationPresentCodes() (*isams.RegistrationPresentCodeResponse, error)
 	PutRegistration(schoolID string, periodID int32, request isams.RegistrationStatusRequest) error
+	GetStudentPhoto(schoolID string) (*isams.StudentPhotoResponse, error)
 }
