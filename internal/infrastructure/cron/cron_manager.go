@@ -79,6 +79,30 @@ func registerJobs(s gocron.Scheduler) error {
 		return err
 	}
 
+	// Registration codes sync job
+	_, err = s.NewJob(
+		gocron.CronJob(
+			"0 5 * * 1-5", // at 5am on weekdays
+			false,
+		),
+		gocron.NewTask(
+			func() {
+				var log *zap.SugaredLogger
+				container.MustResolve(container.Global, &log)
+				log.Infof("Starting student photos data sync... TIME: %s", time.Now().Format(time.RFC3339))
+				sync := synchroniser.StudentSync{}
+				container.MustFill(container.Global, &sync)
+				if err := sync.SyncStudentPhotos(); err != nil {
+					log.Errorf("Error during student photos data sync: %v\n", err)
+				}
+			},
+		),
+		gocron.WithStartAt(gocron.WithStartImmediately()),
+	)
+	if err != nil {
+		return err
+	}
+
 	// You can register more cron jobs here
 
 	return nil

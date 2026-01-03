@@ -24,6 +24,7 @@ const (
 	AbsenceCodesEndpoint             = "/api/registration/absencecodes"
 	RegistrationPresentCodesEndpoint = "/api/registration/presentcodes"
 	YearGroupsDivisionsEndpoint      = "/api/school/yeargroups/{yearGroupId}/divisions"
+	StudentCurrentPhotoEndpoint      = "/api/students/{schoolId}/photos/current"
 )
 
 const (

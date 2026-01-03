@@ -3,6 +3,7 @@ package isams
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -138,4 +139,53 @@ func (c *Client) GetStudentByID(id int32) (*Student, error) {
 	}
 
 	return &payload, nil
+}
+
+type StudentPhotoResponse struct {
+	Data        []byte
+	ContentType string
+	Extension   string
+}
+
+func (c *Client) GetStudentPhoto(studentSchoolID string) (*StudentPhotoResponse, error) {
+	url := StudentCurrentPhotoEndpoint
+	url = strings.Replace(url, "{schoolId}", studentSchoolID, 1)
+	req, err := http.NewRequest("GET", c.BaseURL+url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Accept", "*/*")
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get student photo: %s", resp.Status)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	contentType := resp.Header.Get("Content-Type")
+	extension := ""
+	switch contentType {
+	case "image/jpeg":
+		extension = "jpg"
+	case "image/png":
+		extension = "png"
+	case "image/gif":
+		extension = "gif"
+	}
+
+	return &StudentPhotoResponse{
+		Data:        data,
+		ContentType: contentType,
+		Extension:   extension,
+	}, nil
 }
