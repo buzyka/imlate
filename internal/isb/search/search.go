@@ -3,12 +3,12 @@ package search
 import (
 	"net/http"
 
-	"github.com/buzyka/imlate/internal/isb/entity"
+	"github.com/buzyka/imlate/internal/domain/provider"
 	"github.com/gin-gonic/gin"
 )
 
 type SearchController struct {
-	StudentRepository entity.VisitorRepository `container:"type"`
+	StudentRepository provider.VisitorRepository `container:"type"`
 }
 
 func (sc SearchController) SearchHandler() gin.HandlerFunc {

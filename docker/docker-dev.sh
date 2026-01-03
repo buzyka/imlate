@@ -164,6 +164,13 @@ rebuild() {
     print_success "Containers rebuilt"
 }
 
+# Restart app container only
+restart_app() {
+    print_info "Restarting app container..."
+    docker-compose -f $COMPOSE_FILE restart app
+    print_success "App container restarted"
+}
+
 # Run the application
 run_app() {
     print_info "Running application..."
@@ -270,6 +277,9 @@ case "$1" in
         ;;
     rebuild)
         rebuild
+        ;;
+    restart-app)
+        restart_app
         ;;
     clean)
         clean
