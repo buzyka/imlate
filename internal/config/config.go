@@ -22,6 +22,7 @@ type Config struct {
 	ERPFirstRegistrationPeriodName string `env:"ERP_FIRST_REGISTRATION_PERIOD_NAME" envDefault:"AM"`
 	ERPDefaultPresentCodeName	string `env:"ERP_DEFAULT_PRESENT_CODE_NAME" envDefault:"/"`
 	ERPDefaultLateCodeName		string `env:"ERP_DEFAULT_LATE_CODE_NAME" envDefault:"C"`
+	ERPDefaultLessonAbsenceCodeName string `env:"ERP_DEFAULT_LESSON_ABSENCE_CODE_NAME" envDefault:"C"`
 
 	erpLocation 			*time.Location
 }
