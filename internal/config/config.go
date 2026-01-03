@@ -24,6 +24,9 @@ type Config struct {
 	ERPDefaultLateCodeName		string `env:"ERP_DEFAULT_LATE_CODE_NAME" envDefault:"C"`
 	ERPDefaultLessonAbsenceCodeName string `env:"ERP_DEFAULT_LESSON_ABSENCE_CODE_NAME" envDefault:"C"`
 
+	StudentsImagePhotoDir 	string `env:"STUDENTS_IMAGE_PHOTO_DIR" envDefault:"website/assets/img/students"`
+	StudentsImagePhotoURLPrefix string `env:"STUDENTS_IMAGE_PHOTO_URL_PREFIX" envDefault:"/assets/img/students"`
+
 	erpLocation 			*time.Location
 }
 

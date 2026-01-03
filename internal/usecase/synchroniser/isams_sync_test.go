@@ -84,6 +84,14 @@ func (m *MockERPClient) PutRegistration(schoolID string, periodID int32, request
 	return args.Error(0)
 }
 
+func (m *MockERPClient) GetStudentPhoto(schoolID string) (*isams.StudentPhotoResponse, error) {
+	args := m.Called(schoolID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*isams.StudentPhotoResponse), args.Error(1)
+}
+
 // MockVisitorRepository
 type MockVisitorRepository struct {
 	mock.Mock
