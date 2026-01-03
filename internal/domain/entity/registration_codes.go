@@ -55,6 +55,15 @@ func GetDefaultLateCode() (*RegistrationCode, bool) {
 	return dic.GetCodeByCodeName(dlc)
 }
 
+func GetDefaultLessonAbsenceCode() (*RegistrationCode, bool) {
+	dlac := config.ERPDefaultLessonAbsenceCodeName()
+	dic := GetAbsenceCodeDictionary()	
+	if dic == nil {
+		return nil, false
+	}
+	return dic.GetCodeByCodeName(dlac)
+}
+
 func (rcd *RegistrationCodeDictionary) GetCodeByCodeName(code string) (*RegistrationCode, bool) {
 	for _, c := range rcd.Codes {
 		if c.Code == code {
@@ -63,4 +72,3 @@ func (rcd *RegistrationCodeDictionary) GetCodeByCodeName(code string) (*Registra
 	}
 	return nil, false
 }
-
