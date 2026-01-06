@@ -31,7 +31,10 @@ func (s *StudentTracker) Track(ctx context.Context, visitor *entity.Visitor) err
 	studentAttendance := entity.NewStudentAttendance(visitor, schedule)
 	s.fillAttendanceInfo(erpClient, studentAttendance)
 
-	na, shouldUpdate := studentAttendance.TrackInMainRegistration(util.Now())
+	na, shouldUpdate, err := studentAttendance.TrackInMainRegistration(util.Now())
+	if err != nil {
+		return err
+	}
 	if shouldUpdate {
 		// Update ERP with new attendance info
 		err = erpClient.PutRegistration(
