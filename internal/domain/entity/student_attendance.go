@@ -1,10 +1,17 @@
 package entity
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/buzyka/imlate/internal/config"
+)
+
+var (
+	ErrorMainPeriodNotFound = errors.New("main registration period not found")
+	ErrorStudentSchedulePeriodNotFound = errors.New("student schedule not found")
+	ErrorDefaultPresentCodeNotFound = errors.New("default present code not found")
 )
 
 type RegistrationPeriodID int32
@@ -73,62 +80,59 @@ func (sa *StudentAttendance) SetAttendanceStatus(item *AttendanceItem) {
 	}
 }
 
-func (sa *StudentAttendance) TrackInMainRegistration(trackTime time.Time) (*StudentAttendanceItem, bool) {
+func (sa *StudentAttendance) TrackInMainRegistration(trackTime time.Time) (*StudentAttendanceItem, bool, error) {
 	mainReg, ok := sa.Schedule().GetPeriodByName(config.ERPFirstRegistrationPeriodName())
 	if !ok {
-		return nil, false
+		return nil, false, fmt.Errorf("%w: expected default period %s", ErrorMainPeriodNotFound, config.ERPFirstRegistrationPeriodName())
 	}
 
 	schedule, ok := (*sa.studentSchedule)[RegistrationPeriodID(mainReg.ID)]
 	if !ok {
-		return nil, false
+		return nil, false, fmt.Errorf("%w: expected default period %s", ErrorStudentSchedulePeriodNotFound, config.ERPFirstRegistrationPeriodName())
 	}
 
 	defaultPresentCode, ok := GetDefaultPresentCode()
 	if !ok {
-		return nil, false
+		return nil, false, ErrorDefaultPresentCodeNotFound
 	}
 
 	// Student is not yet registered
 	if schedule.Attendance.IsRegistered == 0 {
-		if  trackTime.Before(mainReg.Finish) {
-			fmt.Println("--- Correct Registration")
+		if trackTime.Before(mainReg.Finish) || trackTime.Equal(mainReg.Finish) {
 			schedule.Attendance.IsRegistered = 1
 			schedule.Attendance.IsPresent = true
 			schedule.Attendance.IsLate = false
 			schedule.Attendance.PresentCodeID = &defaultPresentCode.ID
 
-			return schedule, true
+			return schedule, true, nil
 		} else {
-			fmt.Println("--- Late Registration")
 			schedule.Attendance.IsRegistered = 1
 			schedule.Attendance.IsPresent = true
 			schedule.Attendance.IsLate = true
-			schedule.Attendance.NumberOfMinutesLate = int32(trackTime.Sub(mainReg.Start).Minutes())			
+			schedule.Attendance.NumberOfMinutesLate = int32(trackTime.Sub(mainReg.Time).Minutes())
 			schedule.Attendance.PresentCodeID = nil
 			schedule.Attendance.AbsenceCodeID = nil
 
-			return schedule, true
-		}				
+			return schedule, true, nil
+		}
 	}
 
 	// Student is already registered
 	if schedule.Attendance.IsRegistered > 0 {
 		// Student is marked as absent - update to present and mark a late time
 		if !schedule.Attendance.IsPresent {
-			fmt.Println("--- Update to Present Registration")
 			schedule.Attendance.IsRegistered = 1
 			schedule.Attendance.IsPresent = true
 			schedule.Attendance.IsLate = true
-			schedule.Attendance.NumberOfMinutesLate = int32(trackTime.Sub(mainReg.Start).Minutes())			
+			schedule.Attendance.NumberOfMinutesLate = int32(trackTime.Sub(mainReg.Time).Minutes())			
 			schedule.Attendance.PresentCodeID = nil
 			schedule.Attendance.AbsenceCodeID = nil
 
-			return schedule, true
+			return schedule, true, nil
 		}
 	}
 
-	return nil, false
+	return nil, false, nil
 }
 
 func (sa *StudentAttendance) TrackForbyPeriodsForPresent(trackTime time.Time) (updatedItems []*StudentAttendanceItem, updateRequired bool) {
