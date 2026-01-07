@@ -9,15 +9,16 @@ import (
 )
 
 var (
-	ErrorMainPeriodNotFound = errors.New("main registration period not found")
-	ErrorStudentSchedulePeriodNotFound = errors.New("student schedule not found")
-	ErrorDefaultPresentCodeNotFound = errors.New("default present code not found")
+	ErrorMainPeriodNotFound               = errors.New("main registration period not found")
+	ErrorStudentSchedulePeriodNotFound    = errors.New("student schedule not found")
+	ErrorDefaultPresentCodeNotFound       = errors.New("default present code not found")
+	ErrorDefaultLessonAbsenceCodeNotFound = errors.New("default lesson absence code not found")
 )
 
 type RegistrationPeriodID int32
 
 type AttendanceItem struct {
-	AbsenceCodeID          *int32 
+	AbsenceCodeID          *int32
 	AlertSent              bool
 	IsFutureAbsence        bool
 	IsLate                 bool
@@ -36,11 +37,10 @@ type AttendanceItem struct {
 type AttendanceList map[RegistrationPeriodID]*AttendanceItem
 
 type StudentAttendanceItem struct {
-	Period   *RegistrationPeriod
+	Period     *RegistrationPeriod
 	Attendance *AttendanceItem
 }
 type StudentAttendanceItems map[RegistrationPeriodID]*StudentAttendanceItem
-
 
 func NewStudentAttendance(student *Visitor, schedule *Schedule) *StudentAttendance {
 	items := make(StudentAttendanceItems)
@@ -48,20 +48,20 @@ func NewStudentAttendance(student *Visitor, schedule *Schedule) *StudentAttendan
 		items[RegistrationPeriodID(period.ID)] = &StudentAttendanceItem{
 			Period: period,
 		}
-	}	
+	}
 	return &StudentAttendance{
-		student: student,
+		student:         student,
 		studentSchedule: &items,
-		schedule: schedule,
-		attendance: make(AttendanceList),
+		schedule:        schedule,
+		attendance:      make(AttendanceList),
 	}
 }
 
 type StudentAttendance struct {
-	student *Visitor
+	student         *Visitor
 	studentSchedule *StudentAttendanceItems
-	schedule *Schedule
-	attendance AttendanceList
+	schedule        *Schedule
+	attendance      AttendanceList
 }
 
 func (sa *StudentAttendance) Schedule() *Schedule {
@@ -124,7 +124,7 @@ func (sa *StudentAttendance) TrackInMainRegistration(trackTime time.Time) (*Stud
 			schedule.Attendance.IsRegistered = 1
 			schedule.Attendance.IsPresent = true
 			schedule.Attendance.IsLate = true
-			schedule.Attendance.NumberOfMinutesLate = int32(trackTime.Sub(mainReg.Time).Minutes())			
+			schedule.Attendance.NumberOfMinutesLate = int32(trackTime.Sub(mainReg.Time).Minutes())
 			schedule.Attendance.PresentCodeID = nil
 			schedule.Attendance.AbsenceCodeID = nil
 
@@ -135,16 +135,16 @@ func (sa *StudentAttendance) TrackInMainRegistration(trackTime time.Time) (*Stud
 	return nil, false, nil
 }
 
-func (sa *StudentAttendance) TrackForbyPeriodsForPresent(trackTime time.Time) (updatedItems []*StudentAttendanceItem, updateRequired bool) {
+func (sa *StudentAttendance) TrackForbyPeriodsForPresent(trackTime time.Time) (updatedItems []*StudentAttendanceItem, updateRequired bool, err error) {
 	updateRequired = false
 	mainReg, ok := sa.Schedule().GetPeriodByName(config.ERPFirstRegistrationPeriodName())
 	if !ok {
-		return nil, false
+		return nil, false, fmt.Errorf("%w: expected default period %s", ErrorMainPeriodNotFound, config.ERPFirstRegistrationPeriodName())
 	}
 
 	defaultLessonAbsenceCode, ok := GetDefaultLessonAbsenceCode()
 	if !ok {
-		return nil, false
+		return nil, false, ErrorDefaultLessonAbsenceCodeNotFound
 	}
 
 	for key, scheduleItem := range *sa.studentSchedule {
@@ -153,9 +153,8 @@ func (sa *StudentAttendance) TrackForbyPeriodsForPresent(trackTime time.Time) (u
 		}
 
 		//period forby student marked like absent
-		if trackTime.After(scheduleItem.Period.Finish) {
+		if trackTime.After(scheduleItem.Period.Finish) || trackTime.Equal(scheduleItem.Period.Finish) {
 			if scheduleItem.Attendance.IsRegistered == 0 {
-				fmt.Println("--- Forby Period - Mark Absent")
 				scheduleItem.Attendance.IsRegistered = 1
 				scheduleItem.Attendance.IsPresent = false
 				scheduleItem.Attendance.IsLate = false
@@ -170,12 +169,11 @@ func (sa *StudentAttendance) TrackForbyPeriodsForPresent(trackTime time.Time) (u
 
 		// late for the period
 		if trackTime.After(scheduleItem.Period.Time) && trackTime.Before(scheduleItem.Period.Finish) {
-			if scheduleItem.Attendance.IsRegistered == 0 && scheduleItem.Attendance.IsPresent == false {
-				fmt.Println("--- Forby Period - Late Registration")
+			if scheduleItem.Attendance.IsRegistered == 0 && !scheduleItem.Attendance.IsPresent {
 				scheduleItem.Attendance.IsRegistered = 1
 				scheduleItem.Attendance.IsPresent = true
 				scheduleItem.Attendance.IsLate = true
-				scheduleItem.Attendance.NumberOfMinutesLate = int32(trackTime.Sub(scheduleItem.Period.Start).Minutes())			
+				scheduleItem.Attendance.NumberOfMinutesLate = int32(trackTime.Sub(scheduleItem.Period.Start).Minutes())
 				scheduleItem.Attendance.PresentCodeID = nil
 				scheduleItem.Attendance.AbsenceCodeID = nil
 				updatedItems = append(updatedItems, scheduleItem)
@@ -183,11 +181,7 @@ func (sa *StudentAttendance) TrackForbyPeriodsForPresent(trackTime time.Time) (u
 				updateRequired = true
 				continue
 			}
-		}		
+		}
 	}
-	return updatedItems, updateRequired
+	return updatedItems, updateRequired, nil
 }
-
-
-
-

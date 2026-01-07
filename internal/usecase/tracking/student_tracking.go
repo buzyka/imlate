@@ -46,7 +46,10 @@ func (s *StudentTracker) Track(ctx context.Context, visitor *entity.Visitor) err
 			return err
 		}
 
-		naList, shouldUpdate := studentAttendance.TrackForbyPeriodsForPresent(util.Now())
+		naList, shouldUpdate, err := studentAttendance.TrackForbyPeriodsForPresent(util.Now())
+		if err != nil {
+			return err
+		}
 		if shouldUpdate {
 			for _, na := range naList {
 				// Update ERP with new attendance info
