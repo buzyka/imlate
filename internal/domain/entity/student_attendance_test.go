@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type saEnv struct {	
-	student *Visitor
+type saEnv struct {
+	student  *Visitor
 	schedule *Schedule
 }
 
@@ -31,12 +31,12 @@ func TestNewStudentAttendance(t *testing.T) {
 
 	ai := &AttendanceItem{
 		RegistrationPeriodID: RegistrationPeriodID(100),
-		SchoolID: saEnv.student.ErpSchoolID,
-		IsFutureAbsence: false,
-		IsPresent: false,
-		IsLate: false,
-		IsOutOfSchool: false,
-		IsRegistered: 0,
+		SchoolID:             saEnv.student.ErpSchoolID,
+		IsFutureAbsence:      false,
+		IsPresent:            false,
+		IsLate:               false,
+		IsOutOfSchool:        false,
+		IsRegistered:         0,
 	}
 	sa.SetAttendanceStatus(ai)
 
@@ -57,12 +57,12 @@ func TestSetAttendanceStatusWillUpdateExisting(t *testing.T) {
 
 	ai := &AttendanceItem{
 		RegistrationPeriodID: RegistrationPeriodID(1),
-		SchoolID: sa.student.ErpSchoolID,
-		IsFutureAbsence: true,
-		IsPresent: true,
-		IsLate: false,
-		IsOutOfSchool: false,
-		IsRegistered: 1,
+		SchoolID:             sa.student.ErpSchoolID,
+		IsFutureAbsence:      true,
+		IsPresent:            true,
+		IsLate:               false,
+		IsOutOfSchool:        false,
+		IsRegistered:         1,
 	}
 	sa.SetAttendanceStatus(ai)
 
@@ -78,114 +78,114 @@ func TestTrackInMainRegistrationWillUpdateAttendanceItem(t *testing.T) {
 	presentCode := int32(1)
 	absenceCode := int32(11)
 	var tests = []struct {
-		name               string
-		trackTime		time.Time
-		attendance  *AttendanceItem
-		exIsLate        bool
-		exIsPresent     bool
-		exPresentCode   *int32
-		exAbsenceCode   *int32
-		exNumberOfMinutesLate   int32
+		name                  string
+		trackTime             time.Time
+		attendance            *AttendanceItem
+		exIsLate              bool
+		exIsPresent           bool
+		exPresentCode         *int32
+		exAbsenceCode         *int32
+		exNumberOfMinutesLate int32
 	}{
 		{
-			name: "Before AM period",
+			name:      "Before AM period",
 			trackTime: time.Date(now.Year(), now.Month(), now.Day(), 7, 35, 0, 0, time.UTC),
 			attendance: &AttendanceItem{
 				RegistrationPeriodID: RegistrationPeriodID(100),
-				SchoolID: "S123",
-				IsFutureAbsence: false,
-				IsPresent: false,
-				IsLate: false,
-				IsOutOfSchool: false,
-				IsRegistered: 0,
+				SchoolID:             "S123",
+				IsFutureAbsence:      false,
+				IsPresent:            false,
+				IsLate:               false,
+				IsOutOfSchool:        false,
+				IsRegistered:         0,
 			},
-			exIsLate: false,
-			exIsPresent: true,
+			exIsLate:      false,
+			exIsPresent:   true,
 			exPresentCode: &presentCode,
 		},
 		{
-			name: "During AM period",
+			name:      "During AM period",
 			trackTime: time.Date(now.Year(), now.Month(), now.Day(), 7, 45, 0, 0, time.UTC),
 			attendance: &AttendanceItem{
 				RegistrationPeriodID: RegistrationPeriodID(100),
-				SchoolID: "S123",
-				IsFutureAbsence: false,
-				IsPresent: false,
-				IsLate: false,
-				IsOutOfSchool: false,
-				IsRegistered: 0,
+				SchoolID:             "S123",
+				IsFutureAbsence:      false,
+				IsPresent:            false,
+				IsLate:               false,
+				IsOutOfSchool:        false,
+				IsRegistered:         0,
 			},
-			exIsLate: false,
-			exIsPresent: true,
+			exIsLate:      false,
+			exIsPresent:   true,
 			exPresentCode: &presentCode,
 		},
 		{
-			name: "Execly in the finish time AM period",
+			name:      "Execly in the finish time AM period",
 			trackTime: time.Date(now.Year(), now.Month(), now.Day(), 7, 55, 0, 0, time.UTC),
 			attendance: &AttendanceItem{
 				RegistrationPeriodID: RegistrationPeriodID(100),
-				SchoolID: "S123",
-				IsFutureAbsence: false,
-				IsPresent: false,
-				IsLate: false,
-				IsOutOfSchool: false,
-				IsRegistered: 0,
+				SchoolID:             "S123",
+				IsFutureAbsence:      false,
+				IsPresent:            false,
+				IsLate:               false,
+				IsOutOfSchool:        false,
+				IsRegistered:         0,
 			},
-			exIsLate: false,
-			exIsPresent: true,
+			exIsLate:      false,
+			exIsPresent:   true,
 			exPresentCode: &presentCode,
 		},
 		{
-			name: "After AM period",
+			name:      "After AM period",
 			trackTime: time.Date(now.Year(), now.Month(), now.Day(), 8, 0, 0, 0, time.UTC),
 			attendance: &AttendanceItem{
 				RegistrationPeriodID: RegistrationPeriodID(100),
-				SchoolID: "S123",
-				IsFutureAbsence: false,
-				IsPresent: false,
-				IsLate: false,
-				IsOutOfSchool: false,
-				IsRegistered: 0,
+				SchoolID:             "S123",
+				IsFutureAbsence:      false,
+				IsPresent:            false,
+				IsLate:               false,
+				IsOutOfSchool:        false,
+				IsRegistered:         0,
 			},
-			exIsLate: true,
-			exIsPresent: true,
-			exPresentCode: nil,
+			exIsLate:              true,
+			exIsPresent:           true,
+			exPresentCode:         nil,
 			exNumberOfMinutesLate: 20,
 		},
 		{
-			name: "After AM period for 1 second",
+			name:      "After AM period for 1 second",
 			trackTime: time.Date(now.Year(), now.Month(), now.Day(), 7, 55, 1, 0, time.UTC),
 			attendance: &AttendanceItem{
 				RegistrationPeriodID: RegistrationPeriodID(100),
-				SchoolID: "S123",
-				IsFutureAbsence: false,
-				IsPresent: false,
-				IsLate: false,
-				IsOutOfSchool: false,
-				IsRegistered: 0,
+				SchoolID:             "S123",
+				IsFutureAbsence:      false,
+				IsPresent:            false,
+				IsLate:               false,
+				IsOutOfSchool:        false,
+				IsRegistered:         0,
 			},
-			exIsLate: true,
-			exIsPresent: true,
-			exPresentCode: nil,
+			exIsLate:              true,
+			exIsPresent:           true,
+			exPresentCode:         nil,
 			exNumberOfMinutesLate: 15,
 		},
 		{
-			name: "After AM period and already registered as absence",
+			name:      "After AM period and already registered as absence",
 			trackTime: time.Date(now.Year(), now.Month(), now.Day(), 8, 10, 0, 0, time.UTC),
 			attendance: &AttendanceItem{
 				RegistrationPeriodID: RegistrationPeriodID(100),
-				AbsenceCodeID: &absenceCode,
-				SchoolID: "S123",
-				IsFutureAbsence: false,
-				IsPresent: false,
-				IsLate: false,
-				IsOutOfSchool: false,
-				IsRegistered: 1,
+				AbsenceCodeID:        &absenceCode,
+				SchoolID:             "S123",
+				IsFutureAbsence:      false,
+				IsPresent:            false,
+				IsLate:               false,
+				IsOutOfSchool:        false,
+				IsRegistered:         1,
 			},
-			exIsLate: true,
-			exIsPresent: true,
-			exPresentCode: nil,
-			exAbsenceCode: nil,
+			exIsLate:              true,
+			exIsPresent:           true,
+			exPresentCode:         nil,
+			exAbsenceCode:         nil,
 			exNumberOfMinutesLate: 30,
 		},
 	}
@@ -194,8 +194,8 @@ func TestTrackInMainRegistrationWillUpdateAttendanceItem(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			oldPresentsCodeDictionary := preparePresentsCodeDictionary(t)
-			defer SetPresentsCodeDictionary(oldPresentsCodeDictionary)
+			oldPCD, oldACD := preparePresentsCodeDictionary(t)
+			defer restoreCodesDictionaries(oldPCD, oldACD)
 
 			sa, _ := prepareTestEnv()
 
@@ -219,23 +219,23 @@ func TestTrackInMainRegistrationWillUpdateAttendanceItem(t *testing.T) {
 }
 
 func TestTrackInMainRegistrationWithAlreadyRegisteredStudentWillNotUpdate(t *testing.T) {
-	oldPresentsCodeDictionary := preparePresentsCodeDictionary(t)
-	defer SetPresentsCodeDictionary(oldPresentsCodeDictionary)
+	oldPCD, oldACD := preparePresentsCodeDictionary(t)
+	defer restoreCodesDictionaries(oldPCD, oldACD)
 
 	prepareConfig(t)
 
-	presentCode := int32(1)	
+	presentCode := int32(1)
 	sa, _ := prepareTestEnv()
 
 	ai := &AttendanceItem{
 		RegistrationPeriodID: RegistrationPeriodID(100),
-		PresentCodeID: &presentCode,
-		SchoolID: "S123",
-		IsFutureAbsence: false,
-		IsPresent: true,
-		IsLate: false,
-		IsOutOfSchool: false,
-		IsRegistered: 1,
+		PresentCodeID:        &presentCode,
+		SchoolID:             "S123",
+		IsFutureAbsence:      false,
+		IsPresent:            true,
+		IsLate:               false,
+		IsOutOfSchool:        false,
+		IsRegistered:         1,
 	}
 	sa.SetAttendanceStatus(ai)
 
@@ -249,11 +249,11 @@ func TestTrackInMainRegistrationWithAlreadyRegisteredStudentWillNotUpdate(t *tes
 func TestTrackInMainRegistrationWillReturnError(t *testing.T) {
 
 	t.Run("Period not exists", func(t *testing.T) {
-		oldPresentsCodeDictionary := preparePresentsCodeDictionary(t)
-		defer SetPresentsCodeDictionary(oldPresentsCodeDictionary)
+		oldPCD, oldACD := preparePresentsCodeDictionary(t)
+		defer restoreCodesDictionaries(oldPCD, oldACD)
 
 		cfg := &config.Config{
-			ERPFirstRegistrationPeriodName:       "TT",
+			ERPFirstRegistrationPeriodName: "TT",
 		}
 		err := container.Singleton(func() *config.Config {
 			return cfg
@@ -272,8 +272,8 @@ func TestTrackInMainRegistrationWillReturnError(t *testing.T) {
 	})
 
 	t.Run("Student Schedule not exists", func(t *testing.T) {
-		oldPresentsCodeDictionary := preparePresentsCodeDictionary(t)
-		defer SetPresentsCodeDictionary(oldPresentsCodeDictionary)
+		oldPCD, oldACD := preparePresentsCodeDictionary(t)
+		defer restoreCodesDictionaries(oldPCD, oldACD)
 
 		prepareConfig(t)
 
@@ -308,15 +308,168 @@ func TestTrackInMainRegistrationWillReturnError(t *testing.T) {
 	})
 }
 
+func TestTrackForbyPeriodsForPresentWillReturnError(t *testing.T) {
+
+	t.Run("Period not exists", func(t *testing.T) {
+		oldPCD, oldACD := preparePresentsCodeDictionary(t)
+		defer restoreCodesDictionaries(oldPCD, oldACD)
+
+		cfg := &config.Config{
+			ERPFirstRegistrationPeriodName: "TT",
+		}
+		err := container.Singleton(func() *config.Config {
+			return cfg
+		})
+		assert.NoError(t, err)
+
+		sa, _ := prepareTestEnv()
+
+		a, u, err := sa.TrackForbyPeriodsForPresent(time.Now())
+		assert.Error(t, err)
+		assert.False(t, u)
+		assert.Nil(t, a)
+
+		assert.ErrorIs(t, err, ErrorMainPeriodNotFound)
+		assert.Contains(t, err.Error(), "expected default period TT")
+	})
+
+	t.Run("Default Absence Code not found", func(t *testing.T) {
+		oldPresentsCodeDictionary := GetPresentsCodeDictionary()
+		SetPresentsCodeDictionary(nil)
+		defer SetPresentsCodeDictionary(oldPresentsCodeDictionary)
+
+		prepareConfig(t)
+
+		sa, _ := prepareTestEnv()
+
+		a, u, err := sa.TrackForbyPeriodsForPresent(time.Now())
+		assert.Error(t, err)
+		assert.False(t, u)
+		assert.Nil(t, a)
+
+		assert.ErrorIs(t, err, ErrorDefaultLessonAbsenceCodeNotFound)
+	})
+}
+
+func TestTrackForbyPeriodsForPresentWithLateForSecondPeriodWillAbsenceOnFirstAndLateOnSecond(t *testing.T) {
+	oldPCD, oldACD := preparePresentsCodeDictionary(t)
+	defer restoreCodesDictionaries(oldPCD, oldACD)
+
+	prepareConfig(t)
+
+	sa, _ := prepareTestEnv()
+
+	now := time.Now()
+
+	trackTime := time.Date(now.Year(), now.Month(), now.Day(), 9, 10, 0, 0, time.UTC)
+
+	ui, u, err := sa.TrackForbyPeriodsForPresent(trackTime)
+	assert.NoError(t, err)
+	assert.True(t, u)
+	assert.Equal(t, 2, len(ui))
+
+	var item1, item2 *StudentAttendanceItem
+	for _, saItem := range ui {
+		switch saItem.Period.ID {
+		case 1:
+			item1 = saItem
+		case 2:
+			item2 = saItem
+		}
+	}
+
+	assert.Equal(t, int32(1), item1.Attendance.IsRegistered)
+	assert.False(t, item1.Attendance.IsPresent)
+	assert.False(t, item1.Attendance.IsLate)
+	assert.Nil(t, item1.Attendance.PresentCodeID)
+	assert.NotNil(t, item1.Attendance.AbsenceCodeID)
+
+	assert.Equal(t, int32(1), item2.Attendance.IsRegistered)
+	assert.True(t, item2.Attendance.IsPresent)
+	assert.True(t, item2.Attendance.IsLate)
+	assert.Nil(t, item2.Attendance.PresentCodeID)
+	assert.Nil(t, item2.Attendance.AbsenceCodeID)
+	assert.Equal(t, int32(10), item2.Attendance.NumberOfMinutesLate)
+}
 
 
-func preparePresentsCodeDictionary(t *testing.T) (oldDictionary *RegistrationCodeDictionary) {
+
+func TestTrackForbyPeriodsForPresentWithLateForFirstPeriodWillLateOnFirst(t *testing.T) {
+
+	oldPCD, oldACD := preparePresentsCodeDictionary(t)
+	defer restoreCodesDictionaries(oldPCD, oldACD)
+
+	prepareConfig(t)
+
+	sa, _ := prepareTestEnv()
+
+	now := time.Now()
+
+	trackTime := time.Date(now.Year(), now.Month(), now.Day(), 8, 15, 0, 0, time.UTC)
+
+	ui, u, err := sa.TrackForbyPeriodsForPresent(trackTime)
+	assert.NoError(t, err)
+	assert.True(t, u)
+	assert.Equal(t, 1, len(ui))
+
+	item := ui[0]
+	assert.Equal(t, int32(1), item.Period.ID)
+	assert.Equal(t, int32(1), item.Attendance.IsRegistered)
+	assert.True(t, item.Attendance.IsPresent)
+	assert.True(t, item.Attendance.IsLate)
+	assert.Nil(t, item.Attendance.PresentCodeID)
+	assert.Nil(t, item.Attendance.AbsenceCodeID)
+	assert.Equal(t, int32(15), item.Attendance.NumberOfMinutesLate)
+}
+
+func TestTrackForbyPeriodsForPresentWithOnTimeForSecondPeriodWillLateOnFirst(t *testing.T) {
+	var tests = []struct {
+		name      string
+		trackTime time.Time
+	}{
+		{
+			name:      "On time for second period",
+			trackTime: time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 9, 0, 0, 0, time.UTC),
+		},
+		{
+			name:      "Exactly in the end time for first period",
+			trackTime: time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 8, 59, 0, 0, time.UTC),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oldPCD, oldACD := preparePresentsCodeDictionary(t)
+			defer restoreCodesDictionaries(oldPCD, oldACD)
+
+			prepareConfig(t)
+
+			sa, _ := prepareTestEnv()
+
+			ui, u, err := sa.TrackForbyPeriodsForPresent(tt.trackTime)
+			assert.NoError(t, err)
+			assert.True(t, u)
+			assert.Equal(t, 1, len(ui))
+
+			item := ui[0]
+			assert.Equal(t, int32(1), item.Period.ID)
+			assert.Equal(t, int32(1), item.Attendance.IsRegistered)
+			assert.False(t, item.Attendance.IsPresent)
+			assert.False(t, item.Attendance.IsLate)
+			assert.Nil(t, item.Attendance.PresentCodeID)
+			assert.NotNil(t, item.Attendance.AbsenceCodeID)
+			assert.Equal(t, int32(11), *item.Attendance.AbsenceCodeID)
+		})
+	}
+}
+
+func preparePresentsCodeDictionary(t *testing.T) (oldPresentsCodeDictionary *RegistrationCodeDictionary, oldAbsenceCodeDictionary *RegistrationCodeDictionary) {
 	t.Helper()
-	oldDictionary = GetPresentsCodeDictionary()
+	oldPresentsCodeDictionary = GetPresentsCodeDictionary()
 	presentsCode := &RegistrationCode{
-		ID:   1,
-		Code: "/",
-		Name: "Present",
+		ID:            1,
+		Code:          "/",
+		Name:          "Present",
 		IsAbsenceCode: false,
 	}
 	newDictionary := &RegistrationCodeDictionary{
@@ -326,13 +479,34 @@ func preparePresentsCodeDictionary(t *testing.T) (oldDictionary *RegistrationCod
 		UploadedAt: time.Now(),
 	}
 	SetPresentsCodeDictionary(newDictionary)
-	return oldDictionary
+
+	oldAbsenceCodeDictionary = GetAbsenceCodeDictionary()
+	absenceCode := &RegistrationCode{
+		ID:            11,
+		Code:          "C",
+		Name:          "Lesson absence",
+		IsAbsenceCode: true,
+	}
+	newAbsenceDictionary := &RegistrationCodeDictionary{
+		Codes: map[int32]*RegistrationCode{
+			absenceCode.ID: absenceCode,
+		},
+		UploadedAt: time.Now(),
+	}
+	SetAbsenceCodeDictionary(newAbsenceDictionary)
+	return oldPresentsCodeDictionary, oldAbsenceCodeDictionary
 }
 
-func prepareConfig (t *testing.T) {
+func restoreCodesDictionaries(oldPresentsCodeDictionary *RegistrationCodeDictionary, oldAbsenceCodeDictionary *RegistrationCodeDictionary) {
+	SetPresentsCodeDictionary(oldPresentsCodeDictionary)
+	SetAbsenceCodeDictionary(oldAbsenceCodeDictionary)
+}
+
+func prepareConfig(t *testing.T) {
 	cfg := &config.Config{
-		ERPFirstRegistrationPeriodName:       "AM",
-		ERPDefaultPresentCodeName: "/",		
+		ERPFirstRegistrationPeriodName:  "AM",
+		ERPDefaultLessonAbsenceCodeName: "C",
+		ERPDefaultPresentCodeName:       "/",
 	}
 	err := container.Singleton(func() *config.Config {
 		return cfg
@@ -340,13 +514,13 @@ func prepareConfig (t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func prepareTestEnv () (*StudentAttendance, *saEnv) {
+func prepareTestEnv() (*StudentAttendance, *saEnv) {
 	student := &Visitor{
-		Id:	   1,
-		ErpID: 12345,
-		ErpSchoolID: "S123",
+		Id:             1,
+		ErpID:          12345,
+		ErpSchoolID:    "S123",
 		ErpYearGroupID: 10,
-		ErpDivisions: []int32{101, 102},
+		ErpDivisions:   []int32{101, 102},
 	}
 
 	now := time.Now()
@@ -355,7 +529,7 @@ func prepareTestEnv () (*StudentAttendance, *saEnv) {
 		ID:     100,
 		Name:   "AM",
 		Start:  time.Date(now.Year(), now.Month(), now.Day(), 7, 37, 0, 0, time.UTC),
-		Time: 	time.Date(now.Year(), now.Month(), now.Day(), 7, 40, 0, 0, time.UTC),
+		Time:   time.Date(now.Year(), now.Month(), now.Day(), 7, 40, 0, 0, time.UTC),
 		Finish: time.Date(now.Year(), now.Month(), now.Day(), 7, 55, 0, 0, time.UTC),
 	}
 
@@ -363,7 +537,7 @@ func prepareTestEnv () (*StudentAttendance, *saEnv) {
 		ID:     1,
 		Name:   "Period 1",
 		Start:  time.Date(now.Year(), now.Month(), now.Day(), 8, 0, 0, 0, time.UTC),
-		Time: 	time.Date(now.Year(), now.Month(), now.Day(), 8, 0, 0, 0, time.UTC),
+		Time:   time.Date(now.Year(), now.Month(), now.Day(), 8, 0, 0, 0, time.UTC),
 		Finish: time.Date(now.Year(), now.Month(), now.Day(), 8, 59, 0, 0, time.UTC),
 	}
 
@@ -371,35 +545,35 @@ func prepareTestEnv () (*StudentAttendance, *saEnv) {
 		ID:     2,
 		Name:   "Period 2",
 		Start:  time.Date(now.Year(), now.Month(), now.Day(), 9, 0, 0, 0, time.UTC),
-		Time: 	time.Date(now.Year(), now.Month(), now.Day(), 9, 0, 0, 0, time.UTC),
+		Time:   time.Date(now.Year(), now.Month(), now.Day(), 9, 0, 0, 0, time.UTC),
 		Finish: time.Date(now.Year(), now.Month(), now.Day(), 9, 59, 0, 0, time.UTC),
 	}
 
 	schedule := &Schedule{
 		Periods: map[int32]*RegistrationPeriod{
 			periodAM.ID: periodAM,
-			period1.ID: period1,
-			period2.ID: period2,
+			period1.ID:  period1,
+			period2.ID:  period2,
 		},
 	}
 
 	sa := NewStudentAttendance(student, schedule)
 
-	for _,  period := range schedule.Periods {
+	for _, period := range schedule.Periods {
 		ai := &AttendanceItem{
 			RegistrationPeriodID: RegistrationPeriodID(period.ID),
-			SchoolID: student.ErpSchoolID,
-			IsFutureAbsence: false,
-			IsPresent: false,
-			IsLate: false,
-			IsOutOfSchool: false,
-			IsRegistered: 0,
+			SchoolID:             student.ErpSchoolID,
+			IsFutureAbsence:      false,
+			IsPresent:            false,
+			IsLate:               false,
+			IsOutOfSchool:        false,
+			IsRegistered:         0,
 		}
 		sa.SetAttendanceStatus(ai)
 	}
 
-	return sa, &saEnv{		
-		student: student,
+	return sa, &saEnv{
+		student:  student,
 		schedule: schedule,
 	}
 }
