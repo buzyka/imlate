@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/buzyka/imlate/internal/isb/entity"
+	"github.com/buzyka/imlate/internal/domain/entity"
 )
 
 type Visitor struct {
@@ -16,7 +16,7 @@ type Visitor struct {
 }
 
 func (r *Visitor) GetAll() ([]*entity.Visitor, error) {
-	rows, err := r.Connection.Query("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, updated_at FROM visitors ORDER BY id ASC")
+	rows, err := r.Connection.Query("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, updated_at FROM visitors ORDER BY id ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -28,6 +28,8 @@ func (r *Visitor) GetAll() ([]*entity.Visitor, error) {
 		var tmpImage sql.NullString
 		var tmpErpID sql.NullInt64
 		var tmpErpSchoolID sql.NullString
+		var tmpYearGroup sql.NullInt32
+		var tmpDivisions sql.NullString
 		var tmpUpdatedAt sql.NullTime
 
 		visitor := &entity.Visitor{}
@@ -40,6 +42,8 @@ func (r *Visitor) GetAll() ([]*entity.Visitor, error) {
 			&tmpImage,
 			&tmpErpID,
 			&tmpErpSchoolID,
+			&tmpYearGroup,
+			&tmpDivisions,
 			&tmpUpdatedAt,
 		)
 		if err != nil {
@@ -58,6 +62,15 @@ func (r *Visitor) GetAll() ([]*entity.Visitor, error) {
 		}
 		if tmpErpSchoolID.Valid {
 			visitor.ErpSchoolID = tmpErpSchoolID.String
+		}
+		if tmpYearGroup.Valid {
+			visitor.ErpYearGroupID = tmpYearGroup.Int32
+		}
+		if tmpDivisions.Valid {
+			err = json.Unmarshal([]byte(tmpDivisions.String), &visitor.ErpDivisions)
+			if err != nil {
+				visitor.ErpDivisions = []int32{}
+			}
 		}
 		if tmpUpdatedAt.Valid {
 			visitor.UpdatedAt = tmpUpdatedAt.Time
