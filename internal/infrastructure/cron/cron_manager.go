@@ -79,7 +79,7 @@ func registerJobs(s gocron.Scheduler) error {
 		return err
 	}
 
-	// Registration codes sync job
+	// Photos sync job
 	_, err = s.NewJob(
 		gocron.CronJob(
 			"0 5 * * 1-5", // at 5am on weekdays
