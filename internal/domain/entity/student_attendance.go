@@ -98,7 +98,7 @@ func (sa *StudentAttendance) TrackInMainRegistration(trackTime time.Time) (*Stud
 
 	// Student is not yet registered
 	if schedule.Attendance.IsRegistered == 0 {
-		if trackTime.Before(mainReg.Finish) || trackTime.Equal(mainReg.Finish) {
+		if trackTime.Before(mainReg.Finish) || trackTime.Equal(mainReg.Finish) || int32(trackTime.Sub(mainReg.Start).Minutes()) <= 0 {
 			schedule.Attendance.IsRegistered = 1
 			schedule.Attendance.IsPresent = true
 			schedule.Attendance.IsLate = false
@@ -106,10 +106,14 @@ func (sa *StudentAttendance) TrackInMainRegistration(trackTime time.Time) (*Stud
 
 			return schedule, true, nil
 		} else {
+			lateMinutes := int32(trackTime.Sub(mainReg.Time).Minutes())
+			if lateMinutes == 0 {
+				lateMinutes = 1
+			}
 			schedule.Attendance.IsRegistered = 1
 			schedule.Attendance.IsPresent = true
 			schedule.Attendance.IsLate = true
-			schedule.Attendance.NumberOfMinutesLate = int32(trackTime.Sub(mainReg.Time).Minutes())
+			schedule.Attendance.NumberOfMinutesLate = lateMinutes
 			schedule.Attendance.PresentCodeID = nil
 			schedule.Attendance.AbsenceCodeID = nil
 
