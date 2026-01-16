@@ -1,12 +1,15 @@
 package isams
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+const testDomain = "https://example.test"
 
 func TestClient_GetStudents_Success(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -184,4 +187,115 @@ func TestClient_GetStudentByID_NewRequestError(t *testing.T) {
 	student, err := client.GetStudentByID(123)
 	assert.Error(t, err)
 	assert.Nil(t, student)
+}
+
+func TestClient_GetStudentPhoto_Success(t *testing.T) {
+	var tests = []struct {
+		name		   string
+		contentType   string
+		expectedExt   string
+	} {
+		{"JPEG Image", "image/jpeg", "jpg"},
+		{"PNG Image", "image/png", "png"},
+		{"GIF Image", "image/gif", "gif"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			schoolId := "123"
+			testBody := []byte("test image content")
+			httpClient := &http.Client{
+				Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+					assert.Equal(t, http.MethodGet, r.Method)
+					assert.Equal(t, fmt.Sprintf("%s/api/students/%s/photos/current", testDomain, schoolId), r.URL.String())
+					assert.Equal(t, "*/*", r.Header.Get("Accept"))
+					
+					return testResponse(t, http.StatusOK, WithBodyBinary(testBody), WithHeader("Content-Type", tt.contentType)), nil
+				}),
+			}
+
+			client := &Client{
+				BaseURL:    testDomain,
+				HTTPClient: httpClient,
+			}
+			
+			photoResp, err := client.GetStudentPhoto(schoolId)
+			assert.NoError(t, err)
+			assert.NotNil(t, photoResp)
+			assert.Equal(t, testBody, photoResp.Data)
+			assert.Equal(t, tt.contentType, photoResp.ContentType)
+			assert.Equal(t, tt.expectedExt, photoResp.Extension)
+		})
+	}
+}
+
+
+type tErrReadCloser struct{ err error }
+
+func (e tErrReadCloser) Read(p []byte) (n int, err error) { return 0, e.err }
+func (e tErrReadCloser) Close() error               { return nil }
+
+func TestClient_GetStudentPhoto_HTTPClientError(t *testing.T) {
+	schoolId := "321"
+
+	client := &Client{
+		BaseURL:    testDomain,
+	}
+
+	t.Run("HTTP Client Error", func(t *testing.T){
+		httpClient := &http.Client{
+			Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+				return testResponse(t, http.StatusNotFound), assert.AnError
+			}),
+		}
+
+		client.HTTPClient = httpClient
+
+		photoResp, err := client.GetStudentPhoto(schoolId)
+		assert.Error(t, err)
+		assert.Nil(t, photoResp)
+	})
+
+	t.Run("Non-200 Status Code", func(t *testing.T){
+		httpClient := &http.Client{
+			Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+				return testResponse(t, http.StatusInternalServerError), nil
+			}),
+		}
+
+		client.HTTPClient = httpClient
+
+		photoResp, err := client.GetStudentPhoto(schoolId)
+		assert.Error(t, err)
+		assert.Nil(t, photoResp)
+	})
+
+	t.Run("404 Status Code", func(t *testing.T){
+		httpClient := &http.Client{
+			Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+				return testResponse(t, http.StatusNotFound), nil
+			}),
+		}
+
+		client.HTTPClient = httpClient
+
+		_, err := client.GetStudentPhoto(schoolId)
+		assert.ErrorIs(t, err, ErrStudentPhotoNotFound)
+	})
+
+	t.Run("Response Body Read Error", func(t *testing.T){
+		httpClient := &http.Client{
+			Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+				resp := testResponse(t, http.StatusOK)
+				resp.Body = tErrReadCloser{err: assert.AnError}
+				return resp, nil
+			}),
+		}
+
+		client.HTTPClient = httpClient
+
+		_, err := client.GetStudentPhoto(schoolId)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrAPIResponseBody)
+	})
 }

@@ -81,6 +81,12 @@ type Student struct {
 	YearGroup          *int          `json:"yearGroup"`
 }
 
+var (
+	ErrStudentPhotoNotFound = fmt.Errorf("student photo not found")
+	ErrStudentPhotoResponse  = fmt.Errorf("failed to get student photo")
+	ErrAPIResponseBody	   = fmt.Errorf("invalid API response body")
+)
+
 func (c *Client) GetStudents(page, pageSize int32) (*StudentsResponse, error) {
 	req, err := http.NewRequest("GET", c.BaseURL+StudentsEndpoint, nil)
 	if err != nil {
@@ -164,12 +170,17 @@ func (c *Client) GetStudentPhoto(studentSchoolID string) (*StudentPhotoResponse,
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get student photo: %s", resp.Status)
+		switch resp.StatusCode {
+			case http.StatusNotFound:
+				return nil, ErrStudentPhotoNotFound
+			default:
+				return nil, fmt.Errorf("%w: returned http status: %d", ErrStudentPhotoResponse, resp.StatusCode)
+		}		
 	}
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %v", ErrAPIResponseBody, err)
 	}
 
 	contentType := resp.Header.Get("Content-Type")
