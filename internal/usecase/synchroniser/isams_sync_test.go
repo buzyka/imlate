@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/erp"
 	"github.com/buzyka/imlate/internal/infrastructure/integration/isams"
-	"github.com/buzyka/imlate/internal/isb/entity"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -45,6 +45,51 @@ func (m *MockERPClient) GetYearGroupDivisions(yearGroupID int32) (*isams.YearGro
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*isams.YearGroupsDivisionsResponse), args.Error(1)
+}
+
+func (m *MockERPClient) GetCurrentRegistrationPeriodsForDivision(divisionID int32) (*isams.RegistrationPeriodsResponse, error) {
+	args := m.Called(divisionID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*isams.RegistrationPeriodsResponse), args.Error(1)
+}
+
+func (m *MockERPClient) GetRegistrationStatusForStudent(studentSchoolID string, periodID int32) (*isams.RegistrationStatus, error) {
+	args := m.Called(studentSchoolID, periodID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*isams.RegistrationStatus), args.Error(1)
+}
+
+func (m *MockERPClient) GetRegistrationAbsenceCodes() (*isams.RegistrationAbsenceCodesResponse, error) {
+	args := m.Called()
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*isams.RegistrationAbsenceCodesResponse), args.Error(1)
+}
+
+func (m *MockERPClient) GetRegistrationPresentCodes() (*isams.RegistrationPresentCodeResponse, error) {
+	args := m.Called()
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*isams.RegistrationPresentCodeResponse), args.Error(1)
+}
+
+func (m *MockERPClient) PutRegistration(schoolID string, periodID int32, request isams.RegistrationStatusRequest) error {
+	args := m.Called(schoolID, periodID, request)
+	return args.Error(0)
+}
+
+func (m *MockERPClient) GetStudentPhoto(schoolID string) (*isams.StudentPhotoResponse, error) {
+	args := m.Called(schoolID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*isams.StudentPhotoResponse), args.Error(1)
 }
 
 // MockVisitorRepository

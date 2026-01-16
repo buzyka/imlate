@@ -2,19 +2,32 @@ package config
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/caarlos0/env/v6"
 )
 
 type Config struct {
-	Debug          bool   `env:"DEBUG" envDefault:"false"`
-	Environment    string `env:"ENVIRONMENT" envDefault:"production"` // possible values: development, staging, production.
-	DatabaseEngine string `env:"DATABASE_ENGINE" envDefault:"mysql"`
-	DatabaseURL    string `env:"DATABASE_URL" envDefault:"trackme:trackme@/tracker?parseTime=true"`
+	Debug          			bool   `env:"DEBUG" envDefault:"false"`
+	Environment    			string `env:"ENVIRONMENT" envDefault:"production"` // possible values: development, staging, production.
+	DatabaseEngine 			string `env:"DATABASE_ENGINE" envDefault:"mysql"`
+	DatabaseURL    			string `env:"DATABASE_URL" envDefault:"trackme:trackme@/tracker?parseTime=true"`
 
-	ISAMSBaseURL         string `env:"ISAMS_BASE_URL"`
-	ISAMSAPIClientID     string `env:"ISAMS_API_CLIENT_ID"`
-	ISAMSAPIClientSecret string `env:"ISAMS_API_CLIENT_SECRET"`
+	ISAMSBaseURL         	string `env:"ISAMS_BASE_URL"`
+	ISAMSAPIClientID     	string `env:"ISAMS_API_CLIENT_ID"`
+	ISAMSAPIClientSecret 	string `env:"ISAMS_API_CLIENT_SECRET"`
+
+	ERPTimeZone 		 	string `env:"ERP_LOCAL_TIMEZONE"`
+
+	ERPFirstRegistrationPeriodName string `env:"ERP_FIRST_REGISTRATION_PERIOD_NAME" envDefault:"AM"`
+	ERPDefaultPresentCodeName	string `env:"ERP_DEFAULT_PRESENT_CODE_NAME" envDefault:"/"`
+	ERPDefaultLateCodeName		string `env:"ERP_DEFAULT_LATE_CODE_NAME" envDefault:"C"`
+	ERPDefaultLessonAbsenceCodeName string `env:"ERP_DEFAULT_LESSON_ABSENCE_CODE_NAME" envDefault:"C"`
+
+	StudentsImagePhotoDir 	string `env:"STUDENTS_IMAGE_PHOTO_DIR" envDefault:"website/assets/img/students"`
+	StudentsImagePhotoURLPrefix string `env:"STUDENTS_IMAGE_PHOTO_URL_PREFIX" envDefault:"/assets/img/students"`
+
+	erpLocation 			*time.Location
 }
 
 type MysqlDBConfig struct {
@@ -43,6 +56,14 @@ func NewFromEnv() (Config, error) {
 	case "sqlite":
 		if url, ok := getDatabaseURLForSqliteFromEnv(); ok {
 			cfg.DatabaseURL = url
+		}
+	}
+
+	cfg.erpLocation = time.Local
+
+	if cfg.ERPTimeZone != "" {
+		if erpLoc, err := time.LoadLocation(cfg.ERPTimeZone); err == nil {
+			cfg.erpLocation = erpLoc
 		}
 	}
 
@@ -78,4 +99,8 @@ func getDatabaseURLForMysqlFromEnv() (url string, ok bool) {
 	}
 	url += "/" + cfg.DatabaseName + "?parseTime=true"
 	return url, true
+}
+
+func (c *Config) ERPTimeLocation() *time.Location {
+	return c.erpLocation
 }

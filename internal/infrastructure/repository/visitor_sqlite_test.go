@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/buzyka/imlate/internal/isb/entity"
+	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -538,11 +538,11 @@ func TestGetAll_Success(t *testing.T) {
 	repo := &Visitor{Connection: db}
 
 	now := time.Now()
-	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "updated_at"}).
-		AddRow(1, "John", "Doe", true, 10, "img.jpg", 1001, "S1001", now).
-		AddRow(2, "Jane", "Doe", false, nil, nil, nil, nil, nil)
+	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions", "updated_at"}).
+		AddRow(1, "John", "Doe", true, 10, "img.jpg", 1001, "S1001", 11, "[1]", now).
+		AddRow(2, "Jane", "Doe", false, nil, nil, nil, nil, nil, nil, nil)
 
-	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, updated_at FROM visitors ORDER BY id ASC").
+	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, updated_at FROM visitors ORDER BY id ASC").
 		WillReturnRows(rows)
 
 	visitors, err := repo.GetAll()

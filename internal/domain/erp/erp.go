@@ -13,4 +13,10 @@ type Factory interface {
 type Client interface {
 	GetStudents(page, pageSize int32) (*isams.StudentsResponse, error)
 	GetYearGroupDivisions(yearGroupID int32) (*isams.YearGroupsDivisionsResponse, error)
+	GetCurrentRegistrationPeriodsForDivision(divisionID int32) (*isams.RegistrationPeriodsResponse, error)
+	GetRegistrationStatusForStudent(studentSchoolID string, periodID int32) (*isams.RegistrationStatus, error)
+	GetRegistrationAbsenceCodes() (*isams.RegistrationAbsenceCodesResponse, error)
+	GetRegistrationPresentCodes() (*isams.RegistrationPresentCodeResponse, error)
+	PutRegistration(schoolID string, periodID int32, request isams.RegistrationStatusRequest) error
+	GetStudentPhoto(schoolID string) (*isams.StudentPhotoResponse, error)
 }

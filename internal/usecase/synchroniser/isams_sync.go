@@ -2,17 +2,21 @@ package synchroniser
 
 import (
 	"context"
+	"os"
+	"strings"
 	"time"
 
+	"github.com/buzyka/imlate/internal/config"
+	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/erp"
 	"github.com/buzyka/imlate/internal/domain/provider"
 	"github.com/buzyka/imlate/internal/infrastructure/integration/isams"
-	"github.com/buzyka/imlate/internal/isb/entity"
 )
 
 const PageSize = 100
 
 type StudentSync struct {
+	Config				*config.Config             `container:"type"`
 	ERPFactory         erp.Factory                `container:"type"`
 	VisitorRepo        provider.VisitorRepository `container:"type"`
 	currentVisitors    []*entity.Visitor
@@ -33,7 +37,6 @@ func (s *StudentSync) startSyncSession(ctx context.Context) error {
 		return err
 	}
 	s.currentClient = ERPClient
-	s.yearGroupDivisions = make(map[int32][]int32)
 	return nil
 }
 
@@ -44,6 +47,7 @@ func (s *StudentSync) SyncAllStudents() error {
 		return err
 	}
 	defer s.cleanUpSyncSession()
+	s.yearGroupDivisions = make(map[int32][]int32)
 
 	s.currentVisitors, err = s.VisitorRepo.GetAll()
 	if err != nil {
@@ -67,6 +71,98 @@ func (s *StudentSync) SyncAllStudents() error {
 			break
 		}
 		pageNumber++
+	}
+	return nil
+}
+
+func (s *StudentSync) SyncRegistrationCodesDictionaries() error {
+	ctx := context.Background()
+	err := s.startSyncSession(ctx)
+	if err != nil {
+		return err
+	}
+	defer s.cleanUpSyncSession()
+
+	codesDict := &entity.RegistrationCodeDictionary{
+		Codes: make(map[int32]*entity.RegistrationCode),
+		UploadedAt: time.Now().Truncate(time.Second),
+	}
+
+
+	// Absence codes
+	absenceCodesResp, err := s.currentClient.GetRegistrationAbsenceCodes()
+	if err != nil {
+		return err
+	}
+	for _, code := range absenceCodesResp.AbsenceCodes {
+		codesDict.Codes[code.ID] = &entity.RegistrationCode{
+			ID:            code.ID,
+			Code:		   code.Code,
+			Name:          code.Name,
+			IsAbsenceCode: true,
+		}
+	}
+	entity.SetAbsenceCodeDictionary(codesDict)
+
+	codesDict = &entity.RegistrationCodeDictionary{
+		Codes: make(map[int32]*entity.RegistrationCode),
+		UploadedAt: time.Now().Truncate(time.Second),
+	}
+
+	// Present codes
+	presentCodesResp, err := s.currentClient.GetRegistrationPresentCodes()
+	if err != nil {
+		return err
+	}
+	for _, code := range presentCodesResp.PresentCodes {
+		codesDict.Codes[code.ID] = &entity.RegistrationCode{
+			ID:            code.ID,
+			Code:		   code.Code,
+			Name:          code.Name,
+			IsAbsenceCode: false,
+		}
+	}
+
+	entity.SetPresentsCodeDictionary(codesDict)
+	return nil	
+}
+
+func (s *StudentSync) SyncStudentPhotos() error {
+	ctx := context.Background()
+	err := s.startSyncSession(ctx)
+	if err != nil {
+		return err
+	}
+	defer s.cleanUpSyncSession()
+
+	visitors, err := s.VisitorRepo.GetAll()
+	if err != nil {
+		return err
+	}
+	for _, visitor := range visitors {
+		if !visitor.IsStudent {
+			continue
+		}
+		photoResp, err := s.currentClient.GetStudentPhoto(visitor.ErpSchoolID)
+		if err != nil {
+			if strings.Contains(err.Error(), "Not Found") {
+				continue
+			}
+			return err
+		}
+		if photoResp.Data == nil {
+			continue
+		}
+		filePath := s.Config.StudentsImagePhotoDir
+		fileName := visitor.ErpSchoolID + photoResp.Extension
+		if err := os.WriteFile(filePath + "/" + fileName, photoResp.Data, 0644); err != nil {
+			return err
+		} else {
+			visitor.Image = s.Config.StudentsImagePhotoURLPrefix + "/" + fileName
+			if err := s.VisitorRepo.AddVisitor(visitor); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }

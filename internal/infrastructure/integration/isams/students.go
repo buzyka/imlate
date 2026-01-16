@@ -3,6 +3,7 @@ package isams
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -80,6 +81,12 @@ type Student struct {
 	YearGroup          *int          `json:"yearGroup"`
 }
 
+var (
+	ErrStudentPhotoNotFound = fmt.Errorf("student photo not found")
+	ErrStudentPhotoResponse  = fmt.Errorf("failed to get student photo")
+	ErrAPIResponseBody	   = fmt.Errorf("invalid API response body")
+)
+
 func (c *Client) GetStudents(page, pageSize int32) (*StudentsResponse, error) {
 	req, err := http.NewRequest("GET", c.BaseURL+StudentsEndpoint, nil)
 	if err != nil {
@@ -138,4 +145,58 @@ func (c *Client) GetStudentByID(id int32) (*Student, error) {
 	}
 
 	return &payload, nil
+}
+
+type StudentPhotoResponse struct {
+	Data        []byte
+	ContentType string
+	Extension   string
+}
+
+func (c *Client) GetStudentPhoto(studentSchoolID string) (*StudentPhotoResponse, error) {
+	url := StudentCurrentPhotoEndpoint
+	url = strings.Replace(url, "{schoolId}", studentSchoolID, 1)
+	req, err := http.NewRequest("GET", c.BaseURL+url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Accept", "*/*")
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		switch resp.StatusCode {
+			case http.StatusNotFound:
+				return nil, ErrStudentPhotoNotFound
+			default:
+				return nil, fmt.Errorf("%w: returned http status: %d", ErrStudentPhotoResponse, resp.StatusCode)
+		}		
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrAPIResponseBody, err)
+	}
+
+	contentType := resp.Header.Get("Content-Type")
+	extension := ""
+	switch contentType {
+	case "image/jpeg":
+		extension = "jpg"
+	case "image/png":
+		extension = "png"
+	case "image/gif":
+		extension = "gif"
+	}
+
+	return &StudentPhotoResponse{
+		Data:        data,
+		ContentType: contentType,
+		Extension:   extension,
+	}, nil
 }

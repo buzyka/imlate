@@ -17,6 +17,7 @@
 tmp/
 .vscode/
 website/assets/isb/
+website/assets/img/students/
 
 # Dependency directories (remove the comment below to include it)
 # vendor/

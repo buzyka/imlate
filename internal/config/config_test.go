@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -107,6 +108,42 @@ func TestGetDatabaseURLFromEnvVariableWithNotCorrectConfigurationWillSetDefaultD
 
 			assert.Nil(t, err)
 			assert.Equal(t, "trackme:trackme@/tracker?parseTime=true", cfg.DatabaseURL)
+		})
+	}
+}
+
+func TestGetTimeLocationFromEnvVariableWillSetCorrectLocation(t *testing.T) {
+	var tests = []struct {
+		name              string
+		newEnv            map[string]string
+		expectedERPLoc   string
+	}{
+		{
+			name: "valid timezone locations",
+			newEnv: map[string]string{
+				"ERP_LOCAL_TIMEZONE": "Europe/London",
+			},
+			expectedERPLoc:   "Europe/London",
+		},
+		{
+			name: "empty timezone locations",
+			newEnv: map[string]string{
+				"ERP_LOCAL_TIMEZONE": "",
+			},
+			expectedERPLoc:   time.Now().Location().String(),
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			loadTestEnvVariables(t, tc.newEnv)
+
+			cfg, err := NewFromEnv()
+			assert.Nil(t, err)
+
+			exERPLocation, err := time.LoadLocation(tc.expectedERPLoc)
+			assert.Nil(t, err)
+			
+			assert.Equal(t, exERPLocation, cfg.ERPTimeLocation())
 		})
 	}
 }
