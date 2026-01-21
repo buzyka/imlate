@@ -2,9 +2,9 @@ package synchroniser
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/buzyka/imlate/internal/config"
@@ -69,18 +69,20 @@ func (s *StudentSync) SyncAllStudents() error {
 			return err
 		}
 
+		var updatedStudentsCnt int = 0
+
 		for _, student := range resp.Students {
-			if student.ID == 5225 {
-				fmt.Printf("----- STUDENT: %s\n", *student.Forename)
-			}
-			if err = s.SaveStudent(student); err != nil {
+			if updated, err := s.SaveStudent(student); err != nil {
 				s.Logger.Errorw("sync all students: save student step failed", "studentID", student.ID, "schoolID", student.SchoolID, "error", err)
 				return err
+			} else if updated {
+				updatedStudentsCnt++
 			}
 		}
 		if resp.TotalPages <= pageNumber {
 			break
 		}
+		s.Logger.Infof("Total updated students from page %d: %d", pageNumber, updatedStudentsCnt)
 		pageNumber++
 	}
 	return nil
@@ -138,16 +140,22 @@ func (s *StudentSync) SyncRegistrationCodesDictionaries() error {
 	return nil	
 }
 
+var osWriteFile = func(name string, data []byte, perm os.FileMode) error {
+	return os.WriteFile(name, data, perm)
+}
+
 func (s *StudentSync) SyncStudentPhotos() error {
 	ctx := context.Background()
 	err := s.startSyncSession(ctx)
 	if err != nil {
+		s.Logger.Errorw("sync students photos: create ERP client failed", "error", err)
 		return err
 	}
 	defer s.cleanUpSyncSession()
 
 	visitors, err := s.VisitorRepo.GetAll()
 	if err != nil {
+		s.Logger.Errorw("sync students photos: get all visitors failed", "error", err)
 		return err
 	}
 	for _, visitor := range visitors {
@@ -156,21 +164,21 @@ func (s *StudentSync) SyncStudentPhotos() error {
 		}
 		photoResp, err := s.currentClient.GetStudentPhoto(visitor.ErpSchoolID)
 		if err != nil {
-			if strings.Contains(err.Error(), "Not Found") {
-				continue
+			if !errors.Is(err, isams.ErrStudentPhotoNotFound) {
+				s.Logger.Warnw("sync students photos: get student photo failed", "studentSchoolID", visitor.ErpSchoolID, "error", err)
 			}
-			return err
+			continue
 		}
 		if photoResp.Data == nil {
 			continue
 		}
 		filePath := s.Config.StudentsImagePhotoDir
-		fileName := visitor.ErpSchoolID + photoResp.Extension
-		if err := os.WriteFile(filePath + "/" + fileName, photoResp.Data, 0644); err != nil {
+		fileName := fmt.Sprintf("%s.%s", visitor.ErpSchoolID, photoResp.Extension)
+		if err := osWriteFile(filePath + "/" + fileName, photoResp.Data, 0644); err != nil {
 			return err
 		} else {
 			visitor.Image = s.Config.StudentsImagePhotoURLPrefix + "/" + fileName
-			if err := s.VisitorRepo.AddVisitor(visitor); err != nil {
+			if err := s.VisitorRepo.SaveVisitor(visitor); err != nil {
 				return err
 			}
 		}
@@ -178,8 +186,10 @@ func (s *StudentSync) SyncStudentPhotos() error {
 	return nil
 }
 
-func (s *StudentSync) SaveStudent(student isams.Student) error {
+func (s *StudentSync) SaveStudent(student isams.Student) (updated bool, err error) {
 	var fullName, forename, surname string
+
+	updated = false
 
 	if student.Surname != nil && *student.Surname != "" && student.Forename != nil && *student.Forename != "" {
 		surname = *student.Surname
@@ -200,7 +210,7 @@ func (s *StudentSync) SaveStudent(student isams.Student) error {
 	divisions, err := s.getDivisionsByYearGroup(int32(yearGroup))
 	if err != nil {
 		s.Logger.Errorw("get divisions by year group failed", "yearGroupID", yearGroup, "error", err)
-		return err
+		return updated, err
 	}
 
 	var UpdatedAt time.Time
@@ -224,31 +234,18 @@ func (s *StudentSync) SaveStudent(student isams.Student) error {
 		UpdatedAt:      UpdatedAt,
 	}
 
-	if (visitor.ErpID == 5225) {
-		fmt.Printf("--SYNC: %s %s\n", visitor.Surname, visitor.Name)
-		fmt.Printf("Current: %d", visitor.GetSyncHash())
-	}
-
 	// Check if visitor needs to be updated or added
 	// and set visitor.Id if exists
 	if !s.IsUpToDate(visitor) {
 		s.Logger.Infof("Saving student visitor: ERP ID %d, Name: %s", visitor.ErpID, visitor.FullName)
-		return s.VisitorRepo.SaveVisitor(visitor)
+		return true, s.VisitorRepo.SaveVisitor(visitor)
 	}
-	return nil
+	return false, nil
 }
 
 func (s *StudentSync) IsUpToDate(newVisitor *entity.Visitor) bool {
 	for _, currentVisitor := range s.currentVisitors {
 		if currentVisitor.ErpID == newVisitor.ErpID {
-			
-			if (newVisitor.ErpID == 5225) {
-				fmt.Printf("+++ Existing: %d\n", currentVisitor.GetSyncHash())
-				fmt.Printf("+++ New: %d\n", newVisitor.GetSyncHash())
-				fmt.Printf("++++ Is up to date: %v\n", currentVisitor.GetSyncHash() == newVisitor.GetSyncHash())
-				fmt.Printf("++++ UpdatedAt equal: %v\n", currentVisitor.UpdatedAt.Equal(newVisitor.UpdatedAt))
-			}
-			
 			newVisitor.Id = currentVisitor.Id
 			if currentVisitor.GetSyncHash() == newVisitor.GetSyncHash() {
 				return true
