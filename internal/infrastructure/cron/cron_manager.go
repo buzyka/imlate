@@ -42,11 +42,12 @@ func registerJobs(s gocron.Scheduler) error {
 				var log *zap.SugaredLogger
 				container.MustResolve(container.Global, &log)
 				log.Infof("Starting ERP data sync... TIME: %s", time.Now().Format(time.RFC3339))
-				sync := synchroniser.StudentSync{}
+				sync := synchroniser.StudentSync{}				
 				container.MustFill(container.Global, &sync)
 				if err := sync.SyncAllStudents(); err != nil {
-					log.Errorf("Error during ERP data sync: %v\n", err)
+					log.Errorw("Error during ERP data sync", "error", err)
 				}
+				log.Infof("Finish ERP data sync... TIME: %s", time.Now().Format(time.RFC3339))
 			},
 		),
 		gocron.WithStartAt(gocron.WithStartImmediately()),
@@ -73,7 +74,7 @@ func registerJobs(s gocron.Scheduler) error {
 				}
 			},
 		),
-		gocron.WithStartAt(gocron.WithStartImmediately()),
+		// gocron.WithStartAt(gocron.WithStartImmediately()),
 	)
 	if err != nil {
 		return err
@@ -97,7 +98,7 @@ func registerJobs(s gocron.Scheduler) error {
 				}
 			},
 		),
-		gocron.WithStartAt(gocron.WithStartImmediately()),
+		//gocron.WithStartAt(gocron.WithStartImmediately()),
 	)
 	if err != nil {
 		return err

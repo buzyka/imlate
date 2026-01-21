@@ -30,10 +30,10 @@ func TestFindByKey_Success(t *testing.T) {
 		Image:   "/assets/img/teachers/1.jpg",
 	}
 
-	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions", "key_id"}).
-		AddRow(1, "John", "Doe", true, 10, "/assets/img/teachers/1.jpg", 1001, "S1001", 10, "[1,2]", "ABC123")
+	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions", "sync_hash", "key_id"}).
+		AddRow(1, "John", "Doe", true, 10, "/assets/img/teachers/1.jpg", 1001, "S1001", 10, "[1,2]", 0, "ABC123")
 
-	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
+	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, v.sync_hash, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
 		WithArgs("ABC123").
 		WillReturnRows(rows)
 
@@ -67,7 +67,7 @@ func TestFindByKey_NotFound(t *testing.T) {
 		Connection: db,
 	}
 
-	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
+	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, v.sync_hash, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
 		WithArgs("NOTFOUND").
 		WillReturnError(sql.ErrNoRows)
 
@@ -92,7 +92,7 @@ func TestFindByKey_DatabaseError(t *testing.T) {
 	}
 
 	expectedError := errors.New("database connection error")
-	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
+	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, v.sync_hash, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
 		WithArgs("ERROR").
 		WillReturnError(expectedError)
 
@@ -116,10 +116,10 @@ func TestFindByKey_NullGrade(t *testing.T) {
 		Connection: db,
 	}
 
-	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions", "key_id"}).
-		AddRow(1, "John", "Doe", true, nil, "/assets/img/teachers/1.jpg", nil, nil, nil, nil, "KEY123")
+	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions", "sync_hash", "key_id"}).
+		AddRow(1, "John", "Doe", true, nil, "/assets/img/teachers/1.jpg", nil, nil, nil, nil, 0, "KEY123")
 
-	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
+	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, v.sync_hash, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
 		WithArgs("KEY123").
 		WillReturnRows(rows)
 
@@ -144,10 +144,10 @@ func TestFindByKey_NullImage(t *testing.T) {
 		Connection: db,
 	}
 
-	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions", "key_id"}).
-		AddRow(1, "John", "Doe", true, 10, nil, nil, nil, nil, nil, "KEY123")
+	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions", "sync_hash", "key_id"}).
+		AddRow(1, "John", "Doe", true, 10, nil, nil, nil, nil, nil, 0, "KEY123")
 
-	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
+	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, v.sync_hash, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
 		WithArgs("KEY123").
 		WillReturnRows(rows)
 
@@ -174,10 +174,10 @@ func TestFindById_Success(t *testing.T) {
 		Connection: db,
 	}
 
-	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions"}).
-		AddRow(123, "Jane", "Smith", true, 11, "/assets/img/teachers/2.jpg", 1002, "S1002", 11, "[3,4]")
+	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions", "sync_hash"}).
+		AddRow(123, "Jane", "Smith", true, 11, "/assets/img/teachers/2.jpg", 1002, "S1002", 11, "[3,4]", 0)
 
-	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions FROM visitors WHERE id = ?").
+	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, sync_hash FROM visitors WHERE id = ?").
 		WithArgs(int32(123)).
 		WillReturnRows(rows)
 
@@ -210,7 +210,7 @@ func TestFindById_NotFound(t *testing.T) {
 		Connection: db,
 	}
 
-	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions FROM visitors WHERE id = ?").
+	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, sync_hash FROM visitors WHERE id = ?").
 		WithArgs(int32(999)).
 		WillReturnError(sql.ErrNoRows)
 
@@ -235,7 +235,7 @@ func TestFindById_DatabaseError(t *testing.T) {
 	}
 
 	expectedError := errors.New("connection lost")
-	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions FROM visitors WHERE id = ?").
+	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, sync_hash FROM visitors WHERE id = ?").
 		WithArgs(int32(123)).
 		WillReturnError(expectedError)
 
@@ -259,10 +259,10 @@ func TestFindById_NullValues(t *testing.T) {
 		Connection: db,
 	}
 
-	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions"}).
-		AddRow(456, "Bob", "Johnson", false, nil, nil, nil, nil, nil, nil)
+	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions", "sync_hash"}).
+		AddRow(456, "Bob", "Johnson", false, nil, nil, nil, nil, nil, nil, nil)
 
-	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions FROM visitors WHERE id = ?").
+	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, sync_hash FROM visitors WHERE id = ?").
 		WithArgs(int32(456)).
 		WillReturnRows(rows)
 
@@ -297,7 +297,7 @@ func TestAddKeyToVisitor_Success(t *testing.T) {
 	}
 
 	// Expect FindByKey to return empty result (key not assigned)
-	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
+	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, v.sync_hash, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
 		WithArgs("NEWKEY").
 		WillReturnError(sql.ErrNoRows)
 
@@ -331,10 +331,10 @@ func TestAddKeyToVisitor_SameVisitor(t *testing.T) {
 	}
 
 	// Key already assigned to the same visitor
-	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions", "key_id"}).
-		AddRow(100, "Alice", "Brown", true, 10, "/test.jpg", 123, "SCHOOL1", 11, "[1,2]", "EXISTKEY")
+	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions", "sync_hash", "key_id"}).
+		AddRow(100, "Alice", "Brown", true, 10, "/test.jpg", 123, "SCHOOL1", 11, "[1,2]", 0, "EXISTKEY")
 
-	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
+	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, v.sync_hash, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
 		WithArgs("EXISTKEY").
 		WillReturnRows(rows)
 
@@ -363,10 +363,10 @@ func TestAddKeyToVisitor_DifferentVisitor(t *testing.T) {
 	}
 
 	// Key already assigned to different visitor
-	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions", "key_id"}).
-		AddRow(200, "Charlie", "Davis", true, 9, "/test.jpg", 456, "SCHOOL2", 10, "[]", "TAKEN")
+	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions", "sync_hash", "key_id"}).
+		AddRow(200, "Charlie", "Davis", true, 9, "/test.jpg", 456, "SCHOOL2", 10, "[]", 0, "TAKEN")
 
-	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
+	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, v.sync_hash, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
 		WithArgs("TAKEN").
 		WillReturnRows(rows)
 
@@ -396,7 +396,7 @@ func TestAddKeyToVisitor_SearchError(t *testing.T) {
 	}
 
 	expectedError := errors.New("database error")
-	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
+	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, v.sync_hash, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
 		WithArgs("ERRORKEY").
 		WillReturnError(expectedError)
 
@@ -426,7 +426,7 @@ func TestAddKeyToVisitor_InsertError(t *testing.T) {
 	}
 
 	// Key not assigned
-	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
+	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, v.sync_hash, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
 		WithArgs("NEWKEY").
 		WillReturnError(sql.ErrNoRows)
 
@@ -511,11 +511,11 @@ func TestFindByKey_CaseInsensitive(t *testing.T) {
 		Connection: db,
 	}
 
-	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions", "key_id"}).
-		AddRow(1, "John", "Doe", true, 10, "/assets/img/teachers/1.jpg", nil, nil, nil, nil, "MIXEDCASE")
+	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions", "sync_hash", "key_id"}).
+		AddRow(1, "John", "Doe", true, 10, "/assets/img/teachers/1.jpg", nil, nil, nil, nil, 0, "MIXEDCASE")
 
 	// The query should receive uppercase version
-	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
+	mock.ExpectQuery("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, v.sync_hash, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk").
 		WithArgs("MIXEDCASE").
 		WillReturnRows(rows)
 
@@ -538,11 +538,11 @@ func TestGetAll_Success(t *testing.T) {
 	repo := &Visitor{Connection: db}
 
 	now := time.Now()
-	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions", "updated_at"}).
-		AddRow(1, "John", "Doe", true, 10, "img.jpg", 1001, "S1001", 11, "[1]", now).
-		AddRow(2, "Jane", "Doe", false, nil, nil, nil, nil, nil, nil, nil)
+	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions", "sync_hash", "updated_at"}).
+		AddRow(1, "John", "Doe", true, 10, "img.jpg", 1001, "S1001", 11, "[1]", 0, now).
+		AddRow(2, "Jane", "Doe", false, nil, nil, nil, nil, nil, nil, nil, nil)
 
-	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, updated_at FROM visitors ORDER BY id ASC").
+	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, sync_hash, updated_at FROM visitors ORDER BY id ASC").
 		WillReturnRows(rows)
 
 	visitors, err := repo.GetAll()
@@ -572,7 +572,7 @@ func TestGetAll_QueryError(t *testing.T) {
 
 	repo := &Visitor{Connection: db}
 
-	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, updated_at FROM visitors ORDER BY id ASC").
+	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, sync_hash, updated_at FROM visitors ORDER BY id ASC").
 		WillReturnError(errors.New("query error"))
 
 	visitors, err := repo.GetAll()
@@ -587,10 +587,10 @@ func TestGetAll_ScanError(t *testing.T) {
 
 	repo := &Visitor{Connection: db}
 
-	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "updated_at"}).
-		AddRow("invalid", "John", "Doe", true, 10, "img.jpg", 1001, "S1001", time.Now())
+	rows := sqlmock.NewRows([]string{"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id", "year_group", "divisions", "sync_hash", "updated_at"}).
+		AddRow("invalid", "John", "Doe", true, 10, "img.jpg", 1001, "S1001", 11, "[1]", 0, time.Now())
 
-	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, updated_at FROM visitors ORDER BY id ASC").
+	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, sync_hash, updated_at FROM visitors ORDER BY id ASC").
 		WillReturnRows(rows)
 
 	visitors, err := repo.GetAll()
