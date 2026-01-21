@@ -9,6 +9,8 @@ import (
 	"go.uber.org/zap"
 )
 
+type JobFunction func()
+
 type StopCronFunc = func()
 
 func RunCron() (StopCronFunc, error) {
@@ -30,55 +32,15 @@ func RunCron() (StopCronFunc, error) {
 }
 
 func registerJobs(s gocron.Scheduler) error {
-
 	// Student data sync job
 	_, err := s.NewJob(
 		gocron.CronJob(
 			"0 7-17/2 * * 1-5", // every 2 hours from 7am to 5pm on weekdays
 			false,
 		),
-		gocron.NewTask(
-			func() {
-				var log *zap.SugaredLogger
-				container.MustResolve(container.Global, &log)
-				log.Infof("Starting ERP data sync... TIME: %s", time.Now().Format(time.RFC3339))
-				sync := synchroniser.StudentSync{}				
-				container.MustFill(container.Global, &sync)
-				if err := sync.SyncAllStudents(); err != nil {
-					log.Errorw("Error during ERP data sync", "error", err)
-				}
-				log.Infof("Finish ERP data sync... TIME: %s", time.Now().Format(time.RFC3339))
-			},
-		),
-		gocron.WithStartAt(gocron.WithStartImmediately()),
+		gocron.NewTask(	StudentSyncFunc()),
 	)
-	if err != nil {
-		return err
-	}
-
-	// Registration codes sync job
-	_, err = s.NewJob(
-		gocron.CronJob(
-			"0 7-17/1 * * 1-5", // every hour from 7am to 5pm on weekdays
-			false,
-		),
-		gocron.NewTask(
-			func() {
-				var log *zap.SugaredLogger
-				container.MustResolve(container.Global, &log)
-				log.Infof("Starting registration codes data sync... TIME: %s", time.Now().Format(time.RFC3339))
-				sync := synchroniser.StudentSync{}
-				container.MustFill(container.Global, &sync)
-				if err := sync.SyncRegistrationCodesDictionaries(); err != nil {
-					log.Errorf("Error during registration codes data sync: %v\n", err)
-				}
-			},
-		),
-		// gocron.WithStartAt(gocron.WithStartImmediately()),
-	)
-	if err != nil {
-		return err
-	}
+	if err != nil { return err }
 
 	// Photos sync job
 	_, err = s.NewJob(
@@ -86,25 +48,71 @@ func registerJobs(s gocron.Scheduler) error {
 			"0 5 * * 1-5", // at 5am on weekdays
 			false,
 		),
-		gocron.NewTask(
-			func() {
-				var log *zap.SugaredLogger
-				container.MustResolve(container.Global, &log)
-				log.Infof("Starting student photos data sync... TIME: %s", time.Now().Format(time.RFC3339))
-				sync := synchroniser.StudentSync{}
-				container.MustFill(container.Global, &sync)
-				if err := sync.SyncStudentPhotos(); err != nil {
-					log.Errorf("Error during student photos data sync: %v\n", err)
-				}
-			},
-		),
-		//gocron.WithStartAt(gocron.WithStartImmediately()),
+		gocron.NewTask( StudentPhotosSyncFunc()),
 	)
-	if err != nil {
-		return err
-	}
+	if err != nil {	return err }
+
+	// Registration codes sync job
+	_, err = s.NewJob(
+		gocron.CronJob(
+			"0 7-17/1 * * 1-5", // every hour from 7am to 5pm on weekdays
+			false,
+		),
+		gocron.NewTask(RegistrationCodesSyncFunc()),
+		gocron.WithStartAt(gocron.WithStartImmediately()),
+	)
+	if err != nil { return err }
 
 	// You can register more cron jobs here
+	// ...
+
+	// one-time startup run, sequential
+	go func() {
+		StudentSyncFunc()()
+		StudentPhotosSyncFunc()()
+	}()
 
 	return nil
 }
+
+func StudentSyncFunc() JobFunction {
+	return func() {
+		var log *zap.SugaredLogger
+		container.MustResolve(container.Global, &log)
+		log.Infof("Starting Students data sync... TIME: %s", time.Now().Format(time.RFC3339))
+		sync := synchroniser.StudentSync{}				
+		container.MustFill(container.Global, &sync)
+		if err := sync.SyncAllStudents(); err != nil {
+			log.Errorw("Error during Students data sync", "error", err)
+		}
+		log.Infof("Finish Students data sync... TIME: %s", time.Now().Format(time.RFC3339))
+	}
+}
+
+func RegistrationCodesSyncFunc() JobFunction {
+	return func() {
+		var log *zap.SugaredLogger
+		container.MustResolve(container.Global, &log)
+		log.Infof("Starting registration codes data sync... TIME: %s", time.Now().Format(time.RFC3339))
+		sync := synchroniser.StudentSync{}
+		container.MustFill(container.Global, &sync)
+		if err := sync.SyncRegistrationCodesDictionaries(); err != nil {
+			log.Errorf("Error during registration codes data sync: %v\n", err)
+		}
+	}
+}
+
+func StudentPhotosSyncFunc() JobFunction {
+	return func() {
+		var log *zap.SugaredLogger
+		container.MustResolve(container.Global, &log)
+		log.Infof("Starting student photos data sync... TIME: %s", time.Now().Format(time.RFC3339))
+		sync := synchroniser.StudentSync{}
+		container.MustFill(container.Global, &sync)
+		if err := sync.SyncStudentPhotos(); err != nil {
+			log.Errorf("Error during student photos data sync: %v\n", err)
+		}
+	}
+}
+
+

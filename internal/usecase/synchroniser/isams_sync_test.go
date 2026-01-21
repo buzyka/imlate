@@ -5,9 +5,12 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/buzyka/imlate/internal/config"
 	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/erp"
 	"github.com/buzyka/imlate/internal/domain/provider/providertest"
@@ -406,9 +409,10 @@ func TestSaveStudent_IsUpToDate_NoUpdate(t *testing.T) {
 	mockClient.On("GetYearGroupDivisions", int32(yearGroup)).Return(divisionsResp, nil)
 
 	// No AddVisitor call expected because it's up to date
-	err := sync.SaveStudent(student)
+	updated, err := sync.SaveStudent(student)
 
 	assert.NoError(t, err)
+	assert.False(t, updated)
 	mockRepo.AssertNotCalled(t, "AddVisitor")
 }
 
@@ -446,9 +450,10 @@ func TestSaveStudent_IsUpToDate_UpdateNeeded(t *testing.T) {
 		return v.Id == 1 && v.ErpID == 123
 	})).Return(nil)
 
-	err := sync.SaveStudent(student)
+	updated, err := sync.SaveStudent(student)
 
 	assert.NoError(t, err)
+	assert.True(t, updated)
 	mockRepo.AssertExpectations(t)
 }
 
@@ -477,9 +482,10 @@ func TestSaveStudent_NewVisitor(t *testing.T) {
 		return v.ErpID == 123 && v.Id == 0
 	})).Return(nil)
 
-	err := sync.SaveStudent(student)
+	updated, err := sync.SaveStudent(student)
 
 	assert.NoError(t, err)
+	assert.True(t, updated)
 	mockRepo.AssertExpectations(t)
 }
 
@@ -509,7 +515,7 @@ func TestSaveStudent_InvalidTimeFormat(t *testing.T) {
 		return v.ErpID == 123 && v.UpdatedAt.IsZero() == false // Should default to Now() in IsUpToDate if zero
 	})).Return(nil)
 
-	err := sync.SaveStudent(student)
+	_, err := sync.SaveStudent(student)
 	assert.NoError(t, err)
 }
 
@@ -564,7 +570,7 @@ func TestSaveStudent_GetDivisionsError(t *testing.T) {
 
 	mockClient.On("GetYearGroupDivisions", int32(yearGroup)).Return(nil, errors.New("division error"))
 
-	err := sync.SaveStudent(student)
+	_, err := sync.SaveStudent(student)
 
 	assert.Error(t, err)
 	assert.Equal(t, "division error", err.Error())
@@ -675,7 +681,351 @@ func TestSaveStudent_SaveVisitor(t *testing.T) {
 	err := json.Unmarshal(testSingleStudentResponse, &erpStudentResponse)
 	assert.NoError(t, err)
 
-	err = sync.SaveStudent(erpStudentResponse.Students[0])
+	updated, err := sync.SaveStudent(erpStudentResponse.Students[0])
 	assert.NoError(t, err)
+	assert.True(t, updated)
 	vRMock.AssertExpectations(t)
 }
+
+func TestSyncStudentPhotos_InitErrors(t *testing.T) {
+	t.Run("start sync session error", func(t *testing.T) {
+		mockFactory := new(MockERPFactory)
+		logger, logBuffer := util.NewTestLogger()
+
+		sync := &StudentSync{
+			ERPFactory: mockFactory,
+			Logger:     logger,
+		}
+
+		mockFactory.On("NewClient", mock.Anything).Once().Return(nil, errors.New("client error"))
+
+		err := sync.SyncStudentPhotos()
+
+		assert.Error(t, err)
+		assert.Equal(t, "client error", err.Error())
+		assert.Contains(t, logBuffer.String(), "sync students photos: create ERP client failed")
+	})
+
+	t.Run("get all visitors error", func(t *testing.T) {
+		mockFactory := new(MockERPFactory)
+		mockClient := new(MockERPClient)
+		mockRepo := new(providertest.VisitorRepositoryMock)
+		logger, logBuffer := util.NewTestLogger()
+
+		sync := &StudentSync{
+			ERPFactory:  mockFactory,
+			VisitorRepo: mockRepo,
+			Logger:      logger,
+		}
+
+		mockFactory.On("NewClient", mock.Anything).Once().Return(mockClient, nil)
+		mockRepo.On("GetAll").Return(nil, errors.New("db error"))
+
+		err := sync.SyncStudentPhotos()
+
+		assert.Error(t, err)
+		assert.Equal(t, "db error", err.Error())
+		assert.Contains(t, logBuffer.String(), "sync students photos: get all visitors failed")
+	})
+}
+
+func TestSyncStudentPhotos_NotStudentsWillNotSync(t *testing.T) {
+	mockFactory := new(MockERPFactory)
+	mockClient := new(MockERPClient)
+	mockRepo := new(providertest.VisitorRepositoryMock)
+
+	sync := &StudentSync{
+		ERPFactory:  mockFactory,
+		VisitorRepo: mockRepo,
+		Logger:      zap.NewNop().Sugar(),
+	}
+
+	mockFactory.On("NewClient", mock.Anything).Once().Return(mockClient, nil)
+
+	visitors := []*entity.Visitor{
+		{ErpSchoolID: "S1", IsStudent: false},
+		{ErpSchoolID: "S2", IsStudent: false},
+	}
+	mockRepo.On("GetAll").Return(visitors, nil)
+
+	err := sync.SyncStudentPhotos()
+
+	assert.NoError(t, err)
+	mockClient.AssertNotCalled(t, "GetStudentPhoto", mock.Anything)
+}
+
+func TestSyncStudentPhotos_PhotoNotFoundSkips(t *testing.T) {
+	oldOsWriteFile := osWriteFile
+	defer func() { osWriteFile = oldOsWriteFile }()
+	
+	fileWritten := false
+
+	osWriteFile = func(filename string, data []byte, perm os.FileMode) error {
+		fileWritten = true
+		return nil
+	}
+
+	mockFactory := new(MockERPFactory)
+	mockClient := new(MockERPClient)
+	mockRepo := new(providertest.VisitorRepositoryMock)
+
+	sync := &StudentSync{
+		ERPFactory:  mockFactory,
+		VisitorRepo: mockRepo,
+		Logger:      zap.NewNop().Sugar(),
+	}
+
+	mockFactory.On("NewClient", mock.Anything).Once().Return(mockClient, nil)
+
+	visitors := []*entity.Visitor{
+		{ErpSchoolID: "S1", IsStudent: true},
+	}
+	mockRepo.On("GetAll").Return(visitors, nil)
+
+	mockClient.On("GetStudentPhoto", "S1").Once().Return(nil, isams.ErrStudentPhotoNotFound)
+
+	err := sync.SyncStudentPhotos()
+
+	assert.NoError(t, err)
+	assert.False(t, fileWritten)
+	mockClient.AssertExpectations(t)
+}
+
+func TestSyncStudentPhotos_OtherGetPhotoError(t *testing.T) {
+	oldOsWriteFile := osWriteFile
+	defer func() { osWriteFile = oldOsWriteFile }()
+	
+	fileWritten := false
+
+	osWriteFile = func(filename string, data []byte, perm os.FileMode) error {
+		fileWritten = true
+		return nil
+	}
+
+	mockFactory := new(MockERPFactory)
+	mockClient := new(MockERPClient)
+	mockRepo := new(providertest.VisitorRepositoryMock)
+	logger, logBuffer := util.NewTestLogger()
+
+	sync := &StudentSync{
+		ERPFactory:  mockFactory,
+		VisitorRepo: mockRepo,
+		Logger:      logger,
+	}
+
+	mockFactory.On("NewClient", mock.Anything).Once().Return(mockClient, nil)
+
+	visitors := []*entity.Visitor{
+		{ErpSchoolID: "S1", IsStudent: true},
+	}
+	mockRepo.On("GetAll").Return(visitors, nil)
+
+	mockClient.On("GetStudentPhoto", "S1").Once().Return(nil, isams.ErrAPIResponseBody)
+
+	err := sync.SyncStudentPhotos()
+
+	assert.NoError(t, err)
+	assert.False(t, fileWritten)
+	mockClient.AssertExpectations(t)
+	logStr := logBuffer.String() 
+	assert.Contains(t, logStr, "sync students photos: get student photo failed")
+	assert.Contains(t, logStr, `"error": "invalid API response body"`)
+}
+
+func TestSyncStudentPhotos_ResponsePhotoIsEmpty(t *testing.T) {
+	oldOsWriteFile := osWriteFile
+	defer func() { osWriteFile = oldOsWriteFile }()
+	
+	fileWritten := false
+
+	osWriteFile = func(filename string, data []byte, perm os.FileMode) error {
+		fileWritten = true
+		return nil
+	}
+
+	mockFactory := new(MockERPFactory)
+	mockClient := new(MockERPClient)
+	mockRepo := new(providertest.VisitorRepositoryMock)
+
+	sync := &StudentSync{
+		ERPFactory:  mockFactory,
+		VisitorRepo: mockRepo,
+		Logger:      zap.NewNop().Sugar(),
+	}
+
+	mockFactory.On("NewClient", mock.Anything).Once().Return(mockClient, nil)
+
+	visitors := []*entity.Visitor{
+		{ErpSchoolID: "S1", IsStudent: true},
+	}
+	mockRepo.On("GetAll").Return(visitors, nil)
+
+	emptyDataResponse := &isams.StudentPhotoResponse{}
+	mockClient.On("GetStudentPhoto", "S1").Once().Return(emptyDataResponse, nil)
+
+	err := sync.SyncStudentPhotos()
+
+	assert.NoError(t, err)
+	assert.False(t, fileWritten)
+	mockClient.AssertExpectations(t)
+}
+
+func TestSyncStudentPhotos_PhotoAddedSuccess(t *testing.T) {
+	oldOsWriteFile := osWriteFile
+	defer func() { osWriteFile = oldOsWriteFile }()
+	
+	fileWritten := false
+
+	osWriteFile = func(filename string, data []byte, perm os.FileMode) error {
+		assert.Equal(t, "storage-path/mypath/S1.png", filename)
+		assert.Equal(t, " some photo data ", string(data))
+		assert.Equal(t, os.FileMode(0644), perm)		
+		fileWritten = true
+		return nil
+	}
+
+	mockFactory := new(MockERPFactory)
+	mockClient := new(MockERPClient)
+	mockRepo := new(providertest.VisitorRepositoryMock)
+	cfg := &config.Config{
+		StudentsImagePhotoDir: "storage-path/mypath",
+		StudentsImagePhotoURLPrefix: "url-prefix/mypath",
+	}
+
+	sync := &StudentSync{
+		ERPFactory:  mockFactory,
+		VisitorRepo: mockRepo,
+		Logger:      zap.NewNop().Sugar(),
+		Config:      cfg,
+	}
+
+	mockFactory.On("NewClient", mock.Anything).Once().Return(mockClient, nil)
+
+	visitors := []*entity.Visitor{
+		{ErpSchoolID: "S1", IsStudent: true},
+	}
+	mockRepo.On("GetAll").Return(visitors, nil)
+
+	someDataStr := " some photo data "
+	dataResponse := &isams.StudentPhotoResponse{
+		Extension: "png",
+		Data: []byte(someDataStr),
+	}
+	mockClient.On("GetStudentPhoto", "S1").Once().Return(dataResponse, nil)
+
+	mockRepo.On("SaveVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
+		return v.ErpSchoolID == "S1" && v.Image == "url-prefix/mypath/S1.png"
+	})).Once().Return(nil)
+
+	err := sync.SyncStudentPhotos()
+
+	assert.NoError(t, err)
+	assert.True(t, fileWritten)
+	mockClient.AssertExpectations(t)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestSyncStudentPhotos_SaveImagePathError(t *testing.T) {
+	oldOsWriteFile := osWriteFile
+	defer func() { osWriteFile = oldOsWriteFile }()
+	
+	fileWritten := false
+
+	osWriteFile = func(filename string, data []byte, perm os.FileMode) error {
+		assert.Equal(t, "storage-path/mypath/S1.png", filename)
+		assert.Equal(t, " some photo data ", string(data))
+		assert.Equal(t, os.FileMode(0644), perm)		
+		fileWritten = true
+		return nil
+	}
+
+	mockFactory := new(MockERPFactory)
+	mockClient := new(MockERPClient)
+	mockRepo := new(providertest.VisitorRepositoryMock)
+	cfg := &config.Config{
+		StudentsImagePhotoDir: "storage-path/mypath",
+		StudentsImagePhotoURLPrefix: "url-prefix/mypath",
+	}
+
+	sync := &StudentSync{
+		ERPFactory:  mockFactory,
+		VisitorRepo: mockRepo,
+		Logger:      zap.NewNop().Sugar(),
+		Config:      cfg,
+	}
+
+	mockFactory.On("NewClient", mock.Anything).Once().Return(mockClient, nil)
+
+	visitors := []*entity.Visitor{
+		{ErpSchoolID: "S1", IsStudent: true},
+	}
+	mockRepo.On("GetAll").Return(visitors, nil)
+
+	someDataStr := " some photo data "
+	dataResponse := &isams.StudentPhotoResponse{
+		Extension: "png",
+		Data: []byte(someDataStr),
+	}
+	mockClient.On("GetStudentPhoto", "S1").Once().Return(dataResponse, nil)
+
+	mockRepo.On("SaveVisitor", mock.Anything).Return(assert.AnError)
+
+	err := sync.SyncStudentPhotos()
+
+	assert.Error(t, err)
+	assert.True(t, fileWritten)
+	mockClient.AssertExpectations(t)
+}
+
+func TestSyncStudentPhotos_WriteImageError(t *testing.T) {
+	oldOsWriteFile := osWriteFile
+	defer func() { osWriteFile = oldOsWriteFile }()
+	
+	fileWritten := false
+
+	osWriteFile = func(filename string, data []byte, perm os.FileMode) error {
+		assert.Equal(t, "storage-path/mypath/S1.png", filename)
+		assert.Equal(t, " some photo data ", string(data))
+		assert.Equal(t, os.FileMode(0644), perm)		
+		fileWritten = true
+		return fmt.Errorf("file write error")
+	}
+
+	mockFactory := new(MockERPFactory)
+	mockClient := new(MockERPClient)
+	mockRepo := new(providertest.VisitorRepositoryMock)
+	cfg := &config.Config{
+		StudentsImagePhotoDir: "storage-path/mypath",
+		StudentsImagePhotoURLPrefix: "url-prefix/mypath",
+	}
+
+	sync := &StudentSync{
+		ERPFactory:  mockFactory,
+		VisitorRepo: mockRepo,
+		Logger:      zap.NewNop().Sugar(),
+		Config:      cfg,
+	}
+
+	mockFactory.On("NewClient", mock.Anything).Once().Return(mockClient, nil)
+
+	visitors := []*entity.Visitor{
+		{ErpSchoolID: "S1", IsStudent: true},
+	}
+	mockRepo.On("GetAll").Return(visitors, nil)
+
+	someDataStr := " some photo data "
+	dataResponse := &isams.StudentPhotoResponse{
+		Extension: "png",
+		Data: []byte(someDataStr),
+	}
+	mockClient.On("GetStudentPhoto", "S1").Once().Return(dataResponse, nil)
+
+	err := sync.SyncStudentPhotos()
+
+	assert.Error(t, err)
+	assert.Equal(t, "file write error", err.Error())
+	assert.True(t, fileWritten)
+	mockRepo.AssertNotCalled(t, "SaveVisitor")
+	mockClient.AssertExpectations(t)
+}
+

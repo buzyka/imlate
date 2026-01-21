@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"strconv"
 	"strings"
 	"time"
 
@@ -75,7 +76,10 @@ func (r *Visitor) GetAll() ([]*entity.Visitor, error) {
 			}
 		}
 		if tmpSyncHash.Valid {
-			fmt.Sscanf(tmpSyncHash.String, "%d", &visitor.SyncHash)
+			b, err := strconv.ParseUint(tmpSyncHash.String, 10, 64)
+			if err == nil {
+				visitor.SyncHash = b
+			}
 		}
 		if tmpUpdatedAt.Valid {
 			visitor.UpdatedAt = tmpUpdatedAt.Time
@@ -146,7 +150,10 @@ func (r *Visitor) FindByKey(key string) (*entity.VisitDetails, error) {
 		}
 	}
 	if tmpSyncHash.Valid {
-		fmt.Sscanf(tmpSyncHash.String, "%d", &visitor.SyncHash)
+		b, err := strconv.ParseUint(tmpSyncHash.String, 10, 64)
+		if err == nil {
+			visitor.SyncHash = b
+		}
 	}
 	return visit, nil
 }
@@ -205,7 +212,10 @@ func (r *Visitor) FindById(id int32) (*entity.Visitor, error) {
 		}
 	}
 	if tmpSyncHash.Valid {
-		fmt.Sscanf(tmpSyncHash.String, "%d", &student.SyncHash)
+		b, err := strconv.ParseUint(tmpSyncHash.String, 10, 64)
+		if err == nil {
+			student.SyncHash = b
+		}
 	}
 	return student, nil
 }
