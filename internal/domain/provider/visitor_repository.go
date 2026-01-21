@@ -10,4 +10,5 @@ type VisitorRepository interface {
 	
 	AddKeyToVisitor(visitor *entity.Visitor, key string) error
 	AddVisitor(visitor *entity.Visitor) error
+	SaveVisitor(visitor *entity.Visitor) error
 }

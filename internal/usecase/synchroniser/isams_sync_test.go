@@ -2,16 +2,24 @@ package synchroniser
 
 import (
 	"context"
+	_ "embed"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
 
 	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/erp"
+	"github.com/buzyka/imlate/internal/domain/provider/providertest"
 	"github.com/buzyka/imlate/internal/infrastructure/integration/isams"
+	"github.com/buzyka/imlate/internal/infrastructure/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/zap"
 )
+
+//go:embed _fixtures/single_student.json
+var testSingleStudentResponse []byte
 
 // MockERPFactory
 type MockERPFactory struct {
@@ -92,67 +100,83 @@ func (m *MockERPClient) GetStudentPhoto(schoolID string) (*isams.StudentPhotoRes
 	return args.Get(0).(*isams.StudentPhotoResponse), args.Error(1)
 }
 
-// MockVisitorRepository
-type MockVisitorRepository struct {
-	mock.Mock
-}
+func TestCleanUpSyncSession(t *testing.T) {
+	t.Parallel()
+	erpClient := new(MockERPClient)
+	ctx := context.Background()
+	yg := make(map[int32][]int32)
+	yg[1] = []int32{1}
 
-func (m *MockVisitorRepository) GetAll() ([]*entity.Visitor, error) {
-	args := m.Called()
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
+	s := &StudentSync{
+		currentClient:      erpClient,
+		ctx:                ctx,
+		yearGroupDivisions: yg,
 	}
-	return args.Get(0).([]*entity.Visitor), args.Error(1)
+	s.cleanUpSyncSession()
+
+	assert.Nil(t, s.currentClient)
+	assert.Nil(t, s.ctx)
+	assert.Nil(t, s.yearGroupDivisions)
 }
 
-func (m *MockVisitorRepository) FindById(id int32) (*entity.Visitor, error) {
-	args := m.Called(id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
+func TestStartSyncSession_Error(t *testing.T) {
+	mockFactory := new(MockERPFactory)
+	logger := zap.NewNop().Sugar()
+	sync := &StudentSync{
+		ERPFactory: mockFactory,
+		Logger:     logger,
 	}
-	return args.Get(0).(*entity.Visitor), args.Error(1)
+
+	mockFactory.On("NewClient", mock.Anything).Once().Return(nil, errors.New("client error"))
+
+	err := sync.startSyncSession(context.Background())
+
+	assert.Error(t, err)
+	assert.Nil(t, sync.currentClient)
+	mockFactory.AssertExpectations(t)
 }
 
-func (m *MockVisitorRepository) FindByKey(key string) (*entity.VisitDetails, error) {
-	args := m.Called(key)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
+func TestStartSyncSession_Success(t *testing.T) {
+	mockFactory := new(MockERPFactory)
+	mockClient := new(MockERPClient)
+	sync := &StudentSync{
+		ERPFactory: mockFactory,
 	}
-	return args.Get(0).(*entity.VisitDetails), args.Error(1)
-}
 
-func (m *MockVisitorRepository) AddKeyToVisitor(visitor *entity.Visitor, key string) error {
-	args := m.Called(visitor, key)
-	return args.Error(0)
-}
+	mockFactory.On("NewClient", mock.Anything).Once().Return(mockClient, nil)
 
-func (m *MockVisitorRepository) AddVisitor(visitor *entity.Visitor) error {
-	args := m.Called(visitor)
-	return args.Error(0)
+	err := sync.startSyncSession(context.Background())
+
+	assert.NoError(t, err)
+	assert.Equal(t, mockClient, sync.currentClient)
+	mockFactory.AssertExpectations(t)
 }
 
 func TestSyncAllStudents_Success(t *testing.T) {
 	mockFactory := new(MockERPFactory)
 	mockClient := new(MockERPClient)
-	mockRepo := new(MockVisitorRepository)
+	mockRepo := new(providertest.VisitorRepositoryMock)
 
 	sync := &StudentSync{
 		ERPFactory:  mockFactory,
 		VisitorRepo: mockRepo,
+		Logger:      zap.NewNop().Sugar(),
 	}
 
 	// Setup expectations
-	mockFactory.On("NewClient", mock.Anything).Return(mockClient, nil)
+	mockFactory.On("NewClient", mock.Anything).Once().Return(mockClient, nil)
 	mockRepo.On("GetAll").Return([]*entity.Visitor{}, nil)
 
-	fullName := "John Doe"
+	surname := "Doe"
+	forname := "John"
 	yearGroup := 10
 	lastUpdated := "2023-01-01T12:00:00Z"
 
 	student := isams.Student{
 		ID:          123,
 		SchoolID:    "S123",
-		FullName:    &fullName,
+		Forename:    &forname,
+		Surname:     &surname,
 		YearGroup:   &yearGroup,
 		LastUpdated: &lastUpdated,
 	}
@@ -170,8 +194,8 @@ func TestSyncAllStudents_Success(t *testing.T) {
 
 	mockClient.On("GetStudents", int32(1), int32(PageSize)).Return(resp, nil)
 	mockClient.On("GetYearGroupDivisions", int32(yearGroup)).Return(divisionsResp, nil)
-	mockRepo.On("AddVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
-		return v.ErpID == 123 && v.Surname == "John Doe" && v.Grade == 10 && len(v.ErpDivisions) == 1 && v.ErpDivisions[0] == 1
+	mockRepo.On("SaveVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
+		return v.ErpID == 123 && v.Surname == "Doe" && v.Name == "John" && v.Grade == 10 && len(v.ErpDivisions) == 1 && v.ErpDivisions[0] == 1
 	})).Return(nil)
 
 	// Execute
@@ -186,11 +210,13 @@ func TestSyncAllStudents_Success(t *testing.T) {
 
 func TestSyncAllStudents_NewClientError(t *testing.T) {
 	mockFactory := new(MockERPFactory)
-	mockRepo := new(MockVisitorRepository)
+	mockRepo := new(providertest.VisitorRepositoryMock)
+	logger, logBuffer := util.NewTestLogger()
 
 	sync := &StudentSync{
 		ERPFactory:  mockFactory,
 		VisitorRepo: mockRepo,
+		Logger:      logger,
 	}
 
 	mockFactory.On("NewClient", mock.Anything).Return(nil, errors.New("client error"))
@@ -199,16 +225,19 @@ func TestSyncAllStudents_NewClientError(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Equal(t, "client error", err.Error())
+	assert.Contains(t, logBuffer.String(), "create ERP client failed")
 }
 
 func TestSyncAllStudents_GetAllError(t *testing.T) {
 	mockFactory := new(MockERPFactory)
 	mockClient := new(MockERPClient)
-	mockRepo := new(MockVisitorRepository)
+	mockRepo := new(providertest.VisitorRepositoryMock)
+	logger, logBuffer := util.NewTestLogger()
 
 	sync := &StudentSync{
 		ERPFactory:  mockFactory,
 		VisitorRepo: mockRepo,
+		Logger:      logger,
 	}
 
 	mockFactory.On("NewClient", mock.Anything).Return(mockClient, nil)
@@ -218,16 +247,19 @@ func TestSyncAllStudents_GetAllError(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Equal(t, "db error", err.Error())
+	assert.Contains(t, logBuffer.String(), "sync all students: get all visitors failed")
 }
 
 func TestSyncAllStudents_GetStudentsError(t *testing.T) {
 	mockFactory := new(MockERPFactory)
 	mockClient := new(MockERPClient)
-	mockRepo := new(MockVisitorRepository)
+	mockRepo := new(providertest.VisitorRepositoryMock)
+	logger, logBuffer := util.NewTestLogger()
 
 	sync := &StudentSync{
 		ERPFactory:  mockFactory,
 		VisitorRepo: mockRepo,
+		Logger:      logger,
 	}
 
 	mockFactory.On("NewClient", mock.Anything).Return(mockClient, nil)
@@ -238,16 +270,22 @@ func TestSyncAllStudents_GetStudentsError(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Equal(t, "api error", err.Error())
+	buffStr := logBuffer.String()
+	assert.Contains(t, buffStr, "sync all students: get students step failed")
+	assert.Contains(t, buffStr, "pageNumber")
+	assert.Contains(t, buffStr, "pageSize")
 }
 
 func TestSyncAllStudents_SaveStudentError(t *testing.T) {
 	mockFactory := new(MockERPFactory)
 	mockClient := new(MockERPClient)
-	mockRepo := new(MockVisitorRepository)
+	mockRepo := new(providertest.VisitorRepositoryMock)
+	logger, logBuffer := util.NewTestLogger()
 
 	sync := &StudentSync{
 		ERPFactory:  mockFactory,
 		VisitorRepo: mockRepo,
+		Logger:      logger,
 	}
 
 	mockFactory.On("NewClient", mock.Anything).Return(mockClient, nil)
@@ -256,8 +294,8 @@ func TestSyncAllStudents_SaveStudentError(t *testing.T) {
 	fullName := "John Doe"
 	yearGroup := 10
 	student := isams.Student{
-		ID:       123,
-		FullName: &fullName,
+		ID:        123,
+		FullName:  &fullName,
 		YearGroup: &yearGroup,
 	}
 
@@ -272,22 +310,26 @@ func TestSyncAllStudents_SaveStudentError(t *testing.T) {
 
 	mockClient.On("GetStudents", int32(1), int32(PageSize)).Return(resp, nil)
 	mockClient.On("GetYearGroupDivisions", int32(yearGroup)).Return(divisionsResp, nil)
-	mockRepo.On("AddVisitor", mock.Anything).Return(errors.New("save error"))
+	mockRepo.On("SaveVisitor", mock.Anything).Return(errors.New("save error"))
 
 	err := sync.SyncAllStudents()
 
 	assert.Error(t, err)
 	assert.Equal(t, "save error", err.Error())
+	buffStr := logBuffer.String()
+	assert.Contains(t, buffStr, "sync all students: save student step failed")
+	assert.Contains(t, buffStr, `"studentID": 123`)
 }
 
 func TestSyncAllStudents_Pagination(t *testing.T) {
 	mockFactory := new(MockERPFactory)
 	mockClient := new(MockERPClient)
-	mockRepo := new(MockVisitorRepository)
+	mockRepo := new(providertest.VisitorRepositoryMock)
 
 	sync := &StudentSync{
 		ERPFactory:  mockFactory,
 		VisitorRepo: mockRepo,
+		Logger:      zap.NewNop().Sugar(),
 	}
 
 	mockFactory.On("NewClient", mock.Anything).Return(mockClient, nil)
@@ -317,10 +359,10 @@ func TestSyncAllStudents_Pagination(t *testing.T) {
 	mockClient.On("GetYearGroupDivisions", int32(yearGroup1)).Return(divisionsResp1, nil)
 	mockClient.On("GetYearGroupDivisions", int32(yearGroup2)).Return(divisionsResp2, nil)
 
-	mockRepo.On("AddVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
+	mockRepo.On("SaveVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
 		return v.ErpID == 1
 	})).Return(nil)
-	mockRepo.On("AddVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
+	mockRepo.On("SaveVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
 		return v.ErpID == 2
 	})).Return(nil)
 
@@ -331,29 +373,29 @@ func TestSyncAllStudents_Pagination(t *testing.T) {
 }
 
 func TestSaveStudent_IsUpToDate_NoUpdate(t *testing.T) {
-	mockRepo := new(MockVisitorRepository)
+	mockRepo := new(providertest.VisitorRepositoryMock)
 	mockClient := new(MockERPClient)
 
 	sync := &StudentSync{
-		VisitorRepo: mockRepo,
-		currentClient: mockClient,
+		VisitorRepo:        mockRepo,
+		currentClient:      mockClient,
 		yearGroupDivisions: make(map[int32][]int32),
 	}
 
 	updatedAt, _ := time.Parse(time.RFC3339, "2023-01-01T12:00:00Z")
 	yearGroup := 10
 	existingVisitor := &entity.Visitor{
-		Id:        1,
-		ErpID:     123,
-		UpdatedAt: updatedAt,
+		Id:             1,
+		ErpID:          123,
+		UpdatedAt:      updatedAt,
 		ErpYearGroupID: int32(yearGroup),
-		ErpDivisions: []int32{},
+		ErpDivisions:   []int32{},
 	}
 
 	sync.currentVisitors = []*entity.Visitor{existingVisitor}
 
 	lastUpdatedStr := "2023-01-01T12:00:00Z"
-	
+
 	student := isams.Student{
 		ID:          123,
 		LastUpdated: &lastUpdatedStr,
@@ -371,12 +413,13 @@ func TestSaveStudent_IsUpToDate_NoUpdate(t *testing.T) {
 }
 
 func TestSaveStudent_IsUpToDate_UpdateNeeded(t *testing.T) {
-	mockRepo := new(MockVisitorRepository)
+	mockRepo := new(providertest.VisitorRepositoryMock)
 	mockClient := new(MockERPClient)
 
 	sync := &StudentSync{
-		VisitorRepo: mockRepo,
-		currentClient: mockClient,
+		VisitorRepo:        mockRepo,
+		currentClient:      mockClient,
+		Logger:             zap.NewNop().Sugar(),
 		yearGroupDivisions: make(map[int32][]int32),
 	}
 
@@ -399,7 +442,7 @@ func TestSaveStudent_IsUpToDate_UpdateNeeded(t *testing.T) {
 	divisionsResp := &isams.YearGroupsDivisionsResponse{Divisions: []isams.Division{}}
 	mockClient.On("GetYearGroupDivisions", int32(yearGroup)).Return(divisionsResp, nil)
 
-	mockRepo.On("AddVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
+	mockRepo.On("SaveVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
 		return v.Id == 1 && v.ErpID == 123
 	})).Return(nil)
 
@@ -410,26 +453,27 @@ func TestSaveStudent_IsUpToDate_UpdateNeeded(t *testing.T) {
 }
 
 func TestSaveStudent_NewVisitor(t *testing.T) {
-	mockRepo := new(MockVisitorRepository)
+	mockRepo := new(providertest.VisitorRepositoryMock)
 	mockClient := new(MockERPClient)
 
 	sync := &StudentSync{
-		VisitorRepo: mockRepo,
-		currentClient: mockClient,
+		VisitorRepo:        mockRepo,
+		currentClient:      mockClient,
+		Logger:             zap.NewNop().Sugar(),
 		yearGroupDivisions: make(map[int32][]int32),
 	}
 	sync.currentVisitors = []*entity.Visitor{}
 
 	yearGroup := 10
 	student := isams.Student{
-		ID: 123,
+		ID:        123,
 		YearGroup: &yearGroup,
 	}
 
 	divisionsResp := &isams.YearGroupsDivisionsResponse{Divisions: []isams.Division{}}
 	mockClient.On("GetYearGroupDivisions", int32(yearGroup)).Return(divisionsResp, nil)
 
-	mockRepo.On("AddVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
+	mockRepo.On("SaveVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
 		return v.ErpID == 123 && v.Id == 0
 	})).Return(nil)
 
@@ -440,11 +484,12 @@ func TestSaveStudent_NewVisitor(t *testing.T) {
 }
 
 func TestSaveStudent_InvalidTimeFormat(t *testing.T) {
-	mockRepo := new(MockVisitorRepository)
+	mockRepo := new(providertest.VisitorRepositoryMock)
 	mockClient := new(MockERPClient)
 	sync := &StudentSync{
-		VisitorRepo: mockRepo,
-		currentClient: mockClient,
+		VisitorRepo:        mockRepo,
+		currentClient:      mockClient,
+		Logger:             zap.NewNop().Sugar(),
 		yearGroupDivisions: make(map[int32][]int32),
 	}
 	sync.currentVisitors = []*entity.Visitor{}
@@ -460,7 +505,7 @@ func TestSaveStudent_InvalidTimeFormat(t *testing.T) {
 	divisionsResp := &isams.YearGroupsDivisionsResponse{Divisions: []isams.Division{}}
 	mockClient.On("GetYearGroupDivisions", int32(yearGroup)).Return(divisionsResp, nil)
 
-	mockRepo.On("AddVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
+	mockRepo.On("SaveVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
 		return v.ErpID == 123 && v.UpdatedAt.IsZero() == false // Should default to Now() in IsUpToDate if zero
 	})).Return(nil)
 
@@ -501,18 +546,19 @@ func TestIsUpToDate_NewVisitor_SetsUpdatedAt(t *testing.T) {
 }
 
 func TestSaveStudent_GetDivisionsError(t *testing.T) {
-	mockRepo := new(MockVisitorRepository)
+	mockRepo := new(providertest.VisitorRepositoryMock)
 	mockClient := new(MockERPClient)
 
 	sync := &StudentSync{
-		VisitorRepo: mockRepo,
-		currentClient: mockClient,
+		VisitorRepo:        mockRepo,
+		currentClient:      mockClient,
+		Logger:             zap.NewNop().Sugar(),
 		yearGroupDivisions: make(map[int32][]int32),
 	}
 
 	yearGroup := 10
 	student := isams.Student{
-		ID: 123,
+		ID:        123,
 		YearGroup: &yearGroup,
 	}
 
@@ -527,7 +573,7 @@ func TestSaveStudent_GetDivisionsError(t *testing.T) {
 func TestGetDivisionsByYearGroup_Cache(t *testing.T) {
 	mockClient := new(MockERPClient)
 	sync := &StudentSync{
-		currentClient: mockClient,
+		currentClient:      mockClient,
 		yearGroupDivisions: make(map[int32][]int32),
 	}
 
@@ -556,7 +602,7 @@ func TestGetDivisionsByYearGroup_Cache(t *testing.T) {
 func TestGetDivisionsByYearGroup_Error(t *testing.T) {
 	mockClient := new(MockERPClient)
 	sync := &StudentSync{
-		currentClient: mockClient,
+		currentClient:      mockClient,
 		yearGroupDivisions: make(map[int32][]int32),
 	}
 
@@ -567,4 +613,69 @@ func TestGetDivisionsByYearGroup_Error(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, divs)
 	assert.Equal(t, "api error", err.Error())
+}
+
+func TestSaveStudent_SaveVisitor(t *testing.T) {
+	yGD := make(map[int32][]int32)
+	yGD[6] = []int32{2}
+
+	loc := time.FixedZone("+0100", 1*60*60)
+
+	curVisitors := []*entity.Visitor{}
+	existingVisitor := &entity.Visitor{
+		Id:             1,
+		ErpID:          5225,
+		Name:           "Alice",
+		Surname:        "Smith",
+		Grade:          6,
+		ErpSchoolID:    "132014861202",
+		UpdatedAt:      time.Date(2024, 1, 1, 12, 0, 0, 0, loc),
+		ErpYearGroupID: 6,
+		ErpDivisions:   []int32{2},
+	}
+	curVisitors = append(curVisitors, existingVisitor)
+
+	exVisitor := &entity.Visitor{
+		Id:             1,
+		ErpID:          5225,
+		Name:           "John",
+		Surname:        "Doe",
+		FullName:       "John Doe",
+		Grade:          6,
+		ErpSchoolID:    "132014861202",
+		IsStudent:      true,
+		UpdatedAt:      time.Date(2025, 10, 6, 11, 56, 2, 0, loc),
+		ErpYearGroupID: 6,
+		ErpDivisions:   []int32{2},
+	}
+
+	vRMock := new(providertest.VisitorRepositoryMock)
+	vRMock.On("SaveVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
+		if v.ErpID != exVisitor.ErpID {
+			return false
+		}
+		if !v.UpdatedAt.Equal(exVisitor.UpdatedAt) {
+			return false
+		}
+		return v.FullName == exVisitor.FullName && v.IsStudent == exVisitor.IsStudent
+	})).Once().Return(nil)
+
+	sync := &StudentSync{
+		VisitorRepo:        vRMock,
+		yearGroupDivisions: yGD,
+		currentVisitors:    curVisitors,
+		Logger:             zap.NewNop().Sugar(),
+	}
+
+	str := string(testSingleStudentResponse)
+	assert.NotEmpty(t, str)
+
+	erpStudentResponse := isams.StudentsResponse{}
+
+	err := json.Unmarshal(testSingleStudentResponse, &erpStudentResponse)
+	assert.NoError(t, err)
+
+	err = sync.SaveStudent(erpStudentResponse.Students[0])
+	assert.NoError(t, err)
+	vRMock.AssertExpectations(t)
 }
