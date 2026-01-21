@@ -16,7 +16,7 @@ type Visitor struct {
 }
 
 func (r *Visitor) GetAll() ([]*entity.Visitor, error) {
-	rows, err := r.Connection.Query("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, updated_at FROM visitors ORDER BY id ASC")
+	rows, err := r.Connection.Query("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, sync_hash, updated_at FROM visitors ORDER BY id ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -31,6 +31,7 @@ func (r *Visitor) GetAll() ([]*entity.Visitor, error) {
 		var tmpYearGroup sql.NullInt32
 		var tmpDivisions sql.NullString
 		var tmpUpdatedAt sql.NullTime
+		var tmpSyncHash sql.NullString
 
 		visitor := &entity.Visitor{}
 		err := rows.Scan(
@@ -44,6 +45,7 @@ func (r *Visitor) GetAll() ([]*entity.Visitor, error) {
 			&tmpErpSchoolID,
 			&tmpYearGroup,
 			&tmpDivisions,
+			&tmpSyncHash,
 			&tmpUpdatedAt,
 		)
 		if err != nil {
@@ -72,6 +74,9 @@ func (r *Visitor) GetAll() ([]*entity.Visitor, error) {
 				visitor.ErpDivisions = []int32{}
 			}
 		}
+		if tmpSyncHash.Valid {
+			fmt.Sscanf(tmpSyncHash.String, "%d", &visitor.SyncHash)
+		}
 		if tmpUpdatedAt.Valid {
 			visitor.UpdatedAt = tmpUpdatedAt.Time
 		}
@@ -87,9 +92,10 @@ func (r *Visitor) FindByKey(key string) (*entity.VisitDetails, error) {
 	var tmpErpSchoolID sql.NullString
 	var tmpYearGroup sql.NullInt32
 	var tmpDivisions sql.NullString
+	var tmpSyncHash sql.NullString
 
 	key = strings.ToUpper(key)
-	row := r.Connection.QueryRow("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk ON vk.visitor_id = v.id WHERE vk.key_id = ?", key)
+	row := r.Connection.QueryRow("SELECT v.id, v.name, v.surname, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, v.sync_hash, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk ON vk.visitor_id = v.id WHERE vk.key_id = ?", key)
 
 	visitor := &entity.Visitor{}
 	visit := &entity.VisitDetails{
@@ -107,6 +113,7 @@ func (r *Visitor) FindByKey(key string) (*entity.VisitDetails, error) {
 		&tmpErpSchoolID,
 		&tmpYearGroup,
 		&tmpDivisions,
+		&tmpSyncHash,
 		&visit.Key,
 	)
 	if err != nil {
@@ -138,6 +145,9 @@ func (r *Visitor) FindByKey(key string) (*entity.VisitDetails, error) {
 			return nil, fmt.Errorf("failed to unmarshal divisions: %w", err)
 		}
 	}
+	if tmpSyncHash.Valid {
+		fmt.Sscanf(tmpSyncHash.String, "%d", &visitor.SyncHash)
+	}
 	return visit, nil
 }
 
@@ -148,8 +158,9 @@ func (r *Visitor) FindById(id int32) (*entity.Visitor, error) {
 	var tmpErpSchoolID sql.NullString
 	var tmpYearGroup sql.NullInt32
 	var tmpDivisions sql.NullString
+	var tmpSyncHash sql.NullString
 
-	row := r.Connection.QueryRow("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions FROM visitors WHERE id = ?", id)
+	row := r.Connection.QueryRow("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, sync_hash FROM visitors WHERE id = ?", id)
 	student := &entity.Visitor{}
 	err := row.Scan(
 		&student.Id,
@@ -162,6 +173,7 @@ func (r *Visitor) FindById(id int32) (*entity.Visitor, error) {
 		&tmpErpSchoolID,
 		&tmpYearGroup,
 		&tmpDivisions,
+		&tmpSyncHash,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -192,6 +204,9 @@ func (r *Visitor) FindById(id int32) (*entity.Visitor, error) {
 			return nil, fmt.Errorf("failed to unmarshal divisions: %w", err)
 		}
 	}
+	if tmpSyncHash.Valid {
+		fmt.Sscanf(tmpSyncHash.String, "%d", &student.SyncHash)
+	}
 	return student, nil
 }
 
@@ -215,12 +230,16 @@ func (r *Visitor) AddKeyToVisitor(visitor *entity.Visitor, key string) error {
 	return nil
 }
 
-func (r *Visitor) AddVisitor(visitor *entity.Visitor) error {
+func (r *Visitor) SaveVisitor(visitor *entity.Visitor) error {
 	if visitor.Id > 0 {
 		return r.updateVisitor(visitor)
 	} else {
 		return r.insertVisitor(visitor)
 	}
+}
+
+func (r *Visitor) AddVisitor(visitor *entity.Visitor) error {
+	return r.SaveVisitor(visitor)
 }
 
 func (r *Visitor) updateVisitor(visitor *entity.Visitor) error {

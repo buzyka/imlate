@@ -2,6 +2,7 @@ package synchroniser
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -11,14 +12,16 @@ import (
 	"github.com/buzyka/imlate/internal/domain/erp"
 	"github.com/buzyka/imlate/internal/domain/provider"
 	"github.com/buzyka/imlate/internal/infrastructure/integration/isams"
+	"go.uber.org/zap"
 )
 
 const PageSize = 100
 
 type StudentSync struct {
 	Config				*config.Config             `container:"type"`
-	ERPFactory         erp.Factory                `container:"type"`
-	VisitorRepo        provider.VisitorRepository `container:"type"`
+	ERPFactory         erp.Factory                 `container:"type"`
+	VisitorRepo        provider.VisitorRepository  `container:"type"`
+	Logger 			   *zap.SugaredLogger		   `container:"type"`	
 	currentVisitors    []*entity.Visitor
 	ctx                context.Context
 	currentClient      erp.Client
@@ -44,6 +47,7 @@ func (s *StudentSync) SyncAllStudents() error {
 	ctx := context.Background()
 	err := s.startSyncSession(ctx)
 	if err != nil {
+		s.Logger.Errorw("sync all students: create ERP client failed", "error", err)
 		return err
 	}
 	defer s.cleanUpSyncSession()
@@ -51,19 +55,26 @@ func (s *StudentSync) SyncAllStudents() error {
 
 	s.currentVisitors, err = s.VisitorRepo.GetAll()
 	if err != nil {
+		s.Logger.Errorw("sync all students: get all visitors failed", "error", err)
 		return err
 	}
 
 	var pageNumber int32 = 1
 
 	for {
+		s.Logger.Infof("Syncing students, page %d", pageNumber)
 		resp, err := s.currentClient.GetStudents(pageNumber, PageSize)
 		if err != nil {
+			s.Logger.Errorw("sync all students: get students step failed", "pageNumber", pageNumber,  "pageSize", PageSize, "error", err)
 			return err
 		}
 
 		for _, student := range resp.Students {
+			if student.ID == 5225 {
+				fmt.Printf("----- STUDENT: %s\n", *student.Forename)
+			}
 			if err = s.SaveStudent(student); err != nil {
+				s.Logger.Errorw("sync all students: save student step failed", "studentID", student.ID, "schoolID", student.SchoolID, "error", err)
 				return err
 			}
 		}
@@ -168,8 +179,15 @@ func (s *StudentSync) SyncStudentPhotos() error {
 }
 
 func (s *StudentSync) SaveStudent(student isams.Student) error {
-	var fullName string
-	if student.FullName != nil {
+	var fullName, forename, surname string
+
+	if student.Surname != nil && *student.Surname != "" && student.Forename != nil && *student.Forename != "" {
+		surname = *student.Surname
+		forename = *student.Forename
+		fullName = forename + " " + surname
+	}
+
+	if student.FullName != nil && *student.FullName != "" {
 		fullName = *student.FullName
 	}
 
@@ -181,6 +199,7 @@ func (s *StudentSync) SaveStudent(student isams.Student) error {
 
 	divisions, err := s.getDivisionsByYearGroup(int32(yearGroup))
 	if err != nil {
+		s.Logger.Errorw("get divisions by year group failed", "yearGroupID", yearGroup, "error", err)
 		return err
 	}
 
@@ -193,8 +212,9 @@ func (s *StudentSync) SaveStudent(student isams.Student) error {
 	}
 
 	visitor := &entity.Visitor{
-		Name:           "",
-		Surname:        fullName,
+		Name:           forename,
+		Surname:        surname,
+		FullName:	    fullName,
 		IsStudent:      true,
 		Grade:          grade,
 		ErpID:          student.ID,
@@ -204,10 +224,16 @@ func (s *StudentSync) SaveStudent(student isams.Student) error {
 		UpdatedAt:      UpdatedAt,
 	}
 
+	if (visitor.ErpID == 5225) {
+		fmt.Printf("--SYNC: %s %s\n", visitor.Surname, visitor.Name)
+		fmt.Printf("Current: %d", visitor.GetSyncHash())
+	}
+
 	// Check if visitor needs to be updated or added
 	// and set visitor.Id if exists
 	if !s.IsUpToDate(visitor) {
-		return s.VisitorRepo.AddVisitor(visitor)
+		s.Logger.Infof("Saving student visitor: ERP ID %d, Name: %s", visitor.ErpID, visitor.FullName)
+		return s.VisitorRepo.SaveVisitor(visitor)
 	}
 	return nil
 }
@@ -215,14 +241,17 @@ func (s *StudentSync) SaveStudent(student isams.Student) error {
 func (s *StudentSync) IsUpToDate(newVisitor *entity.Visitor) bool {
 	for _, currentVisitor := range s.currentVisitors {
 		if currentVisitor.ErpID == newVisitor.ErpID {
+			
+			if (newVisitor.ErpID == 5225) {
+				fmt.Printf("+++ Existing: %d\n", currentVisitor.GetSyncHash())
+				fmt.Printf("+++ New: %d\n", newVisitor.GetSyncHash())
+				fmt.Printf("++++ Is up to date: %v\n", currentVisitor.GetSyncHash() == newVisitor.GetSyncHash())
+				fmt.Printf("++++ UpdatedAt equal: %v\n", currentVisitor.UpdatedAt.Equal(newVisitor.UpdatedAt))
+			}
+			
 			newVisitor.Id = currentVisitor.Id
-			switch {
-			case newVisitor.UpdatedAt.IsZero():
+			if currentVisitor.GetSyncHash() == newVisitor.GetSyncHash() {
 				return true
-			case currentVisitor.UpdatedAt.Equal(newVisitor.UpdatedAt) && currentVisitor.GetSyncHash() == newVisitor.GetSyncHash():
-				return true
-			default:
-				return false
 			}
 		}
 	}

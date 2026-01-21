@@ -9,54 +9,15 @@ import (
 	"testing"
 
 	"github.com/buzyka/imlate/internal/domain/entity"
+	"github.com/buzyka/imlate/internal/domain/provider/providertest"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
-
-// MockVisitorRepository is a mock implementation of entity.VisitorRepository
-type MockVisitorRepository struct {
-	mock.Mock
-}
-
-func (m *MockVisitorRepository) FindById(id int32) (*entity.Visitor, error) {
-	args := m.Called(id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*entity.Visitor), args.Error(1)
-}
-
-func (m *MockVisitorRepository) FindByKey(key string) (*entity.VisitDetails, error) {
-	args := m.Called(key)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*entity.VisitDetails), args.Error(1)
-}
-
-func (m *MockVisitorRepository) AddKeyToVisitor(visitor *entity.Visitor, key string) error {
-	args := m.Called(visitor, key)
-	return args.Error(0)
-}
-
-func (m *MockVisitorRepository) AddVisitor(visitor *entity.Visitor) error {
-	args := m.Called(visitor)
-	return args.Error(0)
-}
-
-func (m *MockVisitorRepository) GetAll() ([]*entity.Visitor, error) {
-	args := m.Called()
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).([]*entity.Visitor), args.Error(1)
-}
 
 func TestAddKeyHandler_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	mockRepo := new(MockVisitorRepository)
+	mockRepo := new(providertest.VisitorRepositoryMock)
 	controller := &VisitorController{
 		VisitorRepository: mockRepo,
 	}
@@ -98,7 +59,7 @@ func TestAddKeyHandler_Success(t *testing.T) {
 func TestAddKeyHandler_InvalidRequest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	mockRepo := new(MockVisitorRepository)
+	mockRepo := new(providertest.VisitorRepositoryMock)
 	controller := &VisitorController{
 		VisitorRepository: mockRepo,
 	}
@@ -118,7 +79,7 @@ func TestAddKeyHandler_InvalidRequest(t *testing.T) {
 func TestAddKeyHandler_VisitorNotFound(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	mockRepo := new(MockVisitorRepository)
+	mockRepo := new(providertest.VisitorRepositoryMock)
 	controller := &VisitorController{
 		VisitorRepository: mockRepo,
 	}
@@ -152,7 +113,7 @@ func TestAddKeyHandler_VisitorNotFound(t *testing.T) {
 func TestAddKeyHandler_FindByIdError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	mockRepo := new(MockVisitorRepository)
+	mockRepo := new(providertest.VisitorRepositoryMock)
 	controller := &VisitorController{
 		VisitorRepository: mockRepo,
 	}
@@ -186,7 +147,7 @@ func TestAddKeyHandler_FindByIdError(t *testing.T) {
 func TestAddKeyHandler_AddKeyError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	mockRepo := new(MockVisitorRepository)
+	mockRepo := new(providertest.VisitorRepositoryMock)
 	controller := &VisitorController{
 		VisitorRepository: mockRepo,
 	}
