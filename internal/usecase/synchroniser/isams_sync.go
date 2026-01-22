@@ -92,6 +92,7 @@ func (s *StudentSync) SyncRegistrationCodesDictionaries() error {
 	ctx := context.Background()
 	err := s.startSyncSession(ctx)
 	if err != nil {
+		s.Logger.Errorw("sync registration codes: create ERP client failed", "error", err)
 		return err
 	}
 	defer s.cleanUpSyncSession()
@@ -105,6 +106,7 @@ func (s *StudentSync) SyncRegistrationCodesDictionaries() error {
 	// Absence codes
 	absenceCodesResp, err := s.currentClient.GetRegistrationAbsenceCodes()
 	if err != nil {
+		s.Logger.Errorw("sync registration codes: get absence codes failed", "error", err)
 		return err
 	}
 	for _, code := range absenceCodesResp.AbsenceCodes {
@@ -125,6 +127,7 @@ func (s *StudentSync) SyncRegistrationCodesDictionaries() error {
 	// Present codes
 	presentCodesResp, err := s.currentClient.GetRegistrationPresentCodes()
 	if err != nil {
+		s.Logger.Errorw("sync registration codes: get present codes failed", "error", err)
 		return err
 	}
 	for _, code := range presentCodesResp.PresentCodes {

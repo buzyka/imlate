@@ -1029,3 +1029,168 @@ func TestSyncStudentPhotos_WriteImageError(t *testing.T) {
 	mockClient.AssertExpectations(t)
 }
 
+func TestOsWriteFile_Default(t *testing.T) {
+	dir := t.TempDir()
+	path := dir + "/sample.txt"
+
+	err := osWriteFile(path, []byte("data"), 0644)
+
+	assert.NoError(t, err)
+	contents, readErr := os.ReadFile(path)
+	assert.NoError(t, readErr)
+	assert.Equal(t, "data", string(contents))
+}
+
+func TestSyncRegistrationCodesDictionaries_StartSyncSessionError(t *testing.T) {
+	mockFactory := new(MockERPFactory)
+	logger, logBuffer := util.NewTestLogger()
+	sync := &StudentSync{
+		ERPFactory: mockFactory,
+		Logger:     logger,
+	}
+
+	mockFactory.On("NewClient", mock.Anything).Once().Return(nil, errors.New("client error"))
+
+	err := sync.SyncRegistrationCodesDictionaries()
+
+	assert.Error(t, err)
+	assert.Equal(t, "client error", err.Error())
+	assert.Contains(t, logBuffer.String(), "sync registration codes: create ERP client failed")
+	mockFactory.AssertExpectations(t)
+}
+
+func TestSyncRegistrationCodesDictionaries_AbsenceCodesError(t *testing.T) {
+	mockFactory := new(MockERPFactory)
+	mockClient := new(MockERPClient)
+	logger, logBuffer := util.NewTestLogger()
+
+	oldAbsence := entity.GetAbsenceCodeDictionary()
+	oldPresent := entity.GetPresentsCodeDictionary()
+	sentinelAbsence := &entity.RegistrationCodeDictionary{
+		Codes: map[int32]*entity.RegistrationCode{
+			1: {ID: 1, Code: "ABS", Name: "Absence", IsAbsenceCode: true},
+		},
+		UploadedAt: time.Now().Add(-time.Hour),
+	}
+	entity.SetAbsenceCodeDictionary(sentinelAbsence)
+	t.Cleanup(func() {
+		entity.SetAbsenceCodeDictionary(oldAbsence)
+		entity.SetPresentsCodeDictionary(oldPresent)
+	})
+
+	sync := &StudentSync{
+		ERPFactory: mockFactory,
+		Logger:     logger,
+	}
+
+	mockFactory.On("NewClient", mock.Anything).Once().Return(mockClient, nil)
+	mockClient.On("GetRegistrationAbsenceCodes").Once().Return(nil, errors.New("absence error"))
+
+	err := sync.SyncRegistrationCodesDictionaries()
+
+	assert.Error(t, err)
+	assert.Equal(t, "absence error", err.Error())
+	assert.Contains(t, logBuffer.String(), "sync registration codes: get absence codes failed")
+	assert.Same(t, sentinelAbsence, entity.GetAbsenceCodeDictionary())
+	assert.Same(t, oldPresent, entity.GetPresentsCodeDictionary())
+	mockFactory.AssertExpectations(t)
+	mockClient.AssertExpectations(t)
+}
+
+func TestSyncRegistrationCodesDictionaries_PresentCodesError(t *testing.T) {
+	mockFactory := new(MockERPFactory)
+	mockClient := new(MockERPClient)
+	logger, logBuffer := util.NewTestLogger()
+
+	oldAbsence := entity.GetAbsenceCodeDictionary()
+	oldPresent := entity.GetPresentsCodeDictionary()
+	sentinelPresent := &entity.RegistrationCodeDictionary{
+		Codes: map[int32]*entity.RegistrationCode{
+			2: {ID: 2, Code: "P", Name: "Present", IsAbsenceCode: false},
+		},
+		UploadedAt: time.Now().Add(-time.Hour),
+	}
+	entity.SetPresentsCodeDictionary(sentinelPresent)
+	t.Cleanup(func() {
+		entity.SetAbsenceCodeDictionary(oldAbsence)
+		entity.SetPresentsCodeDictionary(oldPresent)
+	})
+
+	sync := &StudentSync{
+		ERPFactory: mockFactory,
+		Logger:     logger,
+	}
+
+	absenceResp := &isams.RegistrationAbsenceCodesResponse{
+		AbsenceCodes: []isams.RegistrationAbsenceCode{
+			{ID: 10, Code: "A", Name: "Absence Code"},
+		},
+	}
+
+	mockFactory.On("NewClient", mock.Anything).Once().Return(mockClient, nil)
+	mockClient.On("GetRegistrationAbsenceCodes").Once().Return(absenceResp, nil)
+	mockClient.On("GetRegistrationPresentCodes").Once().Return(nil, errors.New("present error"))
+
+	err := sync.SyncRegistrationCodesDictionaries()
+
+	assert.Error(t, err)
+	assert.Equal(t, "present error", err.Error())
+	assert.Contains(t, logBuffer.String(), "sync registration codes: get present codes failed")
+	absenceDict := entity.GetAbsenceCodeDictionary()
+	if assert.NotNil(t, absenceDict) {
+		assert.Contains(t, absenceDict.Codes, int32(10))
+		assert.True(t, absenceDict.Codes[10].IsAbsenceCode)
+	}
+	assert.Same(t, sentinelPresent, entity.GetPresentsCodeDictionary())
+	mockFactory.AssertExpectations(t)
+	mockClient.AssertExpectations(t)
+}
+
+func TestSyncRegistrationCodesDictionaries_Success(t *testing.T) {
+	mockFactory := new(MockERPFactory)
+	mockClient := new(MockERPClient)
+
+	oldAbsence := entity.GetAbsenceCodeDictionary()
+	oldPresent := entity.GetPresentsCodeDictionary()
+	t.Cleanup(func() {
+		entity.SetAbsenceCodeDictionary(oldAbsence)
+		entity.SetPresentsCodeDictionary(oldPresent)
+	})
+
+	sync := &StudentSync{
+		ERPFactory: mockFactory,
+	}
+
+	absenceResp := &isams.RegistrationAbsenceCodesResponse{
+		AbsenceCodes: []isams.RegistrationAbsenceCode{
+			{ID: 10, Code: "A", Name: "Absence Code"},
+		},
+	}
+	presentResp := &isams.RegistrationPresentCodeResponse{
+		PresentCodes: []isams.RegistrationPresentCode{
+			{ID: 20, Code: "P", Name: "Present Code"},
+		},
+	}
+
+	mockFactory.On("NewClient", mock.Anything).Once().Return(mockClient, nil)
+	mockClient.On("GetRegistrationAbsenceCodes").Once().Return(absenceResp, nil)
+	mockClient.On("GetRegistrationPresentCodes").Once().Return(presentResp, nil)
+
+	err := sync.SyncRegistrationCodesDictionaries()
+
+	assert.NoError(t, err)
+	absenceDict := entity.GetAbsenceCodeDictionary()
+	if assert.NotNil(t, absenceDict) {
+		assert.False(t, absenceDict.UploadedAt.IsZero())
+		assert.Contains(t, absenceDict.Codes, int32(10))
+		assert.True(t, absenceDict.Codes[10].IsAbsenceCode)
+	}
+	presentDict := entity.GetPresentsCodeDictionary()
+	if assert.NotNil(t, presentDict) {
+		assert.False(t, presentDict.UploadedAt.IsZero())
+		assert.Contains(t, presentDict.Codes, int32(20))
+		assert.False(t, presentDict.Codes[20].IsAbsenceCode)
+	}
+	mockFactory.AssertExpectations(t)
+	mockClient.AssertExpectations(t)
+}
