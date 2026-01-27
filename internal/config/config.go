@@ -21,8 +21,8 @@ type Config struct {
 
 	ERPFirstRegistrationPeriodName string `env:"ERP_FIRST_REGISTRATION_PERIOD_NAME" envDefault:"AM"`
 	ERPDefaultPresentCodeName	string `env:"ERP_DEFAULT_PRESENT_CODE_NAME" envDefault:"/"`
-	ERPDefaultLateCodeName		string `env:"ERP_DEFAULT_LATE_CODE_NAME" envDefault:"C"`
-	ERPDefaultLessonAbsenceCodeName string `env:"ERP_DEFAULT_LESSON_ABSENCE_CODE_NAME" envDefault:"C"`
+	ERPDefaultLateCodeName		string `env:"ERP_DEFAULT_LATE_CODE_NAME" envDefault:"O"`
+	ERPDefaultLessonAbsenceCodeName string `env:"ERP_DEFAULT_LESSON_ABSENCE_CODE_NAME" envDefault:"O"`
 
 	StudentsImagePhotoDir 	string `env:"STUDENTS_IMAGE_PHOTO_DIR" envDefault:"website/assets/img/students"`
 	StudentsImagePhotoURLPrefix string `env:"STUDENTS_IMAGE_PHOTO_URL_PREFIX" envDefault:"/assets/img/students"`
