@@ -46,15 +46,6 @@ func GetDefaultPresentCode() (*RegistrationCode, bool) {
 	return dic.GetCodeByCodeName(dpc)
 }
 
-func GetDefaultLateCode() (*RegistrationCode, bool) {
-	dlc := config.ERPDefaultLateCodeName()
-	dic := GetAbsenceCodeDictionary()	
-	if dic == nil {
-		return nil, false
-	}
-	return dic.GetCodeByCodeName(dlc)
-}
-
 func GetDefaultLessonAbsenceCode() (*RegistrationCode, bool) {
 	dlac := config.ERPDefaultLessonAbsenceCodeName()
 	dic := GetAbsenceCodeDictionary()	
