@@ -3,6 +3,7 @@ package entity
 import (
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/buzyka/imlate/internal/config"
@@ -106,7 +107,7 @@ func (sa *StudentAttendance) TrackInMainRegistration(trackTime time.Time) (*Stud
 
 			return schedule, true, nil
 		} else {
-			lateMinutes := int32(trackTime.Sub(mainReg.Time).Minutes())
+			lateMinutes := int32(math.Ceil(trackTime.Sub(mainReg.Time).Minutes()))
 			if lateMinutes == 0 {
 				lateMinutes = 1
 			}
@@ -128,7 +129,7 @@ func (sa *StudentAttendance) TrackInMainRegistration(trackTime time.Time) (*Stud
 			schedule.Attendance.IsRegistered = 1
 			schedule.Attendance.IsPresent = true
 			schedule.Attendance.IsLate = true
-			schedule.Attendance.NumberOfMinutesLate = int32(trackTime.Sub(mainReg.Time).Minutes())
+			schedule.Attendance.NumberOfMinutesLate = int32(math.Ceil(trackTime.Sub(mainReg.Time).Minutes()))
 			schedule.Attendance.PresentCodeID = nil
 			schedule.Attendance.AbsenceCodeID = nil
 
@@ -177,7 +178,7 @@ func (sa *StudentAttendance) TrackForbyPeriodsForPresent(trackTime time.Time) (u
 				scheduleItem.Attendance.IsRegistered = 1
 				scheduleItem.Attendance.IsPresent = true
 				scheduleItem.Attendance.IsLate = true
-				scheduleItem.Attendance.NumberOfMinutesLate = int32(trackTime.Sub(scheduleItem.Period.Start).Minutes())
+				scheduleItem.Attendance.NumberOfMinutesLate = int32(math.Ceil(trackTime.Sub(scheduleItem.Period.Start).Minutes()))
 				scheduleItem.Attendance.PresentCodeID = nil
 				scheduleItem.Attendance.AbsenceCodeID = nil
 				updatedItems = append(updatedItems, scheduleItem)
