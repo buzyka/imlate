@@ -167,7 +167,7 @@ func TestTrackInMainRegistrationWillUpdateAttendanceItem(t *testing.T) {
 			exIsLate:              true,
 			exIsPresent:           true,
 			exPresentCode:         nil,
-			exNumberOfMinutesLate: 15,
+			exNumberOfMinutesLate: 16, // 16 minutes because additional second rounded to the next minute
 		},
 		{
 			name:      "After AM period and already registered as absence",
