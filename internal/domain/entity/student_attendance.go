@@ -174,11 +174,11 @@ func (sa *StudentAttendance) TrackForbyPeriodsForPresent(trackTime time.Time) (u
 
 		// late for the period
 		if trackTime.After(scheduleItem.Period.Time) && trackTime.Before(scheduleItem.Period.Finish) {
-			if scheduleItem.Attendance.IsRegistered == 0 && !scheduleItem.Attendance.IsPresent {
+			if scheduleItem.Attendance.IsRegistered == 0 || !scheduleItem.Attendance.IsPresent {
 				scheduleItem.Attendance.IsRegistered = 1
 				scheduleItem.Attendance.IsPresent = true
 				scheduleItem.Attendance.IsLate = true
-				scheduleItem.Attendance.NumberOfMinutesLate = int32(math.Ceil(trackTime.Sub(scheduleItem.Period.Start).Minutes()))
+				scheduleItem.Attendance.NumberOfMinutesLate = int32(math.Ceil(trackTime.Sub(scheduleItem.Period.Time).Minutes()))
 				scheduleItem.Attendance.PresentCodeID = nil
 				scheduleItem.Attendance.AbsenceCodeID = nil
 				updatedItems = append(updatedItems, scheduleItem)
