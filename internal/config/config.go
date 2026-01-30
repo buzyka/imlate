@@ -18,6 +18,7 @@ type Config struct {
 	ISAMSAPIClientSecret 	string `env:"ISAMS_API_CLIENT_SECRET"`
 
 	ERPTimeZone 		 	string `env:"ERP_LOCAL_TIMEZONE"`
+	APPTimeZone 			string `env:"APP_LOCAL_TIMEZONE" envDefault:"UTC"`
 
 	ERPFirstRegistrationPeriodName string `env:"ERP_FIRST_REGISTRATION_PERIOD_NAME" envDefault:"AM"`
 	ERPDefaultPresentCodeName	string `env:"ERP_DEFAULT_PRESENT_CODE_NAME" envDefault:"/"`
@@ -27,6 +28,7 @@ type Config struct {
 	StudentsImagePhotoURLPrefix string `env:"STUDENTS_IMAGE_PHOTO_URL_PREFIX" envDefault:"/assets/img/students"`
 
 	erpLocation 			*time.Location
+	appLocation 			*time.Location
 }
 
 type MysqlDBConfig struct {
@@ -59,10 +61,16 @@ func NewFromEnv() (Config, error) {
 	}
 
 	cfg.erpLocation = time.Local
-
 	if cfg.ERPTimeZone != "" {
 		if erpLoc, err := time.LoadLocation(cfg.ERPTimeZone); err == nil {
 			cfg.erpLocation = erpLoc
+		}
+	}
+
+	cfg.appLocation = time.Local
+	if cfg.APPTimeZone != "" {
+		if appLoc, err := time.LoadLocation(cfg.APPTimeZone); err == nil {
+			cfg.appLocation = appLoc
 		}
 	}
 
@@ -102,4 +110,8 @@ func getDatabaseURLForMysqlFromEnv() (url string, ok bool) {
 
 func (c *Config) ERPTimeLocation() *time.Location {
 	return c.erpLocation
+}
+
+func (c *Config) APPTimeLocation() *time.Location {
+	return c.appLocation
 }

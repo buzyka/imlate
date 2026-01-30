@@ -11,6 +11,7 @@ import (
 	"github.com/buzyka/imlate/internal/infrastructure/integration/isams"
 	"github.com/buzyka/imlate/internal/infrastructure/logging"
 	"github.com/buzyka/imlate/internal/infrastructure/repository"
+	"github.com/buzyka/imlate/internal/infrastructure/util"
 	"github.com/buzyka/imlate/internal/usecase/tracking"
 	"github.com/golobby/container/v3"
 	"go.uber.org/zap"
@@ -25,6 +26,10 @@ func (ef *ERPFactory) NewClient(ctx context.Context) (erp.Client, error) {
 }
 
 func Build(cfg *config.Config) {
+
+	// Timezone setup
+	util.SetAppLocal(cfg.APPTimeLocation())
+
 	logger := logging.NewLogger(true)
 	connection, err := db.Open(cfg.DatabaseEngine, cfg.DatabaseURL, logger)
 	if err != nil {
