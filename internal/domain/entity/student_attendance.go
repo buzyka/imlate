@@ -82,14 +82,14 @@ func (sa *StudentAttendance) SetAttendanceStatus(item *AttendanceItem) {
 }
 
 func (sa *StudentAttendance) TrackInMainRegistration(trackTime time.Time) (*StudentAttendanceItem, bool, error) {
-	mainReg, ok := sa.Schedule().GetPeriodByName(config.ERPFirstRegistrationPeriodName())
+	mainReg, ok := sa.Schedule().GetPeriodByType(config.ERPMainRegistrationPeriodType())
 	if !ok {
-		return nil, false, fmt.Errorf("%w: expected default period %s", ErrorMainPeriodNotFound, config.ERPFirstRegistrationPeriodName())
+		return nil, false, fmt.Errorf("%w: expected default period %s", ErrorMainPeriodNotFound, config.ERPMainRegistrationPeriodType())
 	}
 
 	schedule, ok := (*sa.studentSchedule)[RegistrationPeriodID(mainReg.ID)]
 	if !ok {
-		return nil, false, fmt.Errorf("%w: expected default period %s", ErrorStudentSchedulePeriodNotFound, config.ERPFirstRegistrationPeriodName())
+		return nil, false, fmt.Errorf("%w: expected default period %s", ErrorStudentSchedulePeriodNotFound, config.ERPMainRegistrationPeriodType())
 	}
 
 	defaultPresentCode, ok := GetDefaultPresentCode()
@@ -107,14 +107,10 @@ func (sa *StudentAttendance) TrackInMainRegistration(trackTime time.Time) (*Stud
 
 			return schedule, true, nil
 		} else {
-			lateMinutes := int32(math.Ceil(trackTime.Sub(mainReg.Time).Minutes()))
-			if lateMinutes == 0 {
-				lateMinutes = 1
-			}
-			schedule.Attendance.IsRegistered = 1
+			schedule.Attendance.IsRegistered = 1	
 			schedule.Attendance.IsPresent = true
 			schedule.Attendance.IsLate = true
-			schedule.Attendance.NumberOfMinutesLate = lateMinutes
+			schedule.Attendance.NumberOfMinutesLate = int32(math.Ceil(trackTime.Sub(mainReg.Time).Minutes()))
 			schedule.Attendance.PresentCodeID = nil
 			schedule.Attendance.AbsenceCodeID = nil
 
@@ -142,9 +138,9 @@ func (sa *StudentAttendance) TrackInMainRegistration(trackTime time.Time) (*Stud
 
 func (sa *StudentAttendance) TrackForbyPeriodsForPresent(trackTime time.Time) (updatedItems []*StudentAttendanceItem, updateRequired bool, err error) {
 	updateRequired = false
-	mainReg, ok := sa.Schedule().GetPeriodByName(config.ERPFirstRegistrationPeriodName())
+	mainReg, ok := sa.Schedule().GetPeriodByType(config.ERPMainRegistrationPeriodType())
 	if !ok {
-		return nil, false, fmt.Errorf("%w: expected default period %s", ErrorMainPeriodNotFound, config.ERPFirstRegistrationPeriodName())
+		return nil, false, fmt.Errorf("%w: expected default period %s", ErrorMainPeriodNotFound, config.ERPMainRegistrationPeriodType())
 	}
 
 	defaultLessonAbsenceCode, ok := GetDefaultLessonAbsenceCode()
