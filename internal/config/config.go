@@ -7,28 +7,30 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
+var parseEnv = env.Parse
+
 type Config struct {
-	Debug          			bool   `env:"DEBUG" envDefault:"false"`
-	Environment    			string `env:"ENVIRONMENT" envDefault:"production"` // possible values: development, staging, production.
-	DatabaseEngine 			string `env:"DATABASE_ENGINE" envDefault:"mysql"`
-	DatabaseURL    			string `env:"DATABASE_URL" envDefault:"trackme:trackme@/tracker?parseTime=true"`
+	Debug          bool   `env:"DEBUG" envDefault:"false"`
+	Environment    string `env:"ENVIRONMENT" envDefault:"production"` // possible values: development, staging, production.
+	DatabaseEngine string `env:"DATABASE_ENGINE" envDefault:"mysql"`
+	DatabaseURL    string `env:"DATABASE_URL" envDefault:"trackme:trackme@/tracker?parseTime=true"`
 
-	ISAMSBaseURL         	string `env:"ISAMS_BASE_URL"`
-	ISAMSAPIClientID     	string `env:"ISAMS_API_CLIENT_ID"`
-	ISAMSAPIClientSecret 	string `env:"ISAMS_API_CLIENT_SECRET"`
+	ISAMSBaseURL         string `env:"ISAMS_BASE_URL"`
+	ISAMSAPIClientID     string `env:"ISAMS_API_CLIENT_ID"`
+	ISAMSAPIClientSecret string `env:"ISAMS_API_CLIENT_SECRET"`
 
-	ERPTimeZone 		 	string `env:"ERP_LOCAL_TIMEZONE"`
-	APPTimeZone 			string `env:"APP_LOCAL_TIMEZONE" envDefault:"UTC"`
+	ERPTimeZone string `env:"ERP_LOCAL_TIMEZONE"`
+	APPTimeZone string `env:"APP_LOCAL_TIMEZONE" envDefault:"UTC"`
 
-	ERPFirstRegistrationPeriodName string `env:"ERP_FIRST_REGISTRATION_PERIOD_NAME" envDefault:"AM"`
-	ERPDefaultPresentCodeName	string `env:"ERP_DEFAULT_PRESENT_CODE_NAME" envDefault:"/"`
+	ERPMainRegistrationPeriodType   string `env:"ERP_MAIN_REGISTRATION_PERIOD_TYPE" envDefault:"AM"`
+	ERPDefaultPresentCodeName       string `env:"ERP_DEFAULT_PRESENT_CODE_NAME" envDefault:"/"`
 	ERPDefaultLessonAbsenceCodeName string `env:"ERP_DEFAULT_LESSON_ABSENCE_CODE_NAME" envDefault:"O"`
 
-	StudentsImagePhotoDir 	string `env:"STUDENTS_IMAGE_PHOTO_DIR" envDefault:"website/assets/img/students"`
+	StudentsImagePhotoDir       string `env:"STUDENTS_IMAGE_PHOTO_DIR" envDefault:"website/assets/img/students"`
 	StudentsImagePhotoURLPrefix string `env:"STUDENTS_IMAGE_PHOTO_URL_PREFIX" envDefault:"/assets/img/students"`
 
-	erpLocation 			*time.Location
-	appLocation 			*time.Location
+	erpLocation *time.Location
+	appLocation *time.Location
 }
 
 type MysqlDBConfig struct {
@@ -45,7 +47,7 @@ type SqliteDBConfig struct {
 
 func NewFromEnv() (Config, error) {
 	cfg := Config{}
-	err := env.Parse(&cfg)
+	err := parseEnv(&cfg)
 	if err != nil {
 		return cfg, err
 	}
@@ -79,7 +81,7 @@ func NewFromEnv() (Config, error) {
 
 func getDatabaseURLForSqliteFromEnv() (url string, ok bool) {
 	cfg := &SqliteDBConfig{}
-	if err := env.Parse(cfg); err != nil {
+	if err := parseEnv(cfg); err != nil {
 		return url, false
 	}
 	if cfg.DatabasePath == "" {
@@ -90,7 +92,7 @@ func getDatabaseURLForSqliteFromEnv() (url string, ok bool) {
 
 func getDatabaseURLForMysqlFromEnv() (url string, ok bool) {
 	cfg := &MysqlDBConfig{}
-	if err := env.Parse(cfg); err != nil {
+	if err := parseEnv(cfg); err != nil {
 		return url, false
 	}
 	if cfg.User == "" || cfg.Password == "" || cfg.DatabaseName == "" {

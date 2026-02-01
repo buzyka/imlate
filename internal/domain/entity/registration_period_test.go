@@ -52,6 +52,34 @@ func TestSchedule_GetPeriodByName(t *testing.T) {
 	})
 }
 
+func TestSchedule_GetPeriodByType(t *testing.T) {
+	s := &Schedule{}
+	p1 := &RegistrationPeriod{ID: 1, Type: "MAIN"}
+	p2 := &RegistrationPeriod{ID: 2, Type: "LESSON"}
+
+	s.AddPeriod(p1)
+	s.AddPeriod(p2)
+
+	t.Run("Found", func(t *testing.T) {
+		p, ok := s.GetPeriodByType("MAIN")
+		assert.True(t, ok)
+		assert.Equal(t, p1, p)
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		p, ok := s.GetPeriodByType("AFTER")
+		assert.False(t, ok)
+		assert.Nil(t, p)
+	})
+
+	t.Run("EmptySchedule", func(t *testing.T) {
+		empty := &Schedule{}
+		p, ok := empty.GetPeriodByType("MAIN")
+		assert.False(t, ok)
+		assert.Nil(t, p)
+	})
+}
+
 func TestSchedule_FirstPeriod(t *testing.T) {
 	now := time.Now()
 	p1 := &RegistrationPeriod{ID: 1, Start: now.Add(1 * time.Hour)}
