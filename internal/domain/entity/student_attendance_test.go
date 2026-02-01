@@ -253,7 +253,7 @@ func TestTrackInMainRegistrationWillReturnError(t *testing.T) {
 		defer restoreCodesDictionaries(oldPCD, oldACD)
 
 		cfg := &config.Config{
-			ERPFirstRegistrationPeriodName: "TT",
+			ERPMainRegistrationPeriodType: "TT",
 		}
 		err := container.Singleton(func() *config.Config {
 			return cfg
@@ -315,7 +315,7 @@ func TestTrackForbyPeriodsForPresentWillReturnError(t *testing.T) {
 		defer restoreCodesDictionaries(oldPCD, oldACD)
 
 		cfg := &config.Config{
-			ERPFirstRegistrationPeriodName: "TT",
+			ERPMainRegistrationPeriodType: "TT",
 		}
 		err := container.Singleton(func() *config.Config {
 			return cfg
@@ -391,8 +391,6 @@ func TestTrackForbyPeriodsForPresentWithLateForSecondPeriodWillAbsenceOnFirstAnd
 	assert.Nil(t, item2.Attendance.AbsenceCodeID)
 	assert.Equal(t, int32(10), item2.Attendance.NumberOfMinutesLate)
 }
-
-
 
 func TestTrackForbyPeriodsForPresentWithLateForFirstPeriodWillLateOnFirst(t *testing.T) {
 
@@ -504,7 +502,7 @@ func restoreCodesDictionaries(oldPresentsCodeDictionary *RegistrationCodeDiction
 
 func prepareConfig(t *testing.T) {
 	cfg := &config.Config{
-		ERPFirstRegistrationPeriodName:  "AM",
+		ERPMainRegistrationPeriodType:   "AM",
 		ERPDefaultLessonAbsenceCodeName: "C",
 		ERPDefaultPresentCodeName:       "/",
 	}
@@ -528,6 +526,7 @@ func prepareTestEnv() (*StudentAttendance, *saEnv) {
 	periodAM := &RegistrationPeriod{
 		ID:     100,
 		Name:   "AM",
+		Type:   "AM",
 		Start:  time.Date(now.Year(), now.Month(), now.Day(), 7, 37, 0, 0, time.UTC),
 		Time:   time.Date(now.Year(), now.Month(), now.Day(), 7, 40, 0, 0, time.UTC),
 		Finish: time.Date(now.Year(), now.Month(), now.Day(), 7, 55, 0, 0, time.UTC),

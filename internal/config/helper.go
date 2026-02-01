@@ -8,8 +8,8 @@ func GetGlobalConfig() *Config {
 	return cfg
 }
 
-func ERPFirstRegistrationPeriodName() string {
-	return GetGlobalConfig().ERPFirstRegistrationPeriodName
+func ERPMainRegistrationPeriodType() string {
+	return GetGlobalConfig().ERPMainRegistrationPeriodType
 }
 
 func ERPDefaultPresentCodeName() string {

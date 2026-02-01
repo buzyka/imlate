@@ -9,6 +9,7 @@ type Schedule struct {
 type RegistrationPeriod struct {
 	ID     int32
 	Name   string
+	Type   string
 	Finish time.Time
 	Start  time.Time
 	Time   time.Time
@@ -24,6 +25,15 @@ func (s *Schedule) AddPeriod(period *RegistrationPeriod) {
 func (s *Schedule) GetPeriodByName(name string) (*RegistrationPeriod, bool) {
 	for _, period := range s.Periods {
 		if period.Name == name {
+			return period, true
+		}
+	}
+	return nil, false
+}
+
+func (s *Schedule) GetPeriodByType(periodType string) (*RegistrationPeriod, bool) {
+	for _, period := range s.Periods {
+		if period.Type == periodType {
 			return period, true
 		}
 	}
