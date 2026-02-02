@@ -113,10 +113,7 @@ func (tc *TrackerController) FindAndTrackHandler() gin.HandlerFunc {
 			}
 		}
 
-		fmt.Println("---------------LLLL")
-
 		if 	track.Visitor.IsStudent {
-			fmt.Println("----- STUDEENt")
 			if err := tc.StudentTracker.Track(ctx, track.Visitor); err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{
 					"error": err.Error(),

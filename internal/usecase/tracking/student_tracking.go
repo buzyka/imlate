@@ -8,30 +8,38 @@ import (
 	"github.com/buzyka/imlate/internal/config"
 	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/erp"
+	"github.com/buzyka/imlate/internal/domain/provider"
 	"github.com/buzyka/imlate/internal/infrastructure/integration/isams"
 	"github.com/buzyka/imlate/internal/infrastructure/util"
+	"go.uber.org/zap"
 )
 
 type StudentTracker struct {
-	cfg 				*config.Config 	`container:"type"`
-	ERPFactory          erp.Factory     `container:"type"`	
+	Cfg 				*config.Config 	`container:"type"`
+	ERPFactory          erp.Factory     `container:"type"`
+	VisitorRepo         provider.VisitorRepository  `container:"type"`
+	Logger				*zap.SugaredLogger `container:"type"`
 }
 
 func (s *StudentTracker) Track(ctx context.Context, visitor *entity.Visitor) error {
 	erpClient, err := s.ERPFactory.NewClient(ctx)
 	if err != nil {
+		s.Logger.Errorf("StudentTracker: Error creating ERP client for student %d: %v", visitor.Id, err)
 		return err
 	}
+
 	// Get periods for visitor for today
 	schedule, err := s.getPeriods(erpClient, visitor.ErpDivisions)
 	if err != nil {
+		s.Logger.Errorf("StudentTracker: Error getting periods for student %d: %v", visitor.Id, err)
 		return err
 	}
 
 	studentAttendance := entity.NewStudentAttendance(visitor, schedule)
 	s.fillAttendanceInfo(erpClient, studentAttendance)
 
-	na, shouldUpdate, err := studentAttendance.TrackInMainRegistration(util.Now())
+	n := util.Now()
+	na, shouldUpdate, err := studentAttendance.TrackInMainRegistration(n)
 	if err != nil {
 		return err
 	}
@@ -43,10 +51,11 @@ func (s *StudentTracker) Track(ctx context.Context, visitor *entity.Visitor) err
 			s.PrepareRegistrationStatusRequest(na.Attendance),
 		)
 		if err != nil {
+			s.Logger.Errorf("StudentTracker: Error updating registration for student %d, period %d: %v", visitor.Id, na.Period.ID, err)
 			return err
 		}
 
-		naList, shouldUpdate, err := studentAttendance.TrackForbyPeriodsForPresent(util.Now())
+		naList, shouldUpdate, err := studentAttendance.TrackForbyPeriodsForPresent(n)
 		if err != nil {
 			return err
 		}
@@ -59,21 +68,12 @@ func (s *StudentTracker) Track(ctx context.Context, visitor *entity.Visitor) err
 					s.PrepareRegistrationStatusRequest(na.Attendance),
 				)
 				if err != nil {
+					s.Logger.Errorf("StudentTracker: Error updating registration for student %d, period %d: %v", visitor.Id, na.Period.ID, err)
 					return err
 				}
 			}
 		}
 	}
-
-	// Is it first login of the day? (set status for AM)
-
-	// is he late? (set status for AM and late time and set to the specific period) 
-
-	// Is he already registered,  than it is log out (set status for PM)
-
-	// TODO: implement track logic
-
-	fmt.Printf("---Tracking periods: %d\n", len(schedule.Periods))
 	
 	return nil
 }
@@ -81,7 +81,7 @@ func (s *StudentTracker) Track(ctx context.Context, visitor *entity.Visitor) err
 func (s *StudentTracker) PrepareRegistrationStatusRequest(item *entity.AttendanceItem) isams.RegistrationStatusRequest {
 	var leavingDateTime *string
 	if item.LeavingOrLeftDateTime != nil {
-		leavingDateTimeStr := util.FromLocalTimeToTimeStr(*item.LeavingOrLeftDateTime, s.cfg.ERPTimeLocation())
+		leavingDateTimeStr := util.FromLocalTimeToTimeStr(*item.LeavingOrLeftDateTime, s.Cfg.ERPTimeLocation())
 		leavingDateTime = &leavingDateTimeStr
 	}
 	req := isams.RegistrationStatusRequest{
@@ -97,11 +97,14 @@ func (s *StudentTracker) PrepareRegistrationStatusRequest(item *entity.Attendanc
 }
 
 func (s *StudentTracker) getPeriods(erpClient erp.Client, divisions []int32) (*entity.Schedule, error) {
+	if erpClient == nil {
+		return nil, fmt.Errorf("erp client is nil")
+	}
 	schedule := &entity.Schedule{}
 	for _, division := range divisions {
 		resp, err := erpClient.GetCurrentRegistrationPeriodsForDivision(division)
 		if err != nil {
-			// TODO: log error
+			s.Logger.Errorf("StudentTracker: Error getting registration periods for division %d: %v", division, err)
 			continue
 		}
 		s.addPeriodsFromResponse(schedule, resp)
@@ -127,6 +130,7 @@ func (s *StudentTracker) addPeriodsFromResponse(schedule *entity.Schedule, resp 
 		period := &entity.RegistrationPeriod{
 			ID:        period.ID,
 			Name:      period.FriendlyName,
+			Type:      period.RegistrationType,
 			Time:      timeDate,
 			Start: startDate,
 			Finish:   finishDate,

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/buzyka/imlate/internal/domain/entity"
+	"github.com/buzyka/imlate/internal/domain/provider"
 )
 
 type Visitor struct {
@@ -17,7 +18,38 @@ type Visitor struct {
 }
 
 func (r *Visitor) GetAll() ([]*entity.Visitor, error) {
-	rows, err := r.Connection.Query("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, sync_hash, updated_at FROM visitors ORDER BY id ASC")
+	return r.FindAll()
+}
+
+func (r *Visitor) FindAll(opts ...provider.VisitorFilterOption) ([]*entity.Visitor, error) {
+	cfg := &provider.VisitorFilterConfig{}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(cfg)
+		}
+	}
+
+	query := "SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, sync_hash, updated_at FROM visitors"
+	args := make([]interface{}, 0)
+	clauses := make([]string, 0)
+	if len(cfg.ERPYearGroup) > 0 {
+		placeholders := make([]string, len(cfg.ERPYearGroup))
+		for i, yearGroup := range cfg.ERPYearGroup {
+			placeholders[i] = "?"
+			if yearGroup == nil {
+				args = append(args, nil)
+			} else {
+				args = append(args, *yearGroup)
+			}
+		}
+		clauses = append(clauses, fmt.Sprintf("year_group IN (%s)", strings.Join(placeholders, ", ")))
+	}
+	if len(clauses) > 0 {
+		query += " WHERE " + strings.Join(clauses, " AND ")
+	}
+	query += " ORDER BY id ASC"
+
+	rows, err := r.Connection.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

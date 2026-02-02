@@ -2,6 +2,7 @@ package providertest
 
 import (
 	"github.com/buzyka/imlate/internal/domain/entity"
+	"github.com/buzyka/imlate/internal/domain/provider"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -11,6 +12,14 @@ type VisitorRepositoryMock struct {
 
 func (m *VisitorRepositoryMock) GetAll() ([]*entity.Visitor, error) {
 	args := m.Called()
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*entity.Visitor), args.Error(1)
+}
+
+func (m *VisitorRepositoryMock) FindAll(opts ...provider.VisitorFilterOption) ([]*entity.Visitor, error) {
+	args := m.Called(opts)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}

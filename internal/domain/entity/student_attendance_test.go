@@ -392,6 +392,143 @@ func TestTrackForbyPeriodsForPresentWithLateForSecondPeriodWillAbsenceOnFirstAnd
 	assert.Equal(t, int32(10), item2.Attendance.NumberOfMinutesLate)
 }
 
+func TestMarkNotRegisteredAsAbsent(t *testing.T) {
+	t.Run("MainPeriodNotFound", func(t *testing.T) {
+		oldPCD, oldACD := preparePresentsCodeDictionary(t)
+		defer restoreCodesDictionaries(oldPCD, oldACD)
+
+		cfg := &config.Config{
+			ERPMainRegistrationPeriodType: "TT",
+		}
+		err := container.Singleton(func() *config.Config {
+			return cfg
+		})
+		assert.NoError(t, err)
+
+		sa, _ := prepareTestEnv()
+
+		a, u, err := sa.MarkNotRegisteredAsAbsent(time.Now())
+		assert.NoError(t, err)
+		assert.False(t, u)
+		assert.Nil(t, a)
+	})
+
+	t.Run("StudentScheduleNotFound", func(t *testing.T) {
+		oldPCD, oldACD := preparePresentsCodeDictionary(t)
+		defer restoreCodesDictionaries(oldPCD, oldACD)
+
+		prepareConfig(t)
+
+		sa, _ := prepareTestEnv()
+		mainReg, ok := sa.Schedule().GetPeriodByType(config.ERPMainRegistrationPeriodType())
+		assert.True(t, ok)
+
+		delete(*sa.studentSchedule, RegistrationPeriodID(mainReg.ID))
+
+		a, u, err := sa.MarkNotRegisteredAsAbsent(time.Now())
+		assert.Error(t, err)
+		assert.False(t, u)
+		assert.Nil(t, a)
+		assert.ErrorIs(t, err, ErrorStudentSchedulePeriodNotFound)
+		assert.Contains(t, err.Error(), "expected default period AM")
+	})
+
+	t.Run("DefaultAbsenceCodeNotFound", func(t *testing.T) {
+		oldAbsenceCodeDictionary := GetAbsenceCodeDictionary()
+		SetAbsenceCodeDictionary(nil)
+		defer SetAbsenceCodeDictionary(oldAbsenceCodeDictionary)
+
+		prepareConfig(t)
+
+		sa, _ := prepareTestEnv()
+
+		a, u, err := sa.MarkNotRegisteredAsAbsent(time.Now())
+		assert.Error(t, err)
+		assert.False(t, u)
+		assert.Nil(t, a)
+		assert.ErrorIs(t, err, ErrorDefaultLessonAbsenceCodeNotFound)
+	})
+
+	t.Run("BeforeFinish_NoUpdate", func(t *testing.T) {
+		oldPCD, oldACD := preparePresentsCodeDictionary(t)
+		defer restoreCodesDictionaries(oldPCD, oldACD)
+
+		prepareConfig(t)
+
+		sa, _ := prepareTestEnv()
+		mainReg, ok := sa.Schedule().GetPeriodByType(config.ERPMainRegistrationPeriodType())
+		assert.True(t, ok)
+
+		trackTime := mainReg.Finish.Add(-1 * time.Minute)
+		a, u, err := sa.MarkNotRegisteredAsAbsent(trackTime)
+		assert.NoError(t, err)
+		assert.False(t, u)
+		assert.Nil(t, a)
+	})
+
+	t.Run("NilAttendance_NoUpdate", func(t *testing.T) {
+		oldPCD, oldACD := preparePresentsCodeDictionary(t)
+		defer restoreCodesDictionaries(oldPCD, oldACD)
+
+		prepareConfig(t)
+
+		sa, _ := prepareTestEnv()
+		mainReg, ok := sa.Schedule().GetPeriodByType(config.ERPMainRegistrationPeriodType())
+		assert.True(t, ok)
+
+		item := (*sa.studentSchedule)[RegistrationPeriodID(mainReg.ID)]
+		item.Attendance = nil
+
+		trackTime := mainReg.Finish.Add(1 * time.Minute)
+		a, u, err := sa.MarkNotRegisteredAsAbsent(trackTime)
+		assert.NoError(t, err)
+		assert.False(t, u)
+		assert.Nil(t, a)
+	})
+
+	t.Run("AfterFinish_MarkAbsent", func(t *testing.T) {
+		oldPCD, oldACD := preparePresentsCodeDictionary(t)
+		defer restoreCodesDictionaries(oldPCD, oldACD)
+
+		prepareConfig(t)
+
+		sa, _ := prepareTestEnv()
+		mainReg, ok := sa.Schedule().GetPeriodByType(config.ERPMainRegistrationPeriodType())
+		assert.True(t, ok)
+
+		trackTime := mainReg.Finish.Add(1 * time.Minute)
+		a, u, err := sa.MarkNotRegisteredAsAbsent(trackTime)
+		assert.NoError(t, err)
+		assert.True(t, u)
+		assert.NotNil(t, a)
+		assert.Equal(t, int32(1), a.Attendance.IsRegistered)
+		assert.False(t, a.Attendance.IsPresent)
+		assert.False(t, a.Attendance.IsLate)
+		assert.NotNil(t, a.Attendance.AbsenceCodeID)
+		assert.Equal(t, int32(11), *a.Attendance.AbsenceCodeID)
+	})
+
+	t.Run("AlreadyRegistered_NoUpdate", func(t *testing.T) {
+		oldPCD, oldACD := preparePresentsCodeDictionary(t)
+		defer restoreCodesDictionaries(oldPCD, oldACD)
+
+		prepareConfig(t)
+
+		sa, _ := prepareTestEnv()
+		mainReg, ok := sa.Schedule().GetPeriodByType(config.ERPMainRegistrationPeriodType())
+		assert.True(t, ok)
+
+		item := (*sa.studentSchedule)[RegistrationPeriodID(mainReg.ID)]
+		item.Attendance.IsRegistered = 1
+
+		trackTime := mainReg.Finish.Add(1 * time.Minute)
+		a, u, err := sa.MarkNotRegisteredAsAbsent(trackTime)
+		assert.NoError(t, err)
+		assert.False(t, u)
+		assert.Nil(t, a)
+	})
+}
+
 func TestTrackForbyPeriodsForPresentWithLateForFirstPeriodWillLateOnFirst(t *testing.T) {
 
 	oldPCD, oldACD := preparePresentsCodeDictionary(t)
