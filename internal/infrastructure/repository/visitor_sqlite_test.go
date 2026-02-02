@@ -9,6 +9,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/buzyka/imlate/internal/domain/entity"
+	"github.com/buzyka/imlate/internal/domain/provider"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -753,4 +754,74 @@ func TestAddVisitor_Insert_NullFields(t *testing.T) {
 
 	err = repo.AddVisitor(visitor)
 	assert.NoError(t, err)
+}
+
+func TestFindAll_NoFilters(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer func() { _ = db.Close() }()
+
+	repo := &Visitor{Connection: db}
+
+	rows := sqlmock.NewRows([]string{
+		"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id",
+		"year_group", "divisions", "sync_hash", "updated_at",
+	}).AddRow(1, "John", "Doe", true, 10, "/assets/img/teachers/1.jpg", 1001, "S1001", 10, "[1,2]", "0", time.Now())
+
+	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, sync_hash, updated_at FROM visitors ORDER BY id ASC").
+		WillReturnRows(rows)
+
+	result, err := repo.FindAll()
+
+	assert.NoError(t, err)
+	assert.Len(t, result, 1)
+	assert.Equal(t, int32(1), result[0].Id)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestFindAll_WithERPYearGroupFilter(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer func() { _ = db.Close() }()
+
+	repo := &Visitor{Connection: db}
+
+	rows := sqlmock.NewRows([]string{
+		"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id",
+		"year_group", "divisions", "sync_hash", "updated_at",
+	}).AddRow(2, "Jane", "Roe", true, 11, "/assets/img/teachers/2.jpg", 1002, "S1002", 11, "[3]", "1", time.Now())
+
+	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, sync_hash, updated_at FROM visitors WHERE year_group IN \\(\\?, \\?\\) ORDER BY id ASC").
+		WithArgs(int32(10), int32(11)).
+		WillReturnRows(rows)
+
+	result, err := repo.FindAll(provider.WithERPYearGroups([]int32{10, 11}))
+
+	assert.NoError(t, err)
+	assert.Len(t, result, 1)
+	assert.Equal(t, int32(2), result[0].Id)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetAll_AliasForFindAll(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer func() { _ = db.Close() }()
+
+	repo := &Visitor{Connection: db}
+
+	rows := sqlmock.NewRows([]string{
+		"id", "name", "surname", "is_student", "grade", "image", "isams_id", "isams_school_id",
+		"year_group", "divisions", "sync_hash", "updated_at",
+	}).AddRow(3, "Alex", "Smith", true, 9, "/assets/img/teachers/3.jpg", 1003, "S1003", 9, "[4]", "2", time.Now())
+
+	mock.ExpectQuery("SELECT id, name, surname, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, sync_hash, updated_at FROM visitors ORDER BY id ASC").
+		WillReturnRows(rows)
+
+	result, err := repo.GetAll()
+
+	assert.NoError(t, err)
+	assert.Len(t, result, 1)
+	assert.Equal(t, int32(3), result[0].Id)
+	assert.NoError(t, mock.ExpectationsWereMet())
 }

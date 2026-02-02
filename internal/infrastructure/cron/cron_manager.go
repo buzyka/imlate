@@ -1,9 +1,11 @@
 package cron
 
 import (
+	"context"
 	"time"
 
 	"github.com/buzyka/imlate/internal/usecase/synchroniser"
+	"github.com/buzyka/imlate/internal/usecase/tracking"
 	"github.com/go-co-op/gocron/v2"
 	"github.com/golobby/container/v3"
 	"go.uber.org/zap"
@@ -63,6 +65,16 @@ func registerJobs(s gocron.Scheduler) error {
 	)
 	if err != nil { return err }
 
+	// Mark not registered students as absent job
+	_, err = s.NewJob(
+		gocron.CronJob(
+			"10 8-12/1 * * 1-5", // every hour from 8:10am to 12:10pm on weekdays
+			false,
+		),
+		gocron.NewTask(MarkNotRegisteredStudentsAsAbsent()),
+	)
+	if err != nil { return err }
+
 	// You can register more cron jobs here
 	// ...
 
@@ -111,6 +123,19 @@ func StudentPhotosSyncFunc() JobFunction {
 		container.MustFill(container.Global, &sync)
 		if err := sync.SyncStudentPhotos(); err != nil {
 			log.Errorf("Error during student photos data sync: %v\n", err)
+		}
+	}
+}
+
+func MarkNotRegisteredStudentsAsAbsent() JobFunction {
+	return func() {
+		var log *zap.SugaredLogger
+		container.MustResolve(container.Global, &log)
+		log.Infof("Starting marking not registered students as absent... TIME: %s", time.Now().Format(time.RFC3339))
+		st := tracking.StudentTracker{}
+		container.MustFill(container.Global, &st)
+		if err := st.TrackUntrackedStudentsAsAbsence(context.Background(), tracking.WithYearGroups([]int32{6})); err != nil {
+			log.Errorf("Error during marking not registered students as absent: %v\n", err)
 		}
 	}
 }

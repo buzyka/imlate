@@ -91,6 +91,9 @@ func (sa *StudentAttendance) TrackInMainRegistration(trackTime time.Time) (*Stud
 	if !ok {
 		return nil, false, fmt.Errorf("%w: expected default period %s", ErrorStudentSchedulePeriodNotFound, config.ERPMainRegistrationPeriodType())
 	}
+	if schedule.Attendance == nil {
+		return nil, false, nil
+	}
 
 	defaultPresentCode, ok := GetDefaultPresentCode()
 	if !ok {
@@ -107,7 +110,7 @@ func (sa *StudentAttendance) TrackInMainRegistration(trackTime time.Time) (*Stud
 
 			return schedule, true, nil
 		} else {
-			schedule.Attendance.IsRegistered = 1	
+			schedule.Attendance.IsRegistered = 1
 			schedule.Attendance.IsPresent = true
 			schedule.Attendance.IsLate = true
 			schedule.Attendance.NumberOfMinutesLate = int32(math.Ceil(trackTime.Sub(mainReg.Time).Minutes()))
@@ -185,4 +188,38 @@ func (sa *StudentAttendance) TrackForbyPeriodsForPresent(trackTime time.Time) (u
 		}
 	}
 	return updatedItems, updateRequired, nil
+}
+
+func (sa *StudentAttendance) MarkNotRegisteredAsAbsent(trackTime time.Time) (*StudentAttendanceItem, bool, error) {
+	mainReg, ok := sa.Schedule().GetPeriodByType(config.ERPMainRegistrationPeriodType())
+	if !ok {
+		// main registration period not found just skip
+		return nil, false, nil
+	}
+
+	schedule, ok := (*sa.studentSchedule)[RegistrationPeriodID(mainReg.ID)]
+	if !ok {
+		return nil, false, fmt.Errorf("%w: expected default period %s", ErrorStudentSchedulePeriodNotFound, config.ERPMainRegistrationPeriodType())
+	}
+	if schedule.Attendance == nil {
+		return nil, false, nil
+	}
+
+	defaultLessonAbsenceCode, ok := GetDefaultLessonAbsenceCode()
+	if !ok {
+		return nil, false, ErrorDefaultLessonAbsenceCodeNotFound
+	}
+
+	// Student is not yet registered
+	if schedule.Attendance.IsRegistered == 0 && trackTime.After(mainReg.Finish) {
+		schedule.Attendance.IsRegistered = 1
+		schedule.Attendance.IsPresent = false
+		schedule.Attendance.IsLate = false
+		schedule.Attendance.PresentCodeID = nil
+		schedule.Attendance.AbsenceCodeID = &defaultLessonAbsenceCode.ID
+
+		return schedule, true, nil
+	}
+
+	return nil, false, nil
 }
