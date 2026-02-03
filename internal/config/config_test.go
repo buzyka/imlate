@@ -205,6 +205,16 @@ func TestNewFromEnv_UnknownEngineKeepsDatabaseURL(t *testing.T) {
 	assert.Equal(t, "custom-url", cfg.DatabaseURL)
 }
 
+func TestNewFromEnv_AutoRegistrationYearGroups(t *testing.T) {
+	loadTestEnvVariables(t, map[string]string{
+		"AUTO_REGISTRATION_YEAR_GROUPS": "6,7,8",
+	})
+
+	cfg, err := NewFromEnv()
+	assert.NoError(t, err)
+	assert.Equal(t, []int32{6, 7, 8}, cfg.AutoRegistrationYearGroups)
+}
+
 func TestNewFromEnv_ParseError(t *testing.T) {
 	oldParse := parseEnv
 	parseEnv = func(_ interface{}, _ ...env.Options) error {
@@ -270,6 +280,7 @@ func resetConfigEnv(t *testing.T) {
 		"ERP_DEFAULT_LESSON_ABSENCE_CODE_NAME",
 		"STUDENTS_IMAGE_PHOTO_DIR",
 		"STUDENTS_IMAGE_PHOTO_URL_PREFIX",
+		"AUTO_REGISTRATION_YEAR_GROUPS",
 		"DATABASE_HOST",
 		"DATABASE_PORT",
 		"DATABASE_USERNAME",
