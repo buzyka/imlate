@@ -464,12 +464,13 @@ func TestTrack_MainUpdateOnly(t *testing.T) {
 	env := prepareTrackingTestEnv(t)
 	student := makeVisitor()
 
-	mainStart := time.Date(2026, 2, 1, 7, 37, 0, 0, time.UTC)
-	mainTime := time.Date(2026, 2, 1, 7, 40, 0, 0, time.UTC)
-	mainFinish := time.Date(2026, 2, 1, 7, 55, 0, 0, time.UTC)
-	period1Start := time.Date(2026, 2, 1, 8, 0, 0, 0, time.UTC)
-	period1Time := time.Date(2026, 2, 1, 8, 0, 0, 0, time.UTC)
-	period1Finish := time.Date(2026, 2, 1, 8, 59, 0, 0, time.UTC)
+	now := time.Now().In(time.UTC)
+	mainStart := time.Date(now.Year(), now.Month(), now.Day(), 7, 37, 0, 0, time.UTC)
+	mainTime := time.Date(now.Year(), now.Month(), now.Day(), 7, 40, 0, 0, time.UTC)
+	mainFinish := time.Date(now.Year(), now.Month(), now.Day(), 7, 55, 0, 0, time.UTC)
+	period1Start := time.Date(now.Year(), now.Month(), now.Day(), 8, 0, 0, 0, time.UTC)
+	period1Time := time.Date(now.Year(), now.Month(), now.Day(), 8, 0, 0, 0, time.UTC)
+	period1Finish := time.Date(now.Year(), now.Month(), now.Day(), 8, 59, 0, 0, time.UTC)
 
 	resp := &isams.RegistrationPeriodsResponse{RegistrationPeriods: []isams.RegistrationPeriod{
 		makePeriod(100, "AM", "AM", mainStart, mainTime, mainFinish),
@@ -646,9 +647,10 @@ func TestTrackAbsenceForNotRegisteredStudent_NoUpdate(t *testing.T) {
 	env := prepareTrackingTestEnv(t)
 	student := makeVisitor()
 
-	mainStart := time.Date(2026, 2, 1, 7, 37, 0, 0, time.UTC)
-	mainTime := time.Date(2026, 2, 1, 7, 40, 0, 0, time.UTC)
-	mainFinish := time.Date(2026, 2, 1, 7, 55, 0, 0, time.UTC)
+	now := time.Now().In(time.UTC)
+	mainStart := time.Date(now.Year(), now.Month(), now.Day(), 7, 37, 0, 0, time.UTC)
+	mainTime := time.Date(now.Year(), now.Month(), now.Day(), 7, 40, 0, 0, time.UTC)
+	mainFinish := time.Date(now.Year(), now.Month(), now.Day(), 7, 55, 0, 0, time.UTC)
 	resp := &isams.RegistrationPeriodsResponse{RegistrationPeriods: []isams.RegistrationPeriod{
 		makePeriod(100, "AM", "AM", mainStart, mainTime, mainFinish),
 	}}
