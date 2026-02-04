@@ -75,7 +75,6 @@ func TestSetAttendanceStatusWillUpdateExisting(t *testing.T) {
 
 func TestTrackInMainRegistrationWillUpdateAttendanceItem(t *testing.T) {
 	now := time.Now()
-	presentCode := int32(1)
 	absenceCode := int32(11)
 	var tests = []struct {
 		name                  string
@@ -101,7 +100,7 @@ func TestTrackInMainRegistrationWillUpdateAttendanceItem(t *testing.T) {
 			},
 			exIsLate:      false,
 			exIsPresent:   true,
-			exPresentCode: &presentCode,
+			exPresentCode: nil,
 		},
 		{
 			name:      "During AM period",
@@ -117,7 +116,7 @@ func TestTrackInMainRegistrationWillUpdateAttendanceItem(t *testing.T) {
 			},
 			exIsLate:      false,
 			exIsPresent:   true,
-			exPresentCode: &presentCode,
+			exPresentCode: nil,
 		},
 		{
 			name:      "Execly in the finish time AM period",
@@ -133,7 +132,7 @@ func TestTrackInMainRegistrationWillUpdateAttendanceItem(t *testing.T) {
 			},
 			exIsLate:      false,
 			exIsPresent:   true,
-			exPresentCode: &presentCode,
+			exPresentCode: nil,
 		},
 		{
 			name:      "After AM period",
@@ -209,11 +208,7 @@ func TestTrackInMainRegistrationWillUpdateAttendanceItem(t *testing.T) {
 			assert.Equal(t, tt.exIsPresent, a.Attendance.IsPresent)
 			assert.Equal(t, tt.exIsLate, a.Attendance.IsLate)
 			assert.Equal(t, tt.exNumberOfMinutesLate, a.Attendance.NumberOfMinutesLate)
-			if tt.exPresentCode == nil {
-				assert.Nil(t, a.Attendance.PresentCodeID)
-			} else {
-				assert.Equal(t, *tt.exPresentCode, *a.Attendance.PresentCodeID)
-			}
+			assert.Equal(t, tt.exPresentCode, a.Attendance.PresentCodeID)
 		})
 	}
 }
@@ -299,12 +294,13 @@ func TestTrackInMainRegistrationWillReturnError(t *testing.T) {
 
 		sa, _ := prepareTestEnv()
 
-		a, u, err := sa.TrackInMainRegistration(time.Now())
-		assert.Error(t, err)
-		assert.False(t, u)
-		assert.Nil(t, a)
+		mainReg, ok := sa.Schedule().GetPeriodByType(config.ERPMainRegistrationPeriodType())
+		assert.True(t, ok)
 
-		assert.ErrorIs(t, err, ErrorDefaultPresentCodeNotFound)
+		a, u, err := sa.TrackInMainRegistration(mainReg.Time)
+		assert.NoError(t, err)
+		assert.True(t, u)
+		assert.NotNil(t, a)
 	})
 }
 
@@ -390,6 +386,35 @@ func TestTrackForbyPeriodsForPresentWithLateForSecondPeriodWillAbsenceOnFirstAnd
 	assert.Nil(t, item2.Attendance.PresentCodeID)
 	assert.Nil(t, item2.Attendance.AbsenceCodeID)
 	assert.Equal(t, int32(10), item2.Attendance.NumberOfMinutesLate)
+}
+
+func TestTrackForbyPeriodsForPresentSkipsNilAttendanceItems(t *testing.T) {
+	oldPCD, oldACD := preparePresentsCodeDictionary(t)
+	defer restoreCodesDictionaries(oldPCD, oldACD)
+
+	prepareConfig(t)
+
+	sa, _ := prepareTestEnv()
+
+	// Simulate missing attendance record for period 1.
+	(*sa.studentSchedule)[RegistrationPeriodID(1)].Attendance = nil
+
+	now := time.Now()
+	trackTime := time.Date(now.Year(), now.Month(), now.Day(), 9, 10, 0, 0, time.UTC)
+
+	ui, u, err := sa.TrackForbyPeriodsForPresent(trackTime)
+	assert.NoError(t, err)
+	assert.True(t, u)
+	assert.Equal(t, 1, len(ui))
+
+	item := ui[0]
+	assert.Equal(t, int32(2), item.Period.ID)
+	assert.Equal(t, int32(1), item.Attendance.IsRegistered)
+	assert.True(t, item.Attendance.IsPresent)
+	assert.True(t, item.Attendance.IsLate)
+	assert.Nil(t, item.Attendance.PresentCodeID)
+	assert.Nil(t, item.Attendance.AbsenceCodeID)
+	assert.Equal(t, int32(10), item.Attendance.NumberOfMinutesLate)
 }
 
 func TestMarkNotRegisteredAsAbsent(t *testing.T) {

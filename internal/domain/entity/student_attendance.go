@@ -95,18 +95,12 @@ func (sa *StudentAttendance) TrackInMainRegistration(trackTime time.Time) (*Stud
 		return nil, false, nil
 	}
 
-	defaultPresentCode, ok := GetDefaultPresentCode()
-	if !ok {
-		return nil, false, ErrorDefaultPresentCodeNotFound
-	}
-
 	// Student is not yet registered
 	if schedule.Attendance.IsRegistered == 0 {
 		if trackTime.Before(mainReg.Finish) || trackTime.Equal(mainReg.Finish) || int32(trackTime.Sub(mainReg.Start).Minutes()) <= 0 {
 			schedule.Attendance.IsRegistered = 1
 			schedule.Attendance.IsPresent = true
 			schedule.Attendance.IsLate = false
-			schedule.Attendance.PresentCodeID = &defaultPresentCode.ID
 
 			return schedule, true, nil
 		} else {
@@ -152,6 +146,9 @@ func (sa *StudentAttendance) TrackForbyPeriodsForPresent(trackTime time.Time) (u
 	}
 
 	for key, scheduleItem := range *sa.studentSchedule {
+		if scheduleItem == nil || scheduleItem.Attendance == nil {
+			continue
+		}
 		if key == RegistrationPeriodID(mainReg.ID) {
 			continue
 		}
