@@ -12,7 +12,6 @@ import (
 var (
 	ErrorMainPeriodNotFound               = errors.New("main registration period not found")
 	ErrorStudentSchedulePeriodNotFound    = errors.New("student schedule not found")
-	ErrorDefaultPresentCodeNotFound       = errors.New("default present code not found")
 	ErrorDefaultLessonAbsenceCodeNotFound = errors.New("default lesson absence code not found")
 )
 

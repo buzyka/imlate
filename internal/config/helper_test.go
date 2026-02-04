@@ -10,7 +10,6 @@ import (
 func TestHelperFunctionsUseGlobalConfig(t *testing.T) {
 	cfg := &Config{
 		ERPMainRegistrationPeriodType:   "MAIN",
-		ERPDefaultPresentCodeName:       "/",
 		ERPDefaultLessonAbsenceCodeName: "O",
 	}
 	err := container.Singleton(func() *Config {
@@ -20,6 +19,5 @@ func TestHelperFunctionsUseGlobalConfig(t *testing.T) {
 
 	assert.Equal(t, cfg, GetGlobalConfig())
 	assert.Equal(t, "MAIN", ERPMainRegistrationPeriodType())
-	assert.Equal(t, "/", ERPDefaultPresentCodeName())
 	assert.Equal(t, "O", ERPDefaultLessonAbsenceCodeName())
 }

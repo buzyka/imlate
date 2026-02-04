@@ -68,36 +68,6 @@ func TestRegistrationCodeDictionary_SetGet(t *testing.T) {
 	assert.Equal(t, absenceDict, GetAbsenceCodeDictionary())
 }
 
-func TestGetDefaultPresentCode(t *testing.T) {
-	oldPresents := GetPresentsCodeDictionary()
-	defer SetPresentsCodeDictionary(oldPresents)
-
-	setTestConfig(t, &config.Config{
-		ERPDefaultPresentCodeName: "/",
-	})
-
-	t.Run("DictionaryNil", func(t *testing.T) {
-		SetPresentsCodeDictionary(nil)
-		code, ok := GetDefaultPresentCode()
-		assert.False(t, ok)
-		assert.Nil(t, code)
-	})
-
-	t.Run("Found", func(t *testing.T) {
-		presentDict := &RegistrationCodeDictionary{
-			Codes: map[int32]*RegistrationCode{
-				1: {ID: 1, Code: "/", Name: "Present"},
-			},
-			UploadedAt: time.Now(),
-		}
-		SetPresentsCodeDictionary(presentDict)
-
-		code, ok := GetDefaultPresentCode()
-		assert.True(t, ok)
-		assert.Equal(t, presentDict.Codes[1], code)
-	})
-}
-
 func TestGetDefaultLessonAbsenceCode(t *testing.T) {
 	oldAbsence := GetAbsenceCodeDictionary()
 	defer SetAbsenceCodeDictionary(oldAbsence)
