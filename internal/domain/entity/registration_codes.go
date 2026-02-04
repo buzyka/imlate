@@ -37,15 +37,6 @@ func SetAbsenceCodeDictionary(dict *RegistrationCodeDictionary) {
 	absenceCodeDict = dict
 }
 
-func GetDefaultPresentCode() (*RegistrationCode, bool) {
-	dpc := config.ERPDefaultPresentCodeName()
-	dic := GetPresentsCodeDictionary()
-	if dic == nil {
-		return nil, false
-	}
-	return dic.GetCodeByCodeName(dpc)
-}
-
 func GetDefaultLessonAbsenceCode() (*RegistrationCode, bool) {
 	dlac := config.ERPDefaultLessonAbsenceCodeName()
 	dic := GetAbsenceCodeDictionary()	

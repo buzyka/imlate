@@ -12,10 +12,6 @@ func ERPMainRegistrationPeriodType() string {
 	return GetGlobalConfig().ERPMainRegistrationPeriodType
 }
 
-func ERPDefaultPresentCodeName() string {
-	return GetGlobalConfig().ERPDefaultPresentCodeName
-}
-
 func ERPDefaultLessonAbsenceCodeName() string {
 	return GetGlobalConfig().ERPDefaultLessonAbsenceCodeName
 }
