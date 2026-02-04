@@ -119,11 +119,18 @@ func (sa *StudentAttendance) TrackInMainRegistration(trackTime time.Time) (*Stud
 		// Student is marked as absent - update to present and mark a late time
 		if !schedule.Attendance.IsPresent {
 			schedule.Attendance.IsRegistered = 1
-			schedule.Attendance.IsPresent = true
-			schedule.Attendance.IsLate = true
-			schedule.Attendance.NumberOfMinutesLate = int32(math.Ceil(trackTime.Sub(mainReg.Time).Minutes()))
 			schedule.Attendance.PresentCodeID = nil
 			schedule.Attendance.AbsenceCodeID = nil
+
+			numberOfMinutesLate := int32(math.Ceil(trackTime.Sub(mainReg.Time).Minutes()))
+			if numberOfMinutesLate > 0 {
+				schedule.Attendance.IsPresent = true
+				schedule.Attendance.IsLate = true
+				schedule.Attendance.NumberOfMinutesLate = numberOfMinutesLate
+			} else {				
+				schedule.Attendance.IsPresent = true
+				schedule.Attendance.IsLate = false
+			}
 
 			return schedule, true, nil
 		}
