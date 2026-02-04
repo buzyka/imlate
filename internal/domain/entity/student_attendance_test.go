@@ -187,6 +187,25 @@ func TestTrackInMainRegistrationWillUpdateAttendanceItem(t *testing.T) {
 			exAbsenceCode:         nil,
 			exNumberOfMinutesLate: 30,
 		},
+		{
+			name:      "Before main time and already registered as absence",
+			trackTime: time.Date(now.Year(), now.Month(), now.Day(), 7, 39, 0, 0, time.UTC),
+			attendance: &AttendanceItem{
+				RegistrationPeriodID: RegistrationPeriodID(100),
+				AbsenceCodeID:        &absenceCode,
+				SchoolID:             "S123",
+				IsFutureAbsence:      false,
+				IsPresent:            false,
+				IsLate:               false,
+				IsOutOfSchool:        false,
+				IsRegistered:         1,
+			},
+			exIsLate:              false,
+			exIsPresent:           true,
+			exPresentCode:         nil,
+			exAbsenceCode:         nil,
+			exNumberOfMinutesLate: 0,
+		},
 	}
 
 	prepareConfig(t)
@@ -209,6 +228,7 @@ func TestTrackInMainRegistrationWillUpdateAttendanceItem(t *testing.T) {
 			assert.Equal(t, tt.exIsLate, a.Attendance.IsLate)
 			assert.Equal(t, tt.exNumberOfMinutesLate, a.Attendance.NumberOfMinutesLate)
 			assert.Equal(t, tt.exPresentCode, a.Attendance.PresentCodeID)
+			assert.Equal(t, tt.exAbsenceCode, a.Attendance.AbsenceCodeID)
 		})
 	}
 }
@@ -235,6 +255,26 @@ func TestTrackInMainRegistrationWithAlreadyRegisteredStudentWillNotUpdate(t *tes
 	sa.SetAttendanceStatus(ai)
 
 	trackTime := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 8, 10, 0, 0, time.UTC)
+	a, u, err := sa.TrackInMainRegistration(trackTime)
+	assert.NoError(t, err)
+	assert.False(t, u)
+	assert.Nil(t, a)
+}
+
+func TestTrackInMainRegistrationWithNilAttendanceWillNotUpdate(t *testing.T) {
+	oldPCD, oldACD := preparePresentsCodeDictionary(t)
+	defer restoreCodesDictionaries(oldPCD, oldACD)
+
+	prepareConfig(t)
+
+	sa, _ := prepareTestEnv()
+	mainReg, ok := sa.Schedule().GetPeriodByType(config.ERPMainRegistrationPeriodType())
+	assert.True(t, ok)
+
+	item := (*sa.studentSchedule)[RegistrationPeriodID(mainReg.ID)]
+	item.Attendance = nil
+
+	trackTime := mainReg.Time.Add(1 * time.Minute)
 	a, u, err := sa.TrackInMainRegistration(trackTime)
 	assert.NoError(t, err)
 	assert.False(t, u)
