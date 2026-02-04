@@ -666,7 +666,6 @@ func prepareConfig(t *testing.T) {
 	cfg := &config.Config{
 		ERPMainRegistrationPeriodType:   "AM",
 		ERPDefaultLessonAbsenceCodeName: "C",
-		ERPDefaultPresentCodeName:       "/",
 	}
 	err := container.Singleton(func() *config.Config {
 		return cfg

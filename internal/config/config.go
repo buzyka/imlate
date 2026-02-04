@@ -23,7 +23,6 @@ type Config struct {
 	APPTimeZone string `env:"APP_LOCAL_TIMEZONE" envDefault:"UTC"`
 
 	ERPMainRegistrationPeriodType   string `env:"ERP_MAIN_REGISTRATION_PERIOD_TYPE" envDefault:"AM"`
-	ERPDefaultPresentCodeName       string `env:"ERP_DEFAULT_PRESENT_CODE_NAME" envDefault:"/"`
 	ERPDefaultLessonAbsenceCodeName string `env:"ERP_DEFAULT_LESSON_ABSENCE_CODE_NAME" envDefault:"O"`
 
 	StudentsImagePhotoDir       string `env:"STUDENTS_IMAGE_PHOTO_DIR" envDefault:"website/assets/img/students"`
