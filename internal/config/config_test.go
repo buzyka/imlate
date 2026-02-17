@@ -215,6 +215,41 @@ func TestNewFromEnv_AutoRegistrationYearGroups(t *testing.T) {
 	assert.Equal(t, []int32{6, 7, 8}, cfg.AutoRegistrationYearGroups)
 }
 
+func TestNewFromEnv_ForceERPSyncOnStart(t *testing.T) {
+	tests := []struct {
+		name     string
+		envValue string
+		expected bool
+	}{
+		{
+			name:     "true value",
+			envValue: "true",
+			expected: true,
+		},
+		{
+			name:     "false value",
+			envValue: "false",
+			expected: false,
+		},
+		{
+			name:     "empty uses default false",
+			envValue: "",
+			expected: false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			loadTestEnvVariables(t, map[string]string{
+				"FORCE_ERP_SYNC_ON_START": tc.envValue,
+			})
+
+			cfg, err := NewFromEnv()
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expected, cfg.ForceERPSyncOnStart)
+		})
+	}
+}
+
 func TestNewFromEnv_ParseError(t *testing.T) {
 	oldParse := parseEnv
 	parseEnv = func(_ interface{}, _ ...env.Options) error {
@@ -254,6 +289,57 @@ func TestGetDatabaseURLForMysqlFromEnv_ParseError(t *testing.T) {
 	assert.False(t, ok)
 }
 
+func TestIsERPIntegrated(t *testing.T) {
+	var tests = []struct {
+		name           string
+		newEnv         map[string]string
+		expectedResult bool
+	}{
+		{
+			name: "all required variables are set",
+			newEnv: map[string]string{
+				"ISAMS_BASE_URL":          "https://example.com",
+				"ISAMS_API_CLIENT_ID":     "client-id",
+				"ISAMS_API_CLIENT_SECRET": "client-secret",
+			},
+			expectedResult: true,
+		},
+		{
+			name: "missing ISAMS_BASE_URL",
+			newEnv: map[string]string{
+				"ISAMS_API_CLIENT_ID":     "client-id",
+				"ISAMS_API_CLIENT_SECRET": "client-secret",
+			},
+			expectedResult: false,
+		},
+		{
+			name: "missing ISAMS_API_CLIENT_ID",
+			newEnv: map[string]string{
+				"ISAMS_BASE_URL":          "https://example.com",
+				"ISAMS_API_CLIENT_SECRET": "client-secret",
+			},
+			expectedResult: false,
+		},
+		{
+			name: "missing ISAMS_API_CLIENT_SECRET",
+			newEnv: map[string]string{
+				"ISAMS_BASE_URL":      "https://example.com",
+				"ISAMS_API_CLIENT_ID": "client-id",
+			},
+			expectedResult: false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			loadTestEnvVariables(t, tc.newEnv)
+
+			cfg, err := NewFromEnv()
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedResult, cfg.IsERPIntegrated())
+		})
+	}
+}
+
 func loadTestEnvVariables(t *testing.T, env map[string]string) {
 	t.Helper()
 	resetConfigEnv(t)
@@ -281,6 +367,7 @@ func resetConfigEnv(t *testing.T) {
 		"STUDENTS_IMAGE_PHOTO_DIR",
 		"STUDENTS_IMAGE_PHOTO_URL_PREFIX",
 		"AUTO_REGISTRATION_YEAR_GROUPS",
+		"FORCE_ERP_SYNC_ON_START",
 		"DATABASE_HOST",
 		"DATABASE_PORT",
 		"DATABASE_USERNAME",

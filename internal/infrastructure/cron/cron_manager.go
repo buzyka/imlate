@@ -16,13 +16,17 @@ type JobFunction func()
 
 type StopCronFunc = func()
 
-func RunCron() (StopCronFunc, error) {
+func RunCron(cfg *config.Config) (StopCronFunc, error) {
+	if !cfg.IsERPIntegrated() {
+		return func() {}, nil
+	}
+
 	s, err := gocron.NewScheduler()
 	if err != nil {
 		return nil, err
 	}
 
-	err = registerJobs(s)
+	err = registerJobs(s, cfg.ForceERPSyncOnStart)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +38,7 @@ func RunCron() (StopCronFunc, error) {
 	}, nil
 }
 
-func registerJobs(s gocron.Scheduler) error {
+func registerJobs(s gocron.Scheduler, forceERPSyncOnStart bool) error {
 	// Student data sync job
 	_, err := s.NewJob(
 		gocron.CronJob(
@@ -87,11 +91,13 @@ func registerJobs(s gocron.Scheduler) error {
 	// You can register more cron jobs here
 	// ...
 
-	// one-time startup run, sequential
-	go func() {
-		StudentSyncFunc()()
-		StudentPhotosSyncFunc()()
-	}()
+	// one-time startup run, sequential (only if forceERPSyncOnStart is enabled)
+	if forceERPSyncOnStart {
+		go func() {
+			StudentSyncFunc()()
+			StudentPhotosSyncFunc()()
+		}()
+	}
 
 	return nil
 }
