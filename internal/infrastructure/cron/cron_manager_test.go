@@ -118,3 +118,67 @@ func TestMarkNotRegisteredStudentsAsAbsent_WithoutConfiguredYearGroups(t *testin
 	assert.Equal(t, 1, repo.optsLen)
 	assert.Empty(t, repo.yearGroups)
 }
+
+func TestRunCron_WhenERPNotIntegrated_ReturnsNoopAndNoError(t *testing.T) {
+	cfg := &config.Config{
+		ISAMSBaseURL:         "",
+		ISAMSAPIClientID:     "",
+		ISAMSAPIClientSecret: "",
+	}
+
+	stopFunc, err := RunCron(cfg)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, stopFunc)
+	// Calling stop should not panic
+	stopFunc()
+}
+
+func TestRunCron_WhenERPIntegrated_ReturnsStopFuncAndNoError(t *testing.T) {
+	cfg := &config.Config{
+		ISAMSBaseURL:         "https://example.com",
+		ISAMSAPIClientID:     "client-id",
+		ISAMSAPIClientSecret: "client-secret",
+		ForceERPSyncOnStart:     false,
+	}
+
+	stopFunc, err := RunCron(cfg)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, stopFunc)
+	stopFunc()
+}
+
+func TestRunCron_WhenERPIntegratedAndForceERPSyncOnStart_StartsWithoutError(t *testing.T) {
+	testContainer := container.New()
+	oldGlobal := container.Global
+	container.Global = testContainer
+	t.Cleanup(func() {
+		container.Global = oldGlobal
+	})
+
+	syncCalled := false
+	photosCalled := false
+
+	// Setup minimal container dependencies
+	container.MustSingleton(container.Global, func() *zap.SugaredLogger { return zap.NewNop().Sugar() })
+
+	cfg := &config.Config{
+		ISAMSBaseURL:         "https://example.com",
+		ISAMSAPIClientID:     "client-id",
+		ISAMSAPIClientSecret: "client-secret",
+		ForceERPSyncOnStart:     true,
+	}
+
+	// We can't easily test that goroutine runs without more complex setup
+	// but we can at least verify the function doesn't panic
+	stopFunc, err := RunCron(cfg)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, stopFunc)
+	stopFunc()
+
+	// Verify the variables are unused (just to avoid linter warnings about unused variables)
+	_ = syncCalled
+	_ = photosCalled
+}

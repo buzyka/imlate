@@ -33,7 +33,7 @@ func main() {
 	gocontainer.Build(&cfg)
 
 	// Start cron jobs
-	stopCron, err := cron.RunCron()
+	stopCron, err := cron.RunCron(&cfg)
 	if err != nil {
 		panic(fmt.Sprintf("Error starting cron jobs: %v\n", err))
 	}

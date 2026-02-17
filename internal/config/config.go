@@ -30,6 +30,8 @@ type Config struct {
 
 	AutoRegistrationYearGroups []int32 `env:"AUTO_REGISTRATION_YEAR_GROUPS" envSeparator:","`
 
+	ForceERPSyncOnStart bool `env:"FORCE_ERP_SYNC_ON_START" envDefault:"false"`
+
 	erpLocation *time.Location
 	appLocation *time.Location
 }
@@ -117,4 +119,8 @@ func (c *Config) ERPTimeLocation() *time.Location {
 
 func (c *Config) APPTimeLocation() *time.Location {
 	return c.appLocation
+}
+
+func (c *Config) IsERPIntegrated() bool {
+	return c.ISAMSBaseURL != "" && c.ISAMSAPIClientID != "" && c.ISAMSAPIClientSecret != ""
 }
