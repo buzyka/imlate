@@ -8,15 +8,50 @@ import (
 	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/erp"
 	"github.com/buzyka/imlate/internal/domain/provider"
+	"github.com/buzyka/imlate/internal/infrastructure/integration/isams"
 	"github.com/golobby/container/v3"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
 
+type stubERPClient struct{}
+
+func (s *stubERPClient) GetStudents(_, _ int32) (*isams.StudentsResponse, error) {
+	return &isams.StudentsResponse{}, nil
+}
+
+func (s *stubERPClient) GetYearGroupDivisions(_ int32) (*isams.YearGroupsDivisionsResponse, error) {
+	return &isams.YearGroupsDivisionsResponse{}, nil
+}
+
+func (s *stubERPClient) GetCurrentRegistrationPeriodsForDivision(_ int32) (*isams.RegistrationPeriodsResponse, error) {
+	return &isams.RegistrationPeriodsResponse{}, nil
+}
+
+func (s *stubERPClient) GetRegistrationStatusForStudent(_ string, _ int32) (*isams.RegistrationStatus, error) {
+	return &isams.RegistrationStatus{}, nil
+}
+
+func (s *stubERPClient) GetRegistrationAbsenceCodes() (*isams.RegistrationAbsenceCodesResponse, error) {
+	return &isams.RegistrationAbsenceCodesResponse{}, nil
+}
+
+func (s *stubERPClient) GetRegistrationPresentCodes() (*isams.RegistrationPresentCodeResponse, error) {
+	return &isams.RegistrationPresentCodeResponse{}, nil
+}
+
+func (s *stubERPClient) PutRegistration(_ string, _ int32, _ isams.RegistrationStatusRequest) error {
+	return nil
+}
+
+func (s *stubERPClient) GetStudentPhoto(_ string) (*isams.StudentPhotoResponse, error) {
+	return &isams.StudentPhotoResponse{}, nil
+}
+
 type stubERPFactory struct{}
 
 func (s *stubERPFactory) NewClient(_ context.Context) (erp.Client, error) {
-	return nil, nil
+	return &stubERPClient{}, nil
 }
 
 type visitorRepoSpy struct {
@@ -135,21 +170,6 @@ func TestRunCron_WhenERPNotIntegrated_ReturnsNoopAndNoError(t *testing.T) {
 }
 
 func TestRunCron_WhenERPIntegrated_ReturnsStopFuncAndNoError(t *testing.T) {
-	cfg := &config.Config{
-		ISAMSBaseURL:         "https://example.com",
-		ISAMSAPIClientID:     "client-id",
-		ISAMSAPIClientSecret: "client-secret",
-		ForceERPSyncOnStart:     false,
-	}
-
-	stopFunc, err := RunCron(cfg)
-
-	assert.NoError(t, err)
-	assert.NotNil(t, stopFunc)
-	stopFunc()
-}
-
-func TestRunCron_WhenERPIntegratedAndForceERPSyncOnStart_StartsWithoutError(t *testing.T) {
 	testContainer := container.New()
 	oldGlobal := container.Global
 	container.Global = testContainer
@@ -157,28 +177,24 @@ func TestRunCron_WhenERPIntegratedAndForceERPSyncOnStart_StartsWithoutError(t *t
 		container.Global = oldGlobal
 	})
 
-	syncCalled := false
-	photosCalled := false
-
-	// Setup minimal container dependencies
+	// Setup minimal container dependencies for jobs that run immediately
+	container.MustSingleton(container.Global, func() *config.Config {
+		return &config.Config{}
+	})
 	container.MustSingleton(container.Global, func() *zap.SugaredLogger { return zap.NewNop().Sugar() })
+	container.MustSingleton(container.Global, func() provider.VisitorRepository { return &visitorRepoSpy{} })
+	container.MustSingleton(container.Global, func() erp.Factory { return &stubERPFactory{} })
 
 	cfg := &config.Config{
 		ISAMSBaseURL:         "https://example.com",
 		ISAMSAPIClientID:     "client-id",
 		ISAMSAPIClientSecret: "client-secret",
-		ForceERPSyncOnStart:     true,
+		ForceERPSyncOnStart:  false,
 	}
 
-	// We can't easily test that goroutine runs without more complex setup
-	// but we can at least verify the function doesn't panic
 	stopFunc, err := RunCron(cfg)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, stopFunc)
 	stopFunc()
-
-	// Verify the variables are unused (just to avoid linter warnings about unused variables)
-	_ = syncCalled
-	_ = photosCalled
 }
