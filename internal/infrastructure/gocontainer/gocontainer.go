@@ -75,6 +75,12 @@ func Build(cfg *config.Config) {
 		}
 	})
 
+	container.MustSingleton(container.Global, func () provider.UserRepository {
+		return &repository.UserMySQL{
+			Connection: connection,
+		}
+	})
+
 	container.MustSingleton(container.Global, func () *tracking.StudentTracker {
 		tracker := &tracking.StudentTracker{}
 		container.MustFill(container.Global, tracker)
