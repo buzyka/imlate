@@ -7,6 +7,7 @@ import (
 	"github.com/buzyka/imlate/internal/config"
 	"github.com/buzyka/imlate/internal/infrastructure/cron"
 	"github.com/buzyka/imlate/internal/infrastructure/gocontainer"
+	httpauth "github.com/buzyka/imlate/internal/infrastructure/http/auth"
 	"github.com/buzyka/imlate/internal/infrastructure/util"
 	"github.com/buzyka/imlate/internal/isb/search"
 	"github.com/buzyka/imlate/internal/isb/tracker"
@@ -78,8 +79,31 @@ func main() {
 	container.MustFill(container.Global, visitorController)
 	apiRouteGroup.PATCH("/add-key", visitorController.AddKeyHandler())
 
+
+	registerAdminRoutes(r)
+
 	// Start the server on port 8080
 	if err := r.Run("0.0.0.0:8080"); err != nil {
 		panic(err)
 	}
+}
+
+func registerAdminRoutes(r *gin.Engine) {
+	var authManager httpauth.AuthManager
+	container.MustFill(container.Global, &authManager)
+	authMiddleware, err := authManager.Init()
+	if err != nil {
+		panic(fmt.Sprintf("Error initializing auth middleware: %v\n", err))
+	}
+
+	// Public routes
+  	r.POST("/login", authMiddleware.LoginHandler)
+  	r.POST("/refresh", authMiddleware.RefreshHandler) // RFC 6749 compliant refresh endpoint
+
+	adminGroup := r.Group("/admin", authMiddleware.MiddlewareFunc())
+	adminGroup.GET("/dashboard", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Welcome to the admin dashboard!",
+		})
+	})
 }
