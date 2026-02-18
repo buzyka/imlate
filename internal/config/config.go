@@ -37,6 +37,8 @@ type Config struct {
 	CronRegistrationCodesSync  string `env:"CRON_REGISTRATION_CODES_SYNC" envDefault:"0 7-17/1 * * 1-5"`
 	CronMarkAbsent             string `env:"CRON_MARK_ABSENT" envDefault:"10 8-12/1 * * 1-5"`
 
+	AuthTokenSecret string `env:"AUTH_TOKEN_SECRET" envDefault:""`
+
 	erpLocation *time.Location
 	appLocation *time.Location
 }
