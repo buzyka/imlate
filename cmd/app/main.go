@@ -9,6 +9,7 @@ import (
 	"github.com/buzyka/imlate/internal/infrastructure/gocontainer"
 	httpauth "github.com/buzyka/imlate/internal/infrastructure/http/auth"
 	"github.com/buzyka/imlate/internal/infrastructure/util"
+	"github.com/buzyka/imlate/internal/isb/adminapi"
 	"github.com/buzyka/imlate/internal/isb/search"
 	"github.com/buzyka/imlate/internal/isb/tracker"
 	"github.com/buzyka/imlate/internal/isb/visitor"
@@ -100,10 +101,13 @@ func registerAdminRoutes(r *gin.Engine) {
   	r.POST("/login", authMiddleware.LoginHandler)
   	r.POST("/refresh", authMiddleware.RefreshHandler) // RFC 6749 compliant refresh endpoint
 
-	adminGroup := r.Group("/admin", authMiddleware.MiddlewareFunc())
+	adminGroup := r.Group("/admin-api", authMiddleware.MiddlewareFunc())
 	adminGroup.GET("/dashboard", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Welcome to the admin dashboard!",
 		})
 	})
+
+	adminController := &adminapi.AdminAPIController{}
+	adminGroup.GET("/current-user", adminController.CurrentUserHandler())
 }
