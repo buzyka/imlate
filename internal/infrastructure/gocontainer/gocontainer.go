@@ -12,6 +12,7 @@ import (
 	"github.com/buzyka/imlate/internal/infrastructure/logging"
 	"github.com/buzyka/imlate/internal/infrastructure/repository"
 	"github.com/buzyka/imlate/internal/infrastructure/util"
+	"github.com/buzyka/imlate/internal/usecase/adminapi"
 	"github.com/buzyka/imlate/internal/usecase/tracking"
 	"github.com/golobby/container/v3"
 	"go.uber.org/zap"
@@ -36,54 +37,60 @@ func Build(cfg *config.Config) {
 		panic(err.Error())
 	}
 
-	container.MustSingleton(container.Global, func () *config.Config {
-		return cfg		
+	container.MustSingleton(container.Global, func() *config.Config {
+		return cfg
 	})
 
-	container.MustSingleton(container.Global, func () *zap.SugaredLogger {
+	container.MustSingleton(container.Global, func() *zap.SugaredLogger {
 		return logger
 	})
 
-	container.MustSingleton(container.Global, func() *sql.DB {		
+	container.MustSingleton(container.Global, func() *sql.DB {
 		return connection
 	})
 
-	container.MustSingleton(container.Global, func () provider.VisitorRepository {
+	container.MustSingleton(container.Global, func() provider.VisitorRepository {
 		return &repository.Visitor{
 			Connection: connection,
 		}
 	})
 
-	container.MustSingleton(container.Global, func () provider.VisitorTrackRepository {
+	container.MustSingleton(container.Global, func() provider.VisitorTrackRepository {
 		return &repository.VisitorTrack{
 			Connection: connection,
 		}
 	})
 
-	container.MustSingleton(container.Global, func () erp.Factory {
+	container.MustSingleton(container.Global, func() erp.Factory {
 		f := &isams.ClientFactory{
-			BaseURL:    cfg.ISAMSBaseURL,
-			ClientID:   cfg.ISAMSAPIClientID,
-			ClientSecret:     cfg.ISAMSAPIClientSecret,
+			BaseURL:      cfg.ISAMSBaseURL,
+			ClientID:     cfg.ISAMSAPIClientID,
+			ClientSecret: cfg.ISAMSAPIClientSecret,
 		}
 		return &ERPFactory{f: f}
 	})
 
-	container.MustSingleton(container.Global, func () provider.VisitorRepository {
+	container.MustSingleton(container.Global, func() provider.VisitorRepository {
 		return &repository.Visitor{
 			Connection: connection,
 		}
 	})
 
-	container.MustSingleton(container.Global, func () provider.UserRepository {
+	container.MustSingleton(container.Global, func() provider.UserRepository {
 		return &repository.UserMySQL{
 			Connection: connection,
 		}
 	})
 
-	container.MustSingleton(container.Global, func () *tracking.StudentTracker {
+	container.MustSingleton(container.Global, func() *tracking.StudentTracker {
 		tracker := &tracking.StudentTracker{}
 		container.MustFill(container.Global, tracker)
 		return tracker
+	})
+
+	container.MustSingleton(container.Global, func() *adminapi.AdminAPI {
+		a := &adminapi.AdminAPI{}
+		container.MustFill(container.Global, a)
+		return a
 	})
 }
