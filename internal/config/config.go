@@ -28,6 +28,9 @@ type Config struct {
 	StudentsImagePhotoDir       string `env:"STUDENTS_IMAGE_PHOTO_DIR" envDefault:"website/assets/img/students"`
 	StudentsImagePhotoURLPrefix string `env:"STUDENTS_IMAGE_PHOTO_URL_PREFIX" envDefault:"/assets/img/students"`
 
+	VisitorImageDir       string `env:"VISITOR_IMAGE_DIR" envDefault:"website/assets/img/visitors"`
+	VisitorImageURLPrefix string `env:"VISITOR_IMAGE_URL_PREFIX" envDefault:"/assets/img/visitors"`
+
 	AutoRegistrationYearGroups []int32 `env:"AUTO_REGISTRATION_YEAR_GROUPS" envSeparator:","`
 
 	ForceERPSyncOnStart bool `env:"FORCE_ERP_SYNC_ON_START" envDefault:"false"`

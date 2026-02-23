@@ -4,13 +4,16 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/buzyka/imlate/internal/config"
 	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/provider"
 	"github.com/google/uuid"
 )
 
 type AdminAPI struct {
-	UserRepo provider.UserRepository `container:"type"`
+	UserRepo    provider.UserRepository    `container:"type"`
+	VisitorRepo provider.VisitorRepository `container:"type"`
+	Config      *config.Config             `container:"type"`
 }
 
 func (a *AdminAPI) GetCurrentUser(userID uuid.UUID) (*entity.User, error) {

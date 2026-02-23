@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func intPtr(i int) *int { return &i }
+
 func TestSearchHandler_Success(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
@@ -25,7 +27,7 @@ func TestSearchHandler_Success(t *testing.T) {
 		Id:      1,
 		Name:    "John",
 		Surname: "Doe",
-		Grade:   10,
+		Grade:   intPtr(10),
 		Image:   "/assets/img/teachers/1.jpg",
 	}
 
