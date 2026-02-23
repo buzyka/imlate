@@ -16,4 +16,4 @@ INSERT INTO users (id, username, password, name, surname, role, is_active) VALUE
 ('a570ea85-aa2b-4d9f-b371-d8d2bb25d3fc', 'admin', '$2a$10$0HzIl5VVkiGBtqxs38MkxuZLInFsCRJ3gm9rSFDhXU9YdLnkYRrAi', 'Admin', 'User', 'admin', 1);
 
 INSERT INTO users (id, username, password, name, surname, role, is_active) VALUES
-('b681fb95-bb3c-5e0a-c482-e9e3cc36e4gd', 'terminal', '$2a$10$Fb5Sa3ks.NYHJ7ojUew2/uko7Z3QUF2V11cL4OQa3v6oixh1KO9YW', 'Terminal', 'User', 'terminal', 1);
+('b681fb95-bb3c-5e0a-c482-e9e3cc36e40d', 'terminal', '$2a$10$Fb5Sa3ks.NYHJ7ojUew2/uko7Z3QUF2V11cL4OQa3v6oixh1KO9YW', 'Terminal', 'User', 'terminal', 1);
