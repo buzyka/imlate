@@ -80,7 +80,6 @@ func main() {
 	container.MustFill(container.Global, visitorController)
 	apiRouteGroup.PATCH("/add-key", visitorController.AddKeyHandler())
 
-
 	registerAdminRoutes(r)
 
 	// Start the server on port 8080
@@ -98,8 +97,8 @@ func registerAdminRoutes(r *gin.Engine) {
 	}
 
 	// Public routes
-  	r.POST("/login", authMiddleware.LoginHandler)
-  	r.POST("/refresh", authMiddleware.RefreshHandler) // RFC 6749 compliant refresh endpoint
+	r.POST("/login", authMiddleware.LoginHandler)
+	r.POST("/refresh", authMiddleware.RefreshHandler) // RFC 6749 compliant refresh endpoint
 
 	adminGroup := r.Group("/admin-api", authMiddleware.MiddlewareFunc())
 	adminGroup.GET("/dashboard", func(c *gin.Context) {
@@ -109,5 +108,12 @@ func registerAdminRoutes(r *gin.Engine) {
 	})
 
 	adminController := &adminapi.AdminAPIController{}
+	container.MustFill(container.Global, adminController)
 	adminGroup.GET("/current-user", adminController.CurrentUserHandler())
+	adminGroup.GET("/users", adminController.ListUsersHandler())
+	adminGroup.GET("/users/:id", adminController.GetUserHandler())
+	adminGroup.POST("/users", adminController.CreateUserHandler())
+	adminGroup.PUT("/users/:id", adminController.UpdateUserHandler())
+	adminGroup.PUT("/users/:id/password", adminController.UpdatePasswordHandler())
+	adminGroup.DELETE("/users/:id", adminController.DeleteUserHandler())
 }
