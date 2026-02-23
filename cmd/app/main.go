@@ -116,4 +116,13 @@ func registerAdminRoutes(r *gin.Engine) {
 	adminGroup.PUT("/users/:id", adminController.UpdateUserHandler())
 	adminGroup.PUT("/users/:id/password", adminController.UpdatePasswordHandler())
 	adminGroup.DELETE("/users/:id", adminController.DeleteUserHandler())
+
+	adminGroup.GET("/visitors", adminController.ListVisitorsHandler())
+	adminGroup.GET("/visitors/:id", adminController.GetVisitorHandler())
+	adminGroup.POST("/visitors", adminController.CreateVisitorHandler())
+	adminGroup.PUT("/visitors/:id", adminController.UpdateVisitorHandler())
+	adminGroup.POST("/visitors/:id/image", adminController.UploadVisitorImageHandler())
+	adminGroup.POST("/visitors/:id/key", adminController.AddVisitorKeyHandler())
+	adminGroup.DELETE("/visitors/:id/key/:key", adminController.RemoveVisitorKeyHandler())
+	adminGroup.DELETE("/visitors/:id", adminController.DeleteVisitorHandler())
 }

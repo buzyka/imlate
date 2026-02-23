@@ -56,3 +56,26 @@ func (m *VisitorRepositoryMock) SaveVisitor(visitor *entity.Visitor) error {
 	args := m.Called(visitor)
 	return args.Error(0)
 }
+
+func (m *VisitorRepositoryMock) DeleteVisitor(id int32) error {
+	args := m.Called(id)
+	return args.Error(0)
+}
+
+func (m *VisitorRepositoryMock) RemoveKeyFromVisitor(visitorID int32, key string) error {
+	args := m.Called(visitorID, key)
+	return args.Error(0)
+}
+
+func (m *VisitorRepositoryMock) FindKeysByVisitorId(visitorID int32) ([]string, error) {
+	args := m.Called(visitorID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]string), args.Error(1)
+}
+
+func (m *VisitorRepositoryMock) UpdateVisitorImage(id int32, imagePath string) error {
+	args := m.Called(id, imagePath)
+	return args.Error(0)
+}

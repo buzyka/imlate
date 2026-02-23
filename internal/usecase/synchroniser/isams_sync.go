@@ -18,10 +18,10 @@ import (
 const PageSize = 100
 
 type StudentSync struct {
-	Config				*config.Config             `container:"type"`
-	ERPFactory         erp.Factory                 `container:"type"`
-	VisitorRepo        provider.VisitorRepository  `container:"type"`
-	Logger 			   *zap.SugaredLogger		   `container:"type"`	
+	Config             *config.Config             `container:"type"`
+	ERPFactory         erp.Factory                `container:"type"`
+	VisitorRepo        provider.VisitorRepository `container:"type"`
+	Logger             *zap.SugaredLogger         `container:"type"`
 	currentVisitors    []*entity.Visitor
 	ctx                context.Context
 	currentClient      erp.Client
@@ -65,7 +65,7 @@ func (s *StudentSync) SyncAllStudents() error {
 		s.Logger.Infof("Syncing students, page %d", pageNumber)
 		resp, err := s.currentClient.GetStudents(pageNumber, PageSize)
 		if err != nil {
-			s.Logger.Errorw("sync all students: get students step failed", "pageNumber", pageNumber,  "pageSize", PageSize, "error", err)
+			s.Logger.Errorw("sync all students: get students step failed", "pageNumber", pageNumber, "pageSize", PageSize, "error", err)
 			return err
 		}
 
@@ -98,10 +98,9 @@ func (s *StudentSync) SyncRegistrationCodesDictionaries() error {
 	defer s.cleanUpSyncSession()
 
 	codesDict := &entity.RegistrationCodeDictionary{
-		Codes: make(map[int32]*entity.RegistrationCode),
+		Codes:      make(map[int32]*entity.RegistrationCode),
 		UploadedAt: time.Now().Truncate(time.Second),
 	}
-
 
 	// Absence codes
 	absenceCodesResp, err := s.currentClient.GetRegistrationAbsenceCodes()
@@ -112,7 +111,7 @@ func (s *StudentSync) SyncRegistrationCodesDictionaries() error {
 	for _, code := range absenceCodesResp.AbsenceCodes {
 		codesDict.Codes[code.ID] = &entity.RegistrationCode{
 			ID:            code.ID,
-			Code:		   code.Code,
+			Code:          code.Code,
 			Name:          code.Name,
 			IsAbsenceCode: true,
 		}
@@ -120,7 +119,7 @@ func (s *StudentSync) SyncRegistrationCodesDictionaries() error {
 	entity.SetAbsenceCodeDictionary(codesDict)
 
 	codesDict = &entity.RegistrationCodeDictionary{
-		Codes: make(map[int32]*entity.RegistrationCode),
+		Codes:      make(map[int32]*entity.RegistrationCode),
 		UploadedAt: time.Now().Truncate(time.Second),
 	}
 
@@ -133,14 +132,14 @@ func (s *StudentSync) SyncRegistrationCodesDictionaries() error {
 	for _, code := range presentCodesResp.PresentCodes {
 		codesDict.Codes[code.ID] = &entity.RegistrationCode{
 			ID:            code.ID,
-			Code:		   code.Code,
+			Code:          code.Code,
 			Name:          code.Name,
 			IsAbsenceCode: false,
 		}
 	}
 
 	entity.SetPresentsCodeDictionary(codesDict)
-	return nil	
+	return nil
 }
 
 var osWriteFile = func(name string, data []byte, perm os.FileMode) error {
@@ -177,7 +176,7 @@ func (s *StudentSync) SyncStudentPhotos() error {
 		}
 		filePath := s.Config.StudentsImagePhotoDir
 		fileName := fmt.Sprintf("%s.%s", visitor.ErpSchoolID, photoResp.Extension)
-		if err := osWriteFile(filePath + "/" + fileName, photoResp.Data, 0644); err != nil {
+		if err := osWriteFile(filePath+"/"+fileName, photoResp.Data, 0644); err != nil {
 			return err
 		} else {
 			visitor.Image = s.Config.StudentsImagePhotoURLPrefix + "/" + fileName
@@ -227,9 +226,9 @@ func (s *StudentSync) SaveStudent(student isams.Student) (updated bool, err erro
 	visitor := &entity.Visitor{
 		Name:           forename,
 		Surname:        surname,
-		FullName:	    fullName,
+		FullName:       fullName,
 		IsStudent:      true,
-		Grade:          grade,
+		Grade:          &grade,
 		ErpID:          student.ID,
 		ErpSchoolID:    student.SchoolID,
 		ErpYearGroupID: int32(yearGroup),

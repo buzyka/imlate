@@ -94,6 +94,22 @@ func (v *visitorRepoSpy) SaveVisitor(_ *entity.Visitor) error {
 	return nil
 }
 
+func (v *visitorRepoSpy) DeleteVisitor(_ int32) error {
+	return nil
+}
+
+func (v *visitorRepoSpy) RemoveKeyFromVisitor(_ int32, _ string) error {
+	return nil
+}
+
+func (v *visitorRepoSpy) FindKeysByVisitorId(_ int32) ([]string, error) {
+	return nil, nil
+}
+
+func (v *visitorRepoSpy) UpdateVisitorImage(_ int32, _ string) error {
+	return nil
+}
+
 func extractYearGroups(values []*int32) []int32 {
 	if values == nil {
 		return nil

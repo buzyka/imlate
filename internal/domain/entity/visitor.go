@@ -12,19 +12,22 @@ import (
 var crcTable = crc64.MakeTable(crc64.ISO)
 
 type Visitor struct {
-	Id             int32   `json:"id"`
-	Name           string  `json:"name"`
-	Surname        string  `json:"surname"`
-	FullName       string  `json:"full_name"`
-	IsStudent      bool    `json:"is_student"`
-	Grade          int     `json:"grade"`
-	Image          string  `json:"image"`
-	ErpID          int64   `json:"isams_id"`
-	ErpSchoolID    string  `json:"isams_school_id"`
-	ErpYearGroupID int32   `json:"isams_year_group_id"`
-	ErpDivisions   []int32 `json:"isams_divisions"`
-	SyncHash       uint64
-	UpdatedAt      time.Time `json:"updated_at"`
+	Id             int32      `json:"id"`
+	Name           string     `json:"name"`
+	Surname        string     `json:"surname"`
+	FullName       string     `json:"full_name"`
+	Email          string     `json:"email"`
+	IsStudent      bool       `json:"is_student"`
+	Grade          *int       `json:"grade"`
+	Image          string     `json:"image"`
+	ErpID          int64      `json:"isams_id"`
+	ErpSchoolID    string     `json:"isams_school_id"`
+	ErpYearGroupID int32      `json:"isams_year_group_id"`
+	ErpDivisions   []int32    `json:"isams_divisions"`
+	SyncHash       uint64     `json:"-"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	DeletedAt      *time.Time `json:"deleted_at,omitempty"`
+	Keys           []string   `json:"keys"`
 }
 
 type VisitDetails struct {
