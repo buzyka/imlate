@@ -21,6 +21,8 @@ import (
 	"go.uber.org/zap"
 )
 
+func intPtr(i int) *int { return &i }
+
 //go:embed _fixtures/single_student.json
 var testSingleStudentResponse []byte
 
@@ -198,7 +200,7 @@ func TestSyncAllStudents_Success(t *testing.T) {
 	mockClient.On("GetStudents", int32(1), int32(PageSize)).Return(resp, nil)
 	mockClient.On("GetYearGroupDivisions", int32(yearGroup)).Return(divisionsResp, nil)
 	mockRepo.On("SaveVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
-		return v.ErpID == 123 && v.Surname == "Doe" && v.Name == "John" && v.Grade == 10 && len(v.ErpDivisions) == 1 && v.ErpDivisions[0] == 1
+		return v.ErpID == 123 && v.Surname == "Doe" && v.Name == "John" && v.Grade != nil && *v.Grade == 10 && len(v.ErpDivisions) == 1 && v.ErpDivisions[0] == 1
 	})).Return(nil)
 
 	// Execute
@@ -633,7 +635,7 @@ func TestSaveStudent_SaveVisitor(t *testing.T) {
 		ErpID:          5225,
 		Name:           "Alice",
 		Surname:        "Smith",
-		Grade:          6,
+		Grade:          intPtr(6),
 		ErpSchoolID:    "132014861202",
 		UpdatedAt:      time.Date(2024, 1, 1, 12, 0, 0, 0, loc),
 		ErpYearGroupID: 6,
@@ -647,7 +649,7 @@ func TestSaveStudent_SaveVisitor(t *testing.T) {
 		Name:           "John",
 		Surname:        "Doe",
 		FullName:       "John Doe",
-		Grade:          6,
+		Grade:          intPtr(6),
 		ErpSchoolID:    "132014861202",
 		IsStudent:      true,
 		UpdatedAt:      time.Date(2025, 10, 6, 11, 56, 2, 0, loc),
@@ -757,7 +759,7 @@ func TestSyncStudentPhotos_NotStudentsWillNotSync(t *testing.T) {
 func TestSyncStudentPhotos_PhotoNotFoundSkips(t *testing.T) {
 	oldOsWriteFile := osWriteFile
 	defer func() { osWriteFile = oldOsWriteFile }()
-	
+
 	fileWritten := false
 
 	osWriteFile = func(filename string, data []byte, perm os.FileMode) error {
@@ -794,7 +796,7 @@ func TestSyncStudentPhotos_PhotoNotFoundSkips(t *testing.T) {
 func TestSyncStudentPhotos_OtherGetPhotoError(t *testing.T) {
 	oldOsWriteFile := osWriteFile
 	defer func() { osWriteFile = oldOsWriteFile }()
-	
+
 	fileWritten := false
 
 	osWriteFile = func(filename string, data []byte, perm os.FileMode) error {
@@ -827,7 +829,7 @@ func TestSyncStudentPhotos_OtherGetPhotoError(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, fileWritten)
 	mockClient.AssertExpectations(t)
-	logStr := logBuffer.String() 
+	logStr := logBuffer.String()
 	assert.Contains(t, logStr, "sync students photos: get student photo failed")
 	assert.Contains(t, logStr, `"error": "invalid API response body"`)
 }
@@ -835,7 +837,7 @@ func TestSyncStudentPhotos_OtherGetPhotoError(t *testing.T) {
 func TestSyncStudentPhotos_ResponsePhotoIsEmpty(t *testing.T) {
 	oldOsWriteFile := osWriteFile
 	defer func() { osWriteFile = oldOsWriteFile }()
-	
+
 	fileWritten := false
 
 	osWriteFile = func(filename string, data []byte, perm os.FileMode) error {
@@ -873,13 +875,13 @@ func TestSyncStudentPhotos_ResponsePhotoIsEmpty(t *testing.T) {
 func TestSyncStudentPhotos_PhotoAddedSuccess(t *testing.T) {
 	oldOsWriteFile := osWriteFile
 	defer func() { osWriteFile = oldOsWriteFile }()
-	
+
 	fileWritten := false
 
 	osWriteFile = func(filename string, data []byte, perm os.FileMode) error {
 		assert.Equal(t, "storage-path/mypath/S1.png", filename)
 		assert.Equal(t, " some photo data ", string(data))
-		assert.Equal(t, os.FileMode(0644), perm)		
+		assert.Equal(t, os.FileMode(0644), perm)
 		fileWritten = true
 		return nil
 	}
@@ -888,7 +890,7 @@ func TestSyncStudentPhotos_PhotoAddedSuccess(t *testing.T) {
 	mockClient := new(MockERPClient)
 	mockRepo := new(providertest.VisitorRepositoryMock)
 	cfg := &config.Config{
-		StudentsImagePhotoDir: "storage-path/mypath",
+		StudentsImagePhotoDir:       "storage-path/mypath",
 		StudentsImagePhotoURLPrefix: "url-prefix/mypath",
 	}
 
@@ -909,7 +911,7 @@ func TestSyncStudentPhotos_PhotoAddedSuccess(t *testing.T) {
 	someDataStr := " some photo data "
 	dataResponse := &isams.StudentPhotoResponse{
 		Extension: "png",
-		Data: []byte(someDataStr),
+		Data:      []byte(someDataStr),
 	}
 	mockClient.On("GetStudentPhoto", "S1").Once().Return(dataResponse, nil)
 
@@ -928,13 +930,13 @@ func TestSyncStudentPhotos_PhotoAddedSuccess(t *testing.T) {
 func TestSyncStudentPhotos_SaveImagePathError(t *testing.T) {
 	oldOsWriteFile := osWriteFile
 	defer func() { osWriteFile = oldOsWriteFile }()
-	
+
 	fileWritten := false
 
 	osWriteFile = func(filename string, data []byte, perm os.FileMode) error {
 		assert.Equal(t, "storage-path/mypath/S1.png", filename)
 		assert.Equal(t, " some photo data ", string(data))
-		assert.Equal(t, os.FileMode(0644), perm)		
+		assert.Equal(t, os.FileMode(0644), perm)
 		fileWritten = true
 		return nil
 	}
@@ -943,7 +945,7 @@ func TestSyncStudentPhotos_SaveImagePathError(t *testing.T) {
 	mockClient := new(MockERPClient)
 	mockRepo := new(providertest.VisitorRepositoryMock)
 	cfg := &config.Config{
-		StudentsImagePhotoDir: "storage-path/mypath",
+		StudentsImagePhotoDir:       "storage-path/mypath",
 		StudentsImagePhotoURLPrefix: "url-prefix/mypath",
 	}
 
@@ -964,7 +966,7 @@ func TestSyncStudentPhotos_SaveImagePathError(t *testing.T) {
 	someDataStr := " some photo data "
 	dataResponse := &isams.StudentPhotoResponse{
 		Extension: "png",
-		Data: []byte(someDataStr),
+		Data:      []byte(someDataStr),
 	}
 	mockClient.On("GetStudentPhoto", "S1").Once().Return(dataResponse, nil)
 
@@ -980,13 +982,13 @@ func TestSyncStudentPhotos_SaveImagePathError(t *testing.T) {
 func TestSyncStudentPhotos_WriteImageError(t *testing.T) {
 	oldOsWriteFile := osWriteFile
 	defer func() { osWriteFile = oldOsWriteFile }()
-	
+
 	fileWritten := false
 
 	osWriteFile = func(filename string, data []byte, perm os.FileMode) error {
 		assert.Equal(t, "storage-path/mypath/S1.png", filename)
 		assert.Equal(t, " some photo data ", string(data))
-		assert.Equal(t, os.FileMode(0644), perm)		
+		assert.Equal(t, os.FileMode(0644), perm)
 		fileWritten = true
 		return fmt.Errorf("file write error")
 	}
@@ -995,7 +997,7 @@ func TestSyncStudentPhotos_WriteImageError(t *testing.T) {
 	mockClient := new(MockERPClient)
 	mockRepo := new(providertest.VisitorRepositoryMock)
 	cfg := &config.Config{
-		StudentsImagePhotoDir: "storage-path/mypath",
+		StudentsImagePhotoDir:       "storage-path/mypath",
 		StudentsImagePhotoURLPrefix: "url-prefix/mypath",
 	}
 
@@ -1016,7 +1018,7 @@ func TestSyncStudentPhotos_WriteImageError(t *testing.T) {
 	someDataStr := " some photo data "
 	dataResponse := &isams.StudentPhotoResponse{
 		Extension: "png",
-		Data: []byte(someDataStr),
+		Data:      []byte(someDataStr),
 	}
 	mockClient.On("GetStudentPhoto", "S1").Once().Return(dataResponse, nil)
 

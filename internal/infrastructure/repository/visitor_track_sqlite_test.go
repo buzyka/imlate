@@ -25,7 +25,7 @@ func TestStore_Success(t *testing.T) {
 		Id:      123,
 		Name:    "John",
 		Surname: "Doe",
-		Grade:   10,
+		Grade:   intPtr(10),
 		Image:   "/test.jpg",
 	}
 

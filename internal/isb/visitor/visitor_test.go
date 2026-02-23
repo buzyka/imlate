@@ -14,6 +14,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func intPtr(i int) *int { return &i }
+
 func TestAddKeyHandler_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -26,7 +28,7 @@ func TestAddKeyHandler_Success(t *testing.T) {
 		Id:      1,
 		Name:    "John",
 		Surname: "Doe",
-		Grade:   10,
+		Grade:   intPtr(10),
 	}
 
 	mockRepo.On("FindById", int32(1)).Return(visitor, nil)
@@ -156,7 +158,7 @@ func TestAddKeyHandler_AddKeyError(t *testing.T) {
 		Id:      1,
 		Name:    "John",
 		Surname: "Doe",
-		Grade:   10,
+		Grade:   intPtr(10),
 	}
 
 	mockRepo.On("FindById", int32(1)).Return(visitor, nil)
