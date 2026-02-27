@@ -26,7 +26,7 @@ func RunCron(cfg *config.Config) (StopCronFunc, error) {
 		return nil, err
 	}
 
-	err = registerJobs(s, cfg.ForceERPSyncOnStart)
+	err = registerJobs(s, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -38,11 +38,11 @@ func RunCron(cfg *config.Config) (StopCronFunc, error) {
 	}, nil
 }
 
-func registerJobs(s gocron.Scheduler, forceERPSyncOnStart bool) error {
+func registerJobs(s gocron.Scheduler, cfg *config.Config) error {
 	// Student data sync job
 	_, err := s.NewJob(
 		gocron.CronJob(
-			"0 7-17/2 * * 1-5", // every 2 hours from 7am to 5pm on weekdays
+			cfg.CronStudentSync, // default: every 2 hours from 7am to 5pm on weekdays
 			false,
 		),
 		gocron.NewTask(StudentSyncFunc()),
@@ -54,7 +54,7 @@ func registerJobs(s gocron.Scheduler, forceERPSyncOnStart bool) error {
 	// Photos sync job
 	_, err = s.NewJob(
 		gocron.CronJob(
-			"0 5 * * 1-5", // at 5am on weekdays
+			cfg.CronPhotoSync, // default: at 5am on weekdays
 			false,
 		),
 		gocron.NewTask(StudentPhotosSyncFunc()),
@@ -66,7 +66,7 @@ func registerJobs(s gocron.Scheduler, forceERPSyncOnStart bool) error {
 	// Registration codes sync job
 	_, err = s.NewJob(
 		gocron.CronJob(
-			"0 7-17/1 * * 1-5", // every hour from 7am to 5pm on weekdays
+			cfg.CronRegistrationCodesSync, // default: every hour from 7am to 5pm on weekdays
 			false,
 		),
 		gocron.NewTask(RegistrationCodesSyncFunc()),
@@ -79,7 +79,7 @@ func registerJobs(s gocron.Scheduler, forceERPSyncOnStart bool) error {
 	// Mark not registered students as absent job
 	_, err = s.NewJob(
 		gocron.CronJob(
-			"10 8-12/1 * * 1-5", // every hour from 8:10am to 12:10pm on weekdays
+			cfg.CronMarkAbsent, // default: every hour from 8:10am to 12:10pm on weekdays
 			false,
 		),
 		gocron.NewTask(MarkNotRegisteredStudentsAsAbsent()),
@@ -92,7 +92,7 @@ func registerJobs(s gocron.Scheduler, forceERPSyncOnStart bool) error {
 	// ...
 
 	// one-time startup run, sequential (only if forceERPSyncOnStart is enabled)
-	if forceERPSyncOnStart {
+	if cfg.ForceERPSyncOnStart {
 		go func() {
 			StudentSyncFunc()()
 			StudentPhotosSyncFunc()()

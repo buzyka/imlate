@@ -32,6 +32,11 @@ type Config struct {
 
 	ForceERPSyncOnStart bool `env:"FORCE_ERP_SYNC_ON_START" envDefault:"false"`
 
+	CronStudentSync            string `env:"CRON_STUDENT_SYNC" envDefault:"0 7-17/2 * * 1-5"`
+	CronPhotoSync              string `env:"CRON_PHOTO_SYNC" envDefault:"0 5 * * 1-5"`
+	CronRegistrationCodesSync  string `env:"CRON_REGISTRATION_CODES_SYNC" envDefault:"0 7-17/1 * * 1-5"`
+	CronMarkAbsent             string `env:"CRON_MARK_ABSENT" envDefault:"10 8-12/1 * * 1-5"`
+
 	erpLocation *time.Location
 	appLocation *time.Location
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/buzyka/imlate/internal/domain/erp"
 	"github.com/buzyka/imlate/internal/domain/provider"
 	"github.com/buzyka/imlate/internal/infrastructure/integration/isams"
+	"github.com/go-co-op/gocron/v2"
 	"github.com/golobby/container/v3"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
@@ -186,10 +187,14 @@ func TestRunCron_WhenERPIntegrated_ReturnsStopFuncAndNoError(t *testing.T) {
 	container.MustSingleton(container.Global, func() erp.Factory { return &stubERPFactory{} })
 
 	cfg := &config.Config{
-		ISAMSBaseURL:         "https://example.com",
-		ISAMSAPIClientID:     "client-id",
-		ISAMSAPIClientSecret: "client-secret",
-		ForceERPSyncOnStart:  false,
+		ISAMSBaseURL:              "https://example.com",
+		ISAMSAPIClientID:          "client-id",
+		ISAMSAPIClientSecret:      "client-secret",
+		ForceERPSyncOnStart:       false,
+		CronStudentSync:           "0 7-17/2 * * 1-5",
+		CronPhotoSync:             "0 5 * * 1-5",
+		CronRegistrationCodesSync: "0 7-17/1 * * 1-5",
+		CronMarkAbsent:            "10 8-12/1 * * 1-5",
 	}
 
 	stopFunc, err := RunCron(cfg)
@@ -197,4 +202,94 @@ func TestRunCron_WhenERPIntegrated_ReturnsStopFuncAndNoError(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, stopFunc)
 	stopFunc()
+}
+
+func TestRunCron_WithCustomCronSchedules(t *testing.T) {
+	testContainer := container.New()
+	oldGlobal := container.Global
+	container.Global = testContainer
+	t.Cleanup(func() {
+		container.Global = oldGlobal
+	})
+
+	container.MustSingleton(container.Global, func() *config.Config {
+		return &config.Config{}
+	})
+	container.MustSingleton(container.Global, func() *zap.SugaredLogger { return zap.NewNop().Sugar() })
+	container.MustSingleton(container.Global, func() provider.VisitorRepository { return &visitorRepoSpy{} })
+	container.MustSingleton(container.Global, func() erp.Factory { return &stubERPFactory{} })
+
+	cfg := &config.Config{
+		ISAMSBaseURL:              "https://example.com",
+		ISAMSAPIClientID:          "client-id",
+		ISAMSAPIClientSecret:      "client-secret",
+		ForceERPSyncOnStart:       false,
+		CronStudentSync:           "*/10 * * * *",
+		CronPhotoSync:             "0 3 * * *",
+		CronRegistrationCodesSync: "*/30 * * * 1-5",
+		CronMarkAbsent:            "15 9 * * 1-5",
+	}
+
+	stopFunc, err := RunCron(cfg)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, stopFunc)
+	stopFunc()
+}
+
+func TestRegisterJobs_WithDefaultSchedules(t *testing.T) {
+	testContainer := container.New()
+	oldGlobal := container.Global
+	container.Global = testContainer
+	t.Cleanup(func() {
+		container.Global = oldGlobal
+	})
+
+	container.MustSingleton(container.Global, func() *config.Config {
+		return &config.Config{}
+	})
+	container.MustSingleton(container.Global, func() *zap.SugaredLogger { return zap.NewNop().Sugar() })
+	container.MustSingleton(container.Global, func() provider.VisitorRepository { return &visitorRepoSpy{} })
+	container.MustSingleton(container.Global, func() erp.Factory { return &stubERPFactory{} })
+
+	s, err := gocron.NewScheduler()
+	assert.NoError(t, err)
+	defer func() { _ = s.Shutdown() }()
+
+	cfg := &config.Config{
+		CronStudentSync:           "0 7-17/2 * * 1-5",
+		CronPhotoSync:             "0 5 * * 1-5",
+		CronRegistrationCodesSync: "0 7-17/1 * * 1-5",
+		CronMarkAbsent:            "10 8-12/1 * * 1-5",
+	}
+
+	err = registerJobs(s, cfg)
+	assert.NoError(t, err)
+}
+
+func TestRegisterJobs_WithInvalidCronExpression(t *testing.T) {
+	testContainer := container.New()
+	oldGlobal := container.Global
+	container.Global = testContainer
+	t.Cleanup(func() {
+		container.Global = oldGlobal
+	})
+
+	container.MustSingleton(container.Global, func() *config.Config {
+		return &config.Config{}
+	})
+	container.MustSingleton(container.Global, func() *zap.SugaredLogger { return zap.NewNop().Sugar() })
+	container.MustSingleton(container.Global, func() provider.VisitorRepository { return &visitorRepoSpy{} })
+	container.MustSingleton(container.Global, func() erp.Factory { return &stubERPFactory{} })
+
+	s, err := gocron.NewScheduler()
+	assert.NoError(t, err)
+	defer func() { _ = s.Shutdown() }()
+
+	cfg := &config.Config{
+		CronStudentSync: "invalid cron expression",
+	}
+
+	err = registerJobs(s, cfg)
+	assert.Error(t, err)
 }
