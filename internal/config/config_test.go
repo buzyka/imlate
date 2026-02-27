@@ -340,6 +340,33 @@ func TestIsERPIntegrated(t *testing.T) {
 	}
 }
 
+func TestNewFromEnv_CronScheduleDefaults(t *testing.T) {
+	loadTestEnvVariables(t, map[string]string{})
+
+	cfg, err := NewFromEnv()
+	assert.NoError(t, err)
+	assert.Equal(t, "0 7-17/2 * * 1-5", cfg.CronStudentSync)
+	assert.Equal(t, "0 5 * * 1-5", cfg.CronPhotoSync)
+	assert.Equal(t, "0 7-17/1 * * 1-5", cfg.CronRegistrationCodesSync)
+	assert.Equal(t, "10 8-12/1 * * 1-5", cfg.CronMarkAbsent)
+}
+
+func TestNewFromEnv_CronScheduleCustomValues(t *testing.T) {
+	loadTestEnvVariables(t, map[string]string{
+		"CRON_STUDENT_SYNC":            "*/10 * * * *",
+		"CRON_PHOTO_SYNC":              "0 3 * * *",
+		"CRON_REGISTRATION_CODES_SYNC": "*/30 * * * 1-5",
+		"CRON_MARK_ABSENT":             "15 9 * * 1-5",
+	})
+
+	cfg, err := NewFromEnv()
+	assert.NoError(t, err)
+	assert.Equal(t, "*/10 * * * *", cfg.CronStudentSync)
+	assert.Equal(t, "0 3 * * *", cfg.CronPhotoSync)
+	assert.Equal(t, "*/30 * * * 1-5", cfg.CronRegistrationCodesSync)
+	assert.Equal(t, "15 9 * * 1-5", cfg.CronMarkAbsent)
+}
+
 func loadTestEnvVariables(t *testing.T, env map[string]string) {
 	t.Helper()
 	resetConfigEnv(t)
@@ -368,6 +395,10 @@ func resetConfigEnv(t *testing.T) {
 		"STUDENTS_IMAGE_PHOTO_URL_PREFIX",
 		"AUTO_REGISTRATION_YEAR_GROUPS",
 		"FORCE_ERP_SYNC_ON_START",
+		"CRON_STUDENT_SYNC",
+		"CRON_PHOTO_SYNC",
+		"CRON_REGISTRATION_CODES_SYNC",
+		"CRON_MARK_ABSENT",
 		"DATABASE_HOST",
 		"DATABASE_PORT",
 		"DATABASE_USERNAME",
