@@ -66,6 +66,17 @@ func main() {
 		ctx.File("website/add-key.html")
 	})
 
+	// administration panel routes
+	adminHandler  := func(ctx *gin.Context){
+		ctx.File("website/admin/index.html")
+	}
+	r.GET("/admin", adminHandler)
+	r.GET("/admin/users", adminHandler)
+	r.GET("/admin/admin-users", adminHandler)
+	r.GET("/admin/login", adminHandler)
+
+	r.Static("/admin/assets", "./website/admin/assets")
+
 	searchController := &search.SearchController{}
 	container.MustFill(container.Global, searchController)
 	r.GET("/search/:id", searchController.SearchHandler())
@@ -82,8 +93,12 @@ func main() {
 
 	registerAdminRoutes(r)
 
-	// Start the server on port 8080
-	if err := r.Run("0.0.0.0:8080"); err != nil {
+	port := cfg.AppPort
+	if port == "" {
+		port = "8080"
+	}
+	// Start the server on the configured port
+	if err := r.Run("0.0.0.0:" + port); err != nil {
 		panic(err)
 	}
 }
