@@ -11,6 +11,7 @@ var parseEnv = env.Parse
 
 type Config struct {
 	Debug          bool   `env:"DEBUG" envDefault:"false"`
+	AppPort		   string `env:"APP_PORT" envDefault:"8080"`
 	Environment    string `env:"ENVIRONMENT" envDefault:"production"` // possible values: development, staging, production.
 	DatabaseEngine string `env:"DATABASE_ENGINE" envDefault:"mysql"`
 	DatabaseURL    string `env:"DATABASE_URL" envDefault:"trackme:trackme@/tracker?parseTime=true"`
