@@ -13,6 +13,16 @@ type AdminAPIController struct {
 	AdminAPI *usecase.AdminAPI `container:"type"`
 }
 
+// CurrentUserHandler godoc
+// @Summary      Get current authenticated admin user
+// @Description  Returns the user resolved from the JWT identity (`id`) in the request context.
+// @Tags         admin-users
+// @Produce      json
+// @Success      200  {object}  entity.User
+// @Failure      401  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     ApiKeyAuth
+// @Router       /admin-api/current-user [get]
 func (ac *AdminAPIController) CurrentUserHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		data, exists := c.Get("id")
@@ -35,6 +45,15 @@ func (ac *AdminAPIController) CurrentUserHandler() gin.HandlerFunc {
 	}
 }
 
+// ListUsersHandler godoc
+// @Summary      List admin users
+// @Description  Returns all users available in the administration area.
+// @Tags         admin-users
+// @Produce      json
+// @Success      200  {array}   []entity.User
+// @Failure      500  {object}  ErrorResponse
+// @Security     ApiKeyAuth
+// @Router       /admin-api/users [get]
 func (ac *AdminAPIController) ListUsersHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		users, err := ac.AdminAPI.GetAllUsers()
@@ -46,6 +65,17 @@ func (ac *AdminAPIController) ListUsersHandler() gin.HandlerFunc {
 	}
 }
 
+// GetUserHandler godoc
+// @Summary      Get user by ID
+// @Description  Returns one user by UUID.
+// @Tags         admin-users
+// @Produce      json
+// @Param        id   path      string  true  "User UUID"
+// @Success      200  {object}  entity.User
+// @Failure      400  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Security     ApiKeyAuth
+// @Router       /admin-api/users/{id} [get]
 func (ac *AdminAPIController) GetUserHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, err := uuid.Parse(c.Param("id"))
@@ -72,6 +102,17 @@ type CreateUserRequest struct {
 	Role     entity.UserRole `json:"role" binding:"required"`
 }
 
+// CreateUserHandler godoc
+// @Summary      Create admin user
+// @Description  Creates a new user account for the admin panel.
+// @Tags         admin-users
+// @Accept       json
+// @Produce      json
+// @Param        request  body      CreateUserRequest  true  "Create user request"
+// @Success      201      {object}  entity.User
+// @Failure      400      {object}  ErrorResponse
+// @Security     ApiKeyAuth
+// @Router       /admin-api/users [post]
 func (ac *AdminAPIController) CreateUserHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req CreateUserRequest
@@ -97,6 +138,18 @@ type UpdateUserRequest struct {
 	IsActive bool            `json:"is_active"`
 }
 
+// UpdateUserHandler godoc
+// @Summary      Update admin user
+// @Description  Updates profile and role fields for the user identified by UUID.
+// @Tags         admin-users
+// @Accept       json
+// @Produce      json
+// @Param        id       path      string             true  "User UUID"
+// @Param        request  body      UpdateUserRequest  true  "Update user request"
+// @Success      200      {object}  entity.User
+// @Failure      400      {object}  ErrorResponse
+// @Security     ApiKeyAuth
+// @Router       /admin-api/users/{id} [put]
 func (ac *AdminAPIController) UpdateUserHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, err := uuid.Parse(c.Param("id"))
@@ -125,6 +178,18 @@ type UpdatePasswordRequest struct {
 	Password string `json:"password" binding:"required,min=6"`
 }
 
+// UpdatePasswordHandler godoc
+// @Summary      Update user password
+// @Description  Replaces the password of the user identified by UUID.
+// @Tags         admin-users
+// @Accept       json
+// @Produce      json
+// @Param        id       path      string                 true  "User UUID"
+// @Param        request  body      UpdatePasswordRequest  true  "Update password request"
+// @Success      200      {object}  MessageResponse
+// @Failure      400      {object}  ErrorResponse
+// @Security     ApiKeyAuth
+// @Router       /admin-api/users/{id}/password [put]
 func (ac *AdminAPIController) UpdatePasswordHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, err := uuid.Parse(c.Param("id"))
@@ -148,6 +213,17 @@ func (ac *AdminAPIController) UpdatePasswordHandler() gin.HandlerFunc {
 	}
 }
 
+// DeleteUserHandler godoc
+// @Summary      Delete admin user
+// @Description  Deletes the user identified by UUID.
+// @Tags         admin-users
+// @Produce      json
+// @Param        id   path      string  true  "User UUID"
+// @Success      200  {object}  MessageResponse
+// @Failure      400  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     ApiKeyAuth
+// @Router       /admin-api/users/{id} [delete]
 func (ac *AdminAPIController) DeleteUserHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, err := uuid.Parse(c.Param("id"))
