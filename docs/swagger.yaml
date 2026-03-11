@@ -1,0 +1,782 @@
+basePath: /
+definitions:
+  adminapi.AddKeyRequest:
+    properties:
+      key:
+        type: string
+    required:
+    - key
+    type: object
+  adminapi.AuthErrorResponse:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+    type: object
+  adminapi.AuthTokenResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+    type: object
+  adminapi.CreateUserRequest:
+    properties:
+      name:
+        type: string
+      password:
+        type: string
+      role:
+        $ref: '#/definitions/entity.UserRole'
+      surname:
+        type: string
+      username:
+        type: string
+    required:
+    - name
+    - password
+    - role
+    - surname
+    - username
+    type: object
+  adminapi.CreateVisitorRequest:
+    properties:
+      email:
+        type: string
+      grade:
+        type: integer
+      is_student:
+        type: boolean
+      keys:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      surname:
+        type: string
+    required:
+    - name
+    type: object
+  adminapi.DashboardResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  adminapi.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  adminapi.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  adminapi.MessageResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  adminapi.RefreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  adminapi.UpdatePasswordRequest:
+    properties:
+      password:
+        minLength: 6
+        type: string
+    required:
+    - password
+    type: object
+  adminapi.UpdateUserRequest:
+    properties:
+      is_active:
+        type: boolean
+      name:
+        type: string
+      role:
+        $ref: '#/definitions/entity.UserRole'
+      surname:
+        type: string
+    required:
+    - name
+    - role
+    - surname
+    type: object
+  adminapi.UpdateVisitorRequest:
+    properties:
+      email:
+        type: string
+      grade:
+        type: integer
+      is_student:
+        type: boolean
+      keys:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      surname:
+        type: string
+    required:
+    - name
+    type: object
+  adminapi.VisitorResponse:
+    properties:
+      deleted_at:
+        type: string
+      email:
+        type: string
+      full_name:
+        type: string
+      grade:
+        type: integer
+      id:
+        type: integer
+      image:
+        type: string
+      is_student:
+        type: boolean
+      isams_divisions:
+        items:
+          type: integer
+        type: array
+      isams_id:
+        type: integer
+      isams_school_id:
+        type: string
+      isams_year_group_id:
+        type: integer
+      keys:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      surname:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  entity.User:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      role:
+        $ref: '#/definitions/entity.UserRole'
+      surname:
+        type: string
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  entity.UserRole:
+    enum:
+    - admin
+    - terminal
+    type: string
+    x-enum-varnames:
+    - UserRoleAdmin
+    - UserRoleTerminal
+  entity.Visitor:
+    properties:
+      deleted_at:
+        type: string
+      email:
+        type: string
+      full_name:
+        type: string
+      grade:
+        type: integer
+      id:
+        type: integer
+      image:
+        type: string
+      is_student:
+        type: boolean
+      isams_divisions:
+        items:
+          type: integer
+        type: array
+      isams_id:
+        type: integer
+      isams_school_id:
+        type: string
+      isams_year_group_id:
+        type: integer
+      keys:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      surname:
+        type: string
+      updated_at:
+        type: string
+    type: object
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is the administration API for the ImLate tracking system.
+  termsOfService: http://swagger.io/terms/
+  title: ImLate Admin API
+  version: "2.0"
+paths:
+  /admin-api/current-user:
+    get:
+      description: Returns the user resolved from the JWT identity (`id`) in the request
+        context.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entity.User'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get current authenticated admin user
+      tags:
+      - admin-users
+  /admin-api/dashboard:
+    get:
+      description: Returns a simple dashboard welcome message for authenticated admin
+        users.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/adminapi.DashboardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/adminapi.AuthErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/adminapi.AuthErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get admin dashboard greeting
+      tags:
+      - admin-dashboard
+  /admin-api/users:
+    get:
+      description: Returns all users available in the administration area.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              items:
+                $ref: '#/definitions/entity.User'
+              type: array
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: List admin users
+      tags:
+      - admin-users
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user account for the admin panel.
+      parameters:
+      - description: Create user request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/adminapi.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/entity.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Create admin user
+      tags:
+      - admin-users
+  /admin-api/users/{id}:
+    delete:
+      description: Deletes the user identified by UUID.
+      parameters:
+      - description: User UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/adminapi.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Delete admin user
+      tags:
+      - admin-users
+    get:
+      description: Returns one user by UUID.
+      parameters:
+      - description: User UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entity.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get user by ID
+      tags:
+      - admin-users
+    put:
+      consumes:
+      - application/json
+      description: Updates profile and role fields for the user identified by UUID.
+      parameters:
+      - description: User UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update user request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/adminapi.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entity.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Update admin user
+      tags:
+      - admin-users
+  /admin-api/users/{id}/password:
+    put:
+      consumes:
+      - application/json
+      description: Replaces the password of the user identified by UUID.
+      parameters:
+      - description: User UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update password request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/adminapi.UpdatePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/adminapi.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Update user password
+      tags:
+      - admin-users
+  /admin-api/visitors:
+    get:
+      description: Returns all visitors available in the administration area.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              items:
+                $ref: '#/definitions/entity.Visitor'
+              type: array
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: List visitors
+      tags:
+      - admin-visitors
+    post:
+      consumes:
+      - application/json
+      description: Creates a visitor record with optional keys and student metadata.
+      parameters:
+      - description: Create visitor request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/adminapi.CreateVisitorRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/adminapi.VisitorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Create visitor
+      tags:
+      - admin-visitors
+  /admin-api/visitors/{id}:
+    delete:
+      description: Deletes the visitor identified by numeric ID.
+      parameters:
+      - description: Visitor ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/adminapi.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Delete visitor
+      tags:
+      - admin-visitors
+    get:
+      description: Returns one visitor by numeric identifier.
+      parameters:
+      - description: Visitor ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/adminapi.VisitorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get visitor by ID
+      tags:
+      - admin-visitors
+    put:
+      consumes:
+      - application/json
+      description: Updates visitor profile data, including keys and student fields.
+      parameters:
+      - description: Visitor ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update visitor request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/adminapi.UpdateVisitorRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/adminapi.VisitorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Update visitor
+      tags:
+      - admin-visitors
+  /admin-api/visitors/{id}/image:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads an image file for the specified visitor.
+      parameters:
+      - description: Visitor ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Visitor image file
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/adminapi.VisitorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Upload visitor image
+      tags:
+      - admin-visitors
+  /admin-api/visitors/{id}/key:
+    post:
+      consumes:
+      - application/json
+      description: Adds one access key to the specified visitor.
+      parameters:
+      - description: Visitor ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Add key request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/adminapi.AddKeyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/adminapi.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Add visitor key
+      tags:
+      - admin-visitors
+  /admin-api/visitors/{id}/key/{key}:
+    delete:
+      description: Removes one access key from the specified visitor.
+      parameters:
+      - description: Visitor ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Visitor key
+        in: path
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/adminapi.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Remove visitor key
+      tags:
+      - admin-visitors
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Authenticates a user with username/password and returns a JWT token.
+        Credentials can be sent as JSON or form fields (`username`, `password`).
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/adminapi.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/adminapi.AuthTokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/adminapi.AuthErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/adminapi.AuthErrorResponse'
+      summary: Login for admin API
+      tags:
+      - auth
+  /refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refreshes a valid JWT token and returns a new token pair.
+      parameters:
+      - description: Refresh token payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/adminapi.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/adminapi.AuthTokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/adminapi.AuthErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/adminapi.AuthErrorResponse'
+      summary: Refresh admin JWT token
+      tags:
+      - auth
+securityDefinitions:
+  ApiKeyAuth:
+    description: |-
+      JWT token in format: "Bearer <JWT>".
+      Token lookup order: Authorization header, query parameter `token`, cookie `jwt`.
+      Protected admin routes require admin role.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
