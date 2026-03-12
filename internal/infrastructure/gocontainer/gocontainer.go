@@ -66,6 +66,7 @@ func Build(cfg *config.Config) {
 			BaseURL:      cfg.ISAMSBaseURL,
 			ClientID:     cfg.ISAMSAPIClientID,
 			ClientSecret: cfg.ISAMSAPIClientSecret,
+			Logger:       logger,
 		}
 		return &ERPFactory{f: f}
 	})
