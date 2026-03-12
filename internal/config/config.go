@@ -7,11 +7,13 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
+const minAuthTokenSecretLength = 32
+
 var parseEnv = env.Parse
 
 type Config struct {
 	Debug          bool   `env:"DEBUG" envDefault:"false"`
-	AppPort		   string `env:"APP_PORT" envDefault:"8080"`
+	AppPort        string `env:"APP_PORT" envDefault:"8080"`
 	Environment    string `env:"ENVIRONMENT" envDefault:"production"` // possible values: development, staging, production.
 	DatabaseEngine string `env:"DATABASE_ENGINE" envDefault:"mysql"`
 	DatabaseURL    string `env:"DATABASE_URL" envDefault:"trackme:trackme@/tracker?parseTime=true"`
@@ -34,14 +36,15 @@ type Config struct {
 
 	AutoRegistrationYearGroups []int32 `env:"AUTO_REGISTRATION_YEAR_GROUPS" envSeparator:","`
 
-	ForceERPSyncOnStart bool `env:"FORCE_ERP_SYNC_ON_START" envDefault:"false"`
+	ForceERPSyncOnStart   bool `env:"FORCE_ERP_SYNC_ON_START" envDefault:"false"`
+	ERPIntegrationEnabled bool `env:"ERP_INTEGRATION_ENABLED" envDefault:"false"`
 
-	CronStudentSync            string `env:"CRON_STUDENT_SYNC" envDefault:"0 7-17/2 * * 1-5"`
-	CronPhotoSync              string `env:"CRON_PHOTO_SYNC" envDefault:"0 5 * * 1-5"`
-	CronRegistrationCodesSync  string `env:"CRON_REGISTRATION_CODES_SYNC" envDefault:"0 7-17/1 * * 1-5"`
-	CronMarkAbsent             string `env:"CRON_MARK_ABSENT" envDefault:"10 8-12/1 * * 1-5"`
+	CronStudentSync           string `env:"CRON_STUDENT_SYNC" envDefault:"0 7-17/2 * * 1-5"`
+	CronPhotoSync             string `env:"CRON_PHOTO_SYNC" envDefault:"0 5 * * 1-5"`
+	CronRegistrationCodesSync string `env:"CRON_REGISTRATION_CODES_SYNC" envDefault:"0 7-17/1 * * 1-5"`
+	CronMarkAbsent            string `env:"CRON_MARK_ABSENT" envDefault:"10 8-12/1 * * 1-5"`
 
-	AuthTokenSecret string `env:"AUTH_TOKEN_SECRET" envDefault:""`
+	AuthTokenSecret string `env:"AUTH_TOKEN_SECRET"`
 
 	erpLocation *time.Location
 	appLocation *time.Location
@@ -133,5 +136,12 @@ func (c *Config) APPTimeLocation() *time.Location {
 }
 
 func (c *Config) IsERPIntegrated() bool {
-	return c.ISAMSBaseURL != "" && c.ISAMSAPIClientID != "" && c.ISAMSAPIClientSecret != ""
+	return c.ERPIntegrationEnabled && c.ISAMSBaseURL != "" && c.ISAMSAPIClientID != "" && c.ISAMSAPIClientSecret != ""
+}
+
+func (c *Config) Validate() error {
+	if len(c.AuthTokenSecret) < minAuthTokenSecretLength {
+		return fmt.Errorf("AUTH_TOKEN_SECRET must be at least %d characters", minAuthTokenSecretLength)
+	}
+	return nil
 }

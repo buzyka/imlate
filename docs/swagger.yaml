@@ -203,43 +203,6 @@ definitions:
     x-enum-varnames:
     - UserRoleAdmin
     - UserRoleTerminal
-  entity.Visitor:
-    properties:
-      deleted_at:
-        type: string
-      email:
-        type: string
-      full_name:
-        type: string
-      grade:
-        type: integer
-      id:
-        type: integer
-      image:
-        type: string
-      is_student:
-        type: boolean
-      isams_divisions:
-        items:
-          type: integer
-        type: array
-      isams_id:
-        type: integer
-      isams_school_id:
-        type: string
-      isams_year_group_id:
-        type: integer
-      keys:
-        items:
-          type: string
-        type: array
-      name:
-        type: string
-      surname:
-        type: string
-      updated_at:
-        type: string
-    type: object
 info:
   contact:
     email: support@swagger.io
@@ -308,9 +271,7 @@ paths:
           description: OK
           schema:
             items:
-              items:
-                $ref: '#/definitions/entity.User'
-              type: array
+              $ref: '#/definitions/entity.User'
             type: array
         "500":
           description: Internal Server Error
@@ -480,9 +441,7 @@ paths:
           description: OK
           schema:
             items:
-              items:
-                $ref: '#/definitions/entity.Visitor'
-              type: array
+              $ref: '#/definitions/adminapi.VisitorResponse'
             type: array
         "500":
           description: Internal Server Error

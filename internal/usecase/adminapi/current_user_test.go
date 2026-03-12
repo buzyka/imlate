@@ -85,7 +85,7 @@ func TestCreateUser_Success(t *testing.T) {
 	mockRepo := new(providertest.UserRepositoryMock)
 	api := &AdminAPI{UserRepo: mockRepo}
 
-	mockRepo.On("FindByUsername", "newuser").Return(nil, errors.New("not found"))
+	mockRepo.On("FindByUsername", "newuser").Return(&entity.User{}, nil)
 	mockRepo.On("Create", mock.AnythingOfType("*entity.User")).Return(nil)
 
 	user, err := api.CreateUser("newuser", "password123", "Jane", "Doe", entity.UserRoleAdmin)
@@ -97,6 +97,20 @@ func TestCreateUser_Success(t *testing.T) {
 	assert.Equal(t, entity.UserRoleAdmin, user.Role)
 	assert.True(t, user.IsActive)
 	assert.True(t, user.PasswordValidate("password123"))
+	mockRepo.AssertExpectations(t)
+}
+
+func TestCreateUser_FindByUsernameError(t *testing.T) {
+	mockRepo := new(providertest.UserRepositoryMock)
+	api := &AdminAPI{UserRepo: mockRepo}
+
+	mockRepo.On("FindByUsername", "newuser").Return(nil, errors.New("db down"))
+
+	user, err := api.CreateUser("newuser", "password123", "Jane", "Doe", entity.UserRoleAdmin)
+
+	assert.Error(t, err)
+	assert.Nil(t, user)
+	assert.Contains(t, err.Error(), "failed to check existing username")
 	mockRepo.AssertExpectations(t)
 }
 

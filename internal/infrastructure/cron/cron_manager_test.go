@@ -173,9 +173,10 @@ func TestMarkNotRegisteredStudentsAsAbsent_WithoutConfiguredYearGroups(t *testin
 
 func TestRunCron_WhenERPNotIntegrated_ReturnsNoopAndNoError(t *testing.T) {
 	cfg := &config.Config{
-		ISAMSBaseURL:         "",
-		ISAMSAPIClientID:     "",
-		ISAMSAPIClientSecret: "",
+		ERPIntegrationEnabled: false,
+		ISAMSBaseURL:          "",
+		ISAMSAPIClientID:      "",
+		ISAMSAPIClientSecret:  "",
 	}
 
 	stopFunc, err := RunCron(cfg)
@@ -203,6 +204,7 @@ func TestRunCron_WhenERPIntegrated_ReturnsStopFuncAndNoError(t *testing.T) {
 	container.MustSingleton(container.Global, func() erp.Factory { return &stubERPFactory{} })
 
 	cfg := &config.Config{
+		ERPIntegrationEnabled:     true,
 		ISAMSBaseURL:              "https://example.com",
 		ISAMSAPIClientID:          "client-id",
 		ISAMSAPIClientSecret:      "client-secret",
@@ -236,6 +238,7 @@ func TestRunCron_WithCustomCronSchedules(t *testing.T) {
 	container.MustSingleton(container.Global, func() erp.Factory { return &stubERPFactory{} })
 
 	cfg := &config.Config{
+		ERPIntegrationEnabled:     true,
 		ISAMSBaseURL:              "https://example.com",
 		ISAMSAPIClientID:          "client-id",
 		ISAMSAPIClientSecret:      "client-secret",
