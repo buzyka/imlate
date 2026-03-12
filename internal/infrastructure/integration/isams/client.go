@@ -1,12 +1,15 @@
 package isams
 
 import (
+	"bytes"
 	"context"
-	"fmt"
+	"io"
 	"net/http"
 	"net/http/httputil"
 	"strings"
 
+	"github.com/buzyka/imlate/internal/infrastructure/logging"
+	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 )
@@ -37,6 +40,7 @@ type ClientFactory struct {
 	BaseURL      string
 	ClientID     string
 	ClientSecret string
+	Logger       *zap.SugaredLogger
 }
 
 func (f *ClientFactory) NewClient(ctx context.Context) (*Client, error) {
@@ -59,6 +63,7 @@ func (f *ClientFactory) NewClient(ctx context.Context) (*Client, error) {
 	return &Client{
 		HTTPClient: oAuthClient,
 		BaseURL:    baseURL,
+		Logger:     f.Logger,
 	}, nil
 }
 
@@ -76,10 +81,46 @@ func (f *ClientFactory) getTokenSource(ctx context.Context, cfg clientcredential
 type Client struct {
 	BaseURL    string
 	HTTPClient *http.Client
+	Logger     *zap.SugaredLogger
 }
 
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
-	reqDump, _ := httputil.DumpRequestOut(req, true)
-	fmt.Printf("%s\n", reqDump)
+	c.logOutgoingRequest(req)
+
 	return c.HTTPClient.Do(req)
+}
+
+func (c *Client) logOutgoingRequest(req *http.Request) {
+	logger := c.Logger
+	if logger == nil {
+		logger = logging.Fallback()
+	}
+
+	requestForLog := req.Clone(req.Context())
+	requestForLog.Header = req.Header.Clone()
+
+	if req.Body != nil {
+		bodyBytes, err := io.ReadAll(req.Body)
+		if err != nil {
+			logger.Infow("isams outgoing request", "method", req.Method, "url", req.URL.String(), "dumpError", err.Error())
+			return
+		}
+
+		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		requestForLog.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		requestForLog.ContentLength = int64(len(bodyBytes))
+	}
+
+	for _, headerName := range []string{"Authorization", "Cookie", "X-API-Key"} {
+		if requestForLog.Header.Get(headerName) != "" {
+			requestForLog.Header.Set(headerName, "REDACTED")
+		}
+	}
+
+	reqDump, err := httputil.DumpRequestOut(requestForLog, true)
+	if err != nil {
+		logger.Infow("isams outgoing request", "method", req.Method, "url", req.URL.String(), "dumpError", err.Error())
+	} else {
+		logger.Infow("isams outgoing request", "method", req.Method, "url", req.URL.String(), "request", string(reqDump))
+	}
 }
