@@ -50,7 +50,7 @@ func (ac *AdminAPIController) CurrentUserHandler() gin.HandlerFunc {
 // @Description  Returns all users available in the administration area.
 // @Tags         admin-users
 // @Produce      json
-// @Success      200  {array}   []entity.User
+// @Success      200  {array}   entity.User
 // @Failure      500  {object}  ErrorResponse
 // @Security     ApiKeyAuth
 // @Router       /admin-api/users [get]

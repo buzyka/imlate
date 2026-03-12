@@ -64,6 +64,7 @@ func (a *AdminAPI) CreateVisitor(name, surname string, isStudent bool, grade *in
 		if key == "" {
 			continue
 		}
+		key = strings.ToUpper(key)
 		if err := a.VisitorRepo.AddKeyToVisitor(visitor, key); err != nil {
 			return nil, fmt.Errorf("failed to add key %q: %w", key, err)
 		}

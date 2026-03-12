@@ -30,7 +30,11 @@ func (a *AdminAPI) GetUser(id uuid.UUID) (*entity.User, error) {
 
 func (a *AdminAPI) CreateUser(username, password, name, surname string, role entity.UserRole) (*entity.User, error) {
 	existing, err := a.UserRepo.FindByUsername(username)
-	if err == nil && existing != nil && existing.ID != uuid.Nil {
+	if err != nil {
+		return nil, fmt.Errorf("failed to check existing username: %w", err)
+	}
+
+	if existing != nil && existing.ID != uuid.Nil {
 		return nil, fmt.Errorf("user with username %q already exists", username)
 	}
 

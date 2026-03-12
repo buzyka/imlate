@@ -115,10 +115,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/definitions/entity.User"
-                                }
+                                "$ref": "#/definitions/entity.User"
                             }
                         }
                     },
@@ -387,10 +384,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/definitions/entity.Visitor"
-                                }
+                                "$ref": "#/definitions/adminapi.VisitorResponse"
                             }
                         }
                     },
@@ -1141,62 +1135,6 @@ const docTemplate = `{
                 "UserRoleAdmin",
                 "UserRoleTerminal"
             ]
-        },
-        "entity.Visitor": {
-            "type": "object",
-            "properties": {
-                "deleted_at": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "full_name": {
-                    "type": "string"
-                },
-                "grade": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "image": {
-                    "type": "string"
-                },
-                "is_student": {
-                    "type": "boolean"
-                },
-                "isams_divisions": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "isams_id": {
-                    "type": "integer"
-                },
-                "isams_school_id": {
-                    "type": "string"
-                },
-                "isams_year_group_id": {
-                    "type": "integer"
-                },
-                "keys": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "name": {
-                    "type": "string"
-                },
-                "surname": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
         }
     },
     "securityDefinitions": {

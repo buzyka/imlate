@@ -98,3 +98,6 @@ start-app            # Start application
 ## Environment Variables
 
 See `docker/.env.docker.example` for Docker environment variables.
+
+- `ERP_INTEGRATION_ENABLED` controls iSAMS/ERP integration features. Default is `false`.
+- `AUTH_TOKEN_SECRET` is required for admin JWT auth and must be at least 32 characters.
