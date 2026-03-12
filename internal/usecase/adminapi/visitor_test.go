@@ -96,7 +96,7 @@ func TestCreateVisitor_Success(t *testing.T) {
 	mockRepo.On("AddKeyToVisitor", mock.AnythingOfType("*entity.Visitor"), "KEY1").Return(nil)
 	mockRepo.On("FindKeysByVisitorId", int32(10)).Return([]string{"KEY1"}, nil)
 
-	result, err := api.CreateVisitor("Alice", "Smith", true, intPtr(5), "", []string{"KEY1"})
+	result, err := api.CreateVisitor("Alice", "Smith", true, intPtr(5), "", []string{" key1 "})
 
 	assert.NoError(t, err)
 	assert.Equal(t, int32(10), result.Id)
@@ -105,6 +105,22 @@ func TestCreateVisitor_Success(t *testing.T) {
 	assert.True(t, result.IsStudent)
 	assert.Equal(t, intPtr(5), result.Grade)
 	assert.Equal(t, []string{"KEY1"}, result.Keys)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestCreateVisitor_IgnoreEmptyTrimmedKeys(t *testing.T) {
+	api, mockRepo := newVisitorTestAPI()
+
+	mockRepo.On("SaveVisitor", mock.AnythingOfType("*entity.Visitor")).Run(func(args mock.Arguments) {
+		v := args.Get(0).(*entity.Visitor)
+		v.Id = 12
+	}).Return(nil)
+	mockRepo.On("FindKeysByVisitorId", int32(12)).Return([]string{}, nil)
+
+	result, err := api.CreateVisitor("Alice", "Smith", false, nil, "", []string{"   ", ""})
+
+	assert.NoError(t, err)
+	assert.Equal(t, int32(12), result.Id)
 	mockRepo.AssertExpectations(t)
 }
 

@@ -296,8 +296,9 @@ func TestIsERPIntegrated(t *testing.T) {
 		expectedResult bool
 	}{
 		{
-			name: "all required variables are set",
+			name: "enabled and all required variables are set",
 			newEnv: map[string]string{
+				"ERP_INTEGRATION_ENABLED": "true",
 				"ISAMS_BASE_URL":          "https://example.com",
 				"ISAMS_API_CLIENT_ID":     "client-id",
 				"ISAMS_API_CLIENT_SECRET": "client-secret",
@@ -305,8 +306,19 @@ func TestIsERPIntegrated(t *testing.T) {
 			expectedResult: true,
 		},
 		{
+			name: "disabled even with all credentials set",
+			newEnv: map[string]string{
+				"ERP_INTEGRATION_ENABLED": "false",
+				"ISAMS_BASE_URL":          "https://example.com",
+				"ISAMS_API_CLIENT_ID":     "client-id",
+				"ISAMS_API_CLIENT_SECRET": "client-secret",
+			},
+			expectedResult: false,
+		},
+		{
 			name: "missing ISAMS_BASE_URL",
 			newEnv: map[string]string{
+				"ERP_INTEGRATION_ENABLED": "true",
 				"ISAMS_API_CLIENT_ID":     "client-id",
 				"ISAMS_API_CLIENT_SECRET": "client-secret",
 			},
@@ -315,6 +327,7 @@ func TestIsERPIntegrated(t *testing.T) {
 		{
 			name: "missing ISAMS_API_CLIENT_ID",
 			newEnv: map[string]string{
+				"ERP_INTEGRATION_ENABLED": "true",
 				"ISAMS_BASE_URL":          "https://example.com",
 				"ISAMS_API_CLIENT_SECRET": "client-secret",
 			},
@@ -323,8 +336,9 @@ func TestIsERPIntegrated(t *testing.T) {
 		{
 			name: "missing ISAMS_API_CLIENT_SECRET",
 			newEnv: map[string]string{
-				"ISAMS_BASE_URL":      "https://example.com",
-				"ISAMS_API_CLIENT_ID": "client-id",
+				"ERP_INTEGRATION_ENABLED": "true",
+				"ISAMS_BASE_URL":          "https://example.com",
+				"ISAMS_API_CLIENT_ID":     "client-id",
 			},
 			expectedResult: false,
 		},
@@ -338,6 +352,22 @@ func TestIsERPIntegrated(t *testing.T) {
 			assert.Equal(t, tc.expectedResult, cfg.IsERPIntegrated())
 		})
 	}
+}
+
+func TestNewFromEnv_ERPIntegrationEnabled_DefaultFalse(t *testing.T) {
+	loadTestEnvVariables(t, map[string]string{})
+
+	cfg, err := NewFromEnv()
+	assert.NoError(t, err)
+	assert.False(t, cfg.ERPIntegrationEnabled)
+}
+
+func TestNewFromEnv_ERPIntegrationEnabled_True(t *testing.T) {
+	loadTestEnvVariables(t, map[string]string{"ERP_INTEGRATION_ENABLED": "true"})
+
+	cfg, err := NewFromEnv()
+	assert.NoError(t, err)
+	assert.True(t, cfg.ERPIntegrationEnabled)
 }
 
 func TestNewFromEnv_CronScheduleDefaults(t *testing.T) {
@@ -395,6 +425,8 @@ func resetConfigEnv(t *testing.T) {
 		"STUDENTS_IMAGE_PHOTO_URL_PREFIX",
 		"AUTO_REGISTRATION_YEAR_GROUPS",
 		"FORCE_ERP_SYNC_ON_START",
+		"ERP_INTEGRATION_ENABLED",
+		"AUTH_TOKEN_SECRET",
 		"CRON_STUDENT_SYNC",
 		"CRON_PHOTO_SYNC",
 		"CRON_REGISTRATION_CODES_SYNC",

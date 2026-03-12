@@ -2,12 +2,21 @@ package adminapi
 
 import (
 	"io"
+	"mime/multipart"
 	"net/http"
 	"strconv"
 
 	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/gin-gonic/gin"
 )
+
+const maxVisitorImageUploadSizeBytes int64 = 5 * 1024 * 1024
+
+var openUploadedFile = func(fileHeader *multipart.FileHeader) (multipart.File, error) {
+	return fileHeader.Open()
+}
+
+var readUploadedFile = io.ReadAll
 
 // VisitorResponse is a Swagger-visible alias for entity.Visitor.
 type VisitorResponse = entity.Visitor
@@ -52,7 +61,7 @@ func parseVisitorID(c *gin.Context) (int32, bool) {
 // @Description  Returns all visitors available in the administration area.
 // @Tags         admin-visitors
 // @Produce      json
-// @Success      200  {array}   VisitorListResponse
+// @Success      200  {array}   VisitorResponse
 // @Failure      500  {object}  ErrorResponse
 // @Security     ApiKeyAuth
 // @Router       /admin-api/visitors [get]
@@ -185,14 +194,19 @@ func (ac *AdminAPIController) UploadVisitorImageHandler() gin.HandlerFunc {
 			return
 		}
 
-		file, err := fileHeader.Open()
+		if fileHeader.Size > maxVisitorImageUploadSizeBytes {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "image file is too large (max 5MB)"})
+			return
+		}
+
+		file, err := openUploadedFile(fileHeader)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to open uploaded file"})
 			return
 		}
 		defer func() { _ = file.Close() }()
 
-		data, err := io.ReadAll(file)
+		data, err := readUploadedFile(file)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read uploaded file"})
 			return

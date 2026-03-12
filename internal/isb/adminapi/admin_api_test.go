@@ -178,7 +178,7 @@ func TestCreateUserHandler_Success(t *testing.T) {
 	c.Request = httptest.NewRequest(http.MethodPost, "/admin-api/users", bytes.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 
-	mockRepo.On("FindByUsername", "newuser").Return(nil, errors.New("not found"))
+	mockRepo.On("FindByUsername", "newuser").Return(&entity.User{}, nil)
 	mockRepo.On("Create", mock.AnythingOfType("*entity.User")).Return(nil)
 
 	controller.CreateUserHandler()(c)
@@ -197,6 +197,29 @@ func TestCreateUserHandler_BadRequest(t *testing.T) {
 	controller.CreateUserHandler()(c)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestCreateUserHandler_CreateError(t *testing.T) {
+	mockRepo, controller := setupTest()
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	body, _ := json.Marshal(CreateUserRequest{
+		Username: "existing",
+		Password: "password123",
+		Name:     "Jane",
+		Surname:  "Doe",
+		Role:     entity.UserRoleAdmin,
+	})
+	c.Request = httptest.NewRequest(http.MethodPost, "/admin-api/users", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	mockRepo.On("FindByUsername", "existing").Return(&entity.User{ID: uuid.New(), UserName: "existing"}, nil)
+
+	controller.CreateUserHandler()(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	mockRepo.AssertExpectations(t)
 }
 
 func TestUpdateUserHandler_Success(t *testing.T) {
@@ -235,6 +258,48 @@ func TestUpdateUserHandler_InvalidID(t *testing.T) {
 	controller.UpdateUserHandler()(c)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestUpdateUserHandler_BadRequestBody(t *testing.T) {
+	_, controller := setupTest()
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	userID := uuid.New()
+	c.Params = gin.Params{{Key: "id", Value: userID.String()}}
+	c.Request = httptest.NewRequest(http.MethodPut, "/admin-api/users/"+userID.String(), bytes.NewReader([]byte(`{}`)))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	controller.UpdateUserHandler()(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestUpdateUserHandler_UpdateError(t *testing.T) {
+	mockRepo, controller := setupTest()
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	userID := uuid.New()
+	c.Params = gin.Params{{Key: "id", Value: userID.String()}}
+
+	body, _ := json.Marshal(UpdateUserRequest{
+		Name:     "Updated",
+		Surname:  "Name",
+		Role:     entity.UserRoleTerminal,
+		IsActive: false,
+	})
+	c.Request = httptest.NewRequest(http.MethodPut, "/admin-api/users/"+userID.String(), bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	existing := &entity.User{ID: userID, UserName: "admin", Name: "Old", Surname: "Name"}
+	mockRepo.On("FindByID", userID).Return(existing, nil)
+	mockRepo.On("Update", mock.AnythingOfType("*entity.User")).Return(errors.New("update failed"))
+
+	controller.UpdateUserHandler()(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	mockRepo.AssertExpectations(t)
 }
 
 func TestDeleteUserHandler_Success(t *testing.T) {
@@ -329,4 +394,26 @@ func TestUpdatePasswordHandler_TooShort(t *testing.T) {
 	controller.UpdatePasswordHandler()(c)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestUpdatePasswordHandler_UpdateError(t *testing.T) {
+	mockRepo, controller := setupTest()
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	userID := uuid.New()
+	c.Params = gin.Params{{Key: "id", Value: userID.String()}}
+
+	body, _ := json.Marshal(UpdatePasswordRequest{Password: "newpassword123"})
+	c.Request = httptest.NewRequest(http.MethodPut, "/admin-api/users/"+userID.String()+"/password", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	existing := &entity.User{ID: userID, UserName: "admin"}
+	mockRepo.On("FindByID", userID).Return(existing, nil)
+	mockRepo.On("Update", mock.AnythingOfType("*entity.User")).Return(errors.New("update failed"))
+
+	controller.UpdatePasswordHandler()(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	mockRepo.AssertExpectations(t)
 }

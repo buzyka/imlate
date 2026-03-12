@@ -71,12 +71,6 @@ func Build(cfg *config.Config) {
 		return &ERPFactory{f: f}
 	})
 
-	container.MustSingleton(container.Global, func() provider.VisitorRepository {
-		return &repository.Visitor{
-			Connection: connection,
-		}
-	})
-
 	container.MustSingleton(container.Global, func() provider.UserRepository {
 		return &repository.UserMySQL{
 			Connection: connection,

@@ -54,6 +54,10 @@ func main() {
 		panic(fmt.Sprintf("Error loading config from env: %v\n", err))
 	}
 
+	if err := cfg.Validate(); err != nil {
+		panic(fmt.Sprintf("Error validating config: %v", err))
+	}
+
 	gocontainer.Build(&cfg)
 
 	// Start cron jobs
