@@ -194,7 +194,7 @@ func TestAddVisitorKey_Success(t *testing.T) {
 	mockRepo.On("FindById", int32(1)).Return(visitor, nil)
 	mockRepo.On("AddKeyToVisitor", visitor, "NEWKEY").Return(nil)
 
-	err := api.AddVisitorKey(1, "NEWKEY")
+	err := api.AddVisitorKey(1, " newKey ")
 
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
