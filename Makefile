@@ -1,4 +1,4 @@
-.PHONY: help start stop restart status logs install-mod build-app dist got gotc gol golf migrate-up migrate-down mysql clean rebuild restart-app swag
+.PHONY: help start stop restart status logs install-mod build-app dist got gotc gol golf migrate-up migrate-down mysql clean rebuild restart-app swag swag
 
 # Default target
 help:
