@@ -39,19 +39,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.User"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_domain_entity.User"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -76,19 +76,102 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.DashboardResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.DashboardResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.AuthErrorResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.AuthErrorResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin-api/reports/visits": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns paginated visitor attendance information aggregated per visitor per day for a given date range.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-reports"
+                ],
+                "summary": "Get visitor attendance report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD, inclusive)",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD, inclusive)",
+                        "name": "to",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by student flag",
+                        "name": "is_student",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by year group",
+                        "name": "year_group",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by sign status (not_signed, signed_in, signed_out)",
+                        "name": "sign_status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Records per page (default 100)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_isb_adminapi.ReportsVisitsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -115,14 +198,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/entity.User"
+                                "$ref": "#/definitions/github_com_buzyka_imlate_internal_domain_entity.User"
                             }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -151,7 +234,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/adminapi.CreateUserRequest"
+                            "$ref": "#/definitions/internal_isb_adminapi.CreateUserRequest"
                         }
                     }
                 ],
@@ -159,13 +242,13 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/entity.User"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_domain_entity.User"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -199,19 +282,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.User"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_domain_entity.User"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -247,7 +330,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/adminapi.UpdateUserRequest"
+                            "$ref": "#/definitions/internal_isb_adminapi.UpdateUserRequest"
                         }
                     }
                 ],
@@ -255,13 +338,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.User"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_domain_entity.User"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -293,19 +376,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.MessageResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -343,7 +426,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/adminapi.UpdatePasswordRequest"
+                            "$ref": "#/definitions/internal_isb_adminapi.UpdatePasswordRequest"
                         }
                     }
                 ],
@@ -351,13 +434,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.MessageResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -384,14 +467,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/adminapi.VisitorResponse"
+                                "$ref": "#/definitions/internal_isb_adminapi.VisitorResponse"
                             }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -420,7 +503,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/adminapi.CreateVisitorRequest"
+                            "$ref": "#/definitions/internal_isb_adminapi.CreateVisitorRequest"
                         }
                     }
                 ],
@@ -428,13 +511,13 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.VisitorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.VisitorResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -468,19 +551,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.VisitorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.VisitorResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -516,7 +599,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/adminapi.UpdateVisitorRequest"
+                            "$ref": "#/definitions/internal_isb_adminapi.UpdateVisitorRequest"
                         }
                     }
                 ],
@@ -524,13 +607,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.VisitorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.VisitorResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -562,19 +645,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.MessageResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -618,19 +701,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.VisitorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.VisitorResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -668,7 +751,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/adminapi.AddKeyRequest"
+                            "$ref": "#/definitions/internal_isb_adminapi.AddKeyRequest"
                         }
                     }
                 ],
@@ -676,13 +759,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.MessageResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -723,13 +806,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.MessageResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -755,7 +838,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/adminapi.LoginRequest"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.LoginRequest"
                         }
                     }
                 ],
@@ -763,19 +846,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.AuthTokenResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthTokenResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.AuthErrorResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.AuthErrorResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse"
                         }
                     }
                 }
@@ -801,7 +884,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/adminapi.RefreshRequest"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.RefreshRequest"
                         }
                     }
                 ],
@@ -809,19 +892,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.AuthTokenResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthTokenResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.AuthErrorResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/adminapi.AuthErrorResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse"
                         }
                     }
                 }
@@ -829,18 +912,50 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "adminapi.AddKeyRequest": {
+        "github_com_buzyka_imlate_internal_domain_entity.User": {
             "type": "object",
-            "required": [
-                "key"
-            ],
             "properties": {
-                "key": {
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/github_com_buzyka_imlate_internal_domain_entity.UserRole"
+                },
+                "surname": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "username": {
                     "type": "string"
                 }
             }
         },
-        "adminapi.AuthErrorResponse": {
+        "github_com_buzyka_imlate_internal_domain_entity.UserRole": {
+            "type": "string",
+            "enum": [
+                "admin",
+                "terminal"
+            ],
+            "x-enum-varnames": [
+                "UserRoleAdmin",
+                "UserRoleTerminal"
+            ]
+        },
+        "github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -851,7 +966,7 @@ const docTemplate = `{
                 }
             }
         },
-        "adminapi.AuthTokenResponse": {
+        "github_com_buzyka_imlate_internal_isb_adminapi.AuthTokenResponse": {
             "type": "object",
             "properties": {
                 "access_token": {
@@ -868,7 +983,90 @@ const docTemplate = `{
                 }
             }
         },
-        "adminapi.CreateUserRequest": {
+        "github_com_buzyka_imlate_internal_isb_adminapi.DashboardResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_buzyka_imlate_internal_isb_adminapi.LoginRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_buzyka_imlate_internal_isb_adminapi.RefreshRequest": {
+            "type": "object",
+            "required": [
+                "refresh_token"
+            ],
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_buzyka_imlate_internal_usecase_adminapi.ReportsVisitsResponseItem": {
+            "type": "object",
+            "properties": {
+                "duration_minutes": {
+                    "type": "integer"
+                },
+                "is_student": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "sign_status": {
+                    "type": "string"
+                },
+                "signed_in": {
+                    "type": "string"
+                },
+                "signed_out": {
+                    "type": "string"
+                },
+                "surname": {
+                    "type": "string"
+                },
+                "visit_date": {
+                    "type": "string"
+                },
+                "visitor_id": {
+                    "type": "integer"
+                },
+                "visits_count": {
+                    "type": "integer"
+                },
+                "year_group": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_isb_adminapi.AddKeyRequest": {
+            "type": "object",
+            "required": [
+                "key"
+            ],
+            "properties": {
+                "key": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_isb_adminapi.CreateUserRequest": {
             "type": "object",
             "required": [
                 "name",
@@ -885,7 +1083,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "role": {
-                    "$ref": "#/definitions/entity.UserRole"
+                    "$ref": "#/definitions/github_com_buzyka_imlate_internal_domain_entity.UserRole"
                 },
                 "surname": {
                     "type": "string"
@@ -895,7 +1093,7 @@ const docTemplate = `{
                 }
             }
         },
-        "adminapi.CreateVisitorRequest": {
+        "internal_isb_adminapi.CreateVisitorRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -924,15 +1122,7 @@ const docTemplate = `{
                 }
             }
         },
-        "adminapi.DashboardResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "adminapi.ErrorResponse": {
+        "internal_isb_adminapi.ErrorResponse": {
             "type": "object",
             "properties": {
                 "error": {
@@ -940,22 +1130,7 @@ const docTemplate = `{
                 }
             }
         },
-        "adminapi.LoginRequest": {
-            "type": "object",
-            "required": [
-                "password",
-                "username"
-            ],
-            "properties": {
-                "password": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "adminapi.MessageResponse": {
+        "internal_isb_adminapi.MessageResponse": {
             "type": "object",
             "properties": {
                 "message": {
@@ -963,18 +1138,32 @@ const docTemplate = `{
                 }
             }
         },
-        "adminapi.RefreshRequest": {
+        "internal_isb_adminapi.ReportsVisitsResponse": {
             "type": "object",
-            "required": [
-                "refresh_token"
-            ],
             "properties": {
-                "refresh_token": {
-                    "type": "string"
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_buzyka_imlate_internal_usecase_adminapi.ReportsVisitsResponseItem"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "description": "total matching records count for the given filters (without pagination)",
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "description": "total pages count based on total records and page size",
+                    "type": "integer"
                 }
             }
         },
-        "adminapi.UpdatePasswordRequest": {
+        "internal_isb_adminapi.UpdatePasswordRequest": {
             "type": "object",
             "required": [
                 "password"
@@ -986,7 +1175,7 @@ const docTemplate = `{
                 }
             }
         },
-        "adminapi.UpdateUserRequest": {
+        "internal_isb_adminapi.UpdateUserRequest": {
             "type": "object",
             "required": [
                 "name",
@@ -1001,14 +1190,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "role": {
-                    "$ref": "#/definitions/entity.UserRole"
+                    "$ref": "#/definitions/github_com_buzyka_imlate_internal_domain_entity.UserRole"
                 },
                 "surname": {
                     "type": "string"
                 }
             }
         },
-        "adminapi.UpdateVisitorRequest": {
+        "internal_isb_adminapi.UpdateVisitorRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -1037,7 +1226,7 @@ const docTemplate = `{
                 }
             }
         },
-        "adminapi.VisitorResponse": {
+        "internal_isb_adminapi.VisitorResponse": {
             "type": "object",
             "properties": {
                 "deleted_at": {
@@ -1092,49 +1281,6 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
-        },
-        "entity.User": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "deleted_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "is_active": {
-                    "type": "boolean"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "role": {
-                    "$ref": "#/definitions/entity.UserRole"
-                },
-                "surname": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "entity.UserRole": {
-            "type": "string",
-            "enum": [
-                "admin",
-                "terminal"
-            ],
-            "x-enum-varnames": [
-                "UserRoleAdmin",
-                "UserRoleTerminal"
-            ]
         }
     },
     "securityDefinitions": {

@@ -11,9 +11,10 @@ import (
 )
 
 type AdminAPI struct {
-	UserRepo    provider.UserRepository    `container:"type"`
-	VisitorRepo provider.VisitorRepository `container:"type"`
-	Config      *config.Config             `container:"type"`
+	UserRepo         provider.UserRepository         `container:"type"`
+	VisitorRepo      provider.VisitorRepository      `container:"type"`
+	VisitorTrackRepo provider.VisitorTrackRepository `container:"type"`
+	Config           *config.Config                  `container:"type"`
 }
 
 func (a *AdminAPI) GetCurrentUser(userID uuid.UUID) (*entity.User, error) {
