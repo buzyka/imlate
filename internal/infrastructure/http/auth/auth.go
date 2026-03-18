@@ -69,8 +69,8 @@ func (a *AuthManager) initParams() *gjwt.GinJWTMiddleware {
 	return &gjwt.GinJWTMiddleware{
 		Realm:       "admin zone",
 		Key:         []byte(a.Config.AuthTokenSecret),
-		Timeout:     time.Minute * 3,
-		MaxRefresh:  time.Minute * 3,
+		Timeout:     time.Minute * 30,
+		MaxRefresh:  time.Minute * 30,
 		IdentityKey: identityKey,
 		PayloadFunc: a.payloadFunc(),
 

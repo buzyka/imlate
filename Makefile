@@ -1,4 +1,4 @@
-.PHONY: help start stop restart status logs install-mod build-app got gotc gol golf migrate-up migrate-down mysql clean rebuild restart-app
+.PHONY: help start stop restart status logs install-mod build-app got gotc gol golf migrate-up migrate-down mysql clean rebuild restart-app swag
 
 # Default target
 help:
@@ -71,6 +71,10 @@ rebuild:
 
 restart-app:
 	@./docker/docker-dev.sh restart-app
+
+# Swagger
+swag:
+	swag init -g cmd/app/main.go -o docs --parseDependency --parseInternal
 
 # Shell access
 shell:

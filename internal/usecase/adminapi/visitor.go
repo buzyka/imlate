@@ -189,6 +189,7 @@ func (a *AdminAPI) AddVisitorKey(visitorID int32, key string) error {
 	if key == "" {
 		return fmt.Errorf("key cannot be empty")
 	}
+	key = strings.ToUpper(key)
 
 	if err := a.VisitorRepo.AddKeyToVisitor(visitor, key); err != nil {
 		return fmt.Errorf("failed to add key: %w", err)

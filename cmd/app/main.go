@@ -165,6 +165,8 @@ func registerAdminRoutes(r *gin.Engine) {
 	adminGroup.POST("/visitors/:id/key", adminController.AddVisitorKeyHandler())
 	adminGroup.DELETE("/visitors/:id/key/:key", adminController.RemoveVisitorKeyHandler())
 	adminGroup.DELETE("/visitors/:id", adminController.DeleteVisitorHandler())
+
+	adminGroup.GET("/reports/visits", adminController.VisitsReportsHandler())
 }
 
 // adminLoginHandler godoc
