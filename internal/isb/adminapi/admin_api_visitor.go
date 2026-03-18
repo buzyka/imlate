@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,12 +16,6 @@ var openUploadedFile = func(fileHeader *multipart.FileHeader) (multipart.File, e
 }
 
 var readUploadedFile = io.ReadAll
-
-// VisitorResponse is a Swagger-visible alias for entity.Visitor.
-type VisitorResponse = entity.Visitor
-
-// VisitorListResponse is a Swagger-visible alias for visitor list payloads.
-type VisitorListResponse = []entity.Visitor
 
 type CreateVisitorRequest struct {
 	Name      string   `json:"name" binding:"required"`

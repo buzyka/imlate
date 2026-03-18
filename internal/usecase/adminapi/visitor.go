@@ -10,7 +10,66 @@ import (
 	"github.com/buzyka/imlate/internal/domain/entity"
 )
 
-func (a *AdminAPI) GetAllVisitors() ([]*entity.Visitor, error) {
+type VisitorResponse struct {
+	Id                int32      `json:"id"`
+	Name              string     `json:"name"`
+	Surname           string     `json:"surname"`
+	FullName          string     `json:"full_name"`
+	Email             string     `json:"email"`
+	IsStudent         bool       `json:"is_student"`
+	Grade             *int       `json:"grade"`
+	Image             string     `json:"image"`
+	ErpID             int64      `json:"isams_id"`
+	ErpSchoolID       string     `json:"isams_school_id"`
+	ErpYearGroupID    int32      `json:"isams_year_group_id"`
+	ErpDivisions      []int32    `json:"isams_divisions"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+	DeletedAt         *time.Time `json:"deleted_at,omitempty"`
+	Keys              []string   `json:"keys"`
+	ImportedFromISAMS bool       `json:"imported_from_isams"`
+}
+
+func newVisitorResponse(visitor *entity.Visitor) *VisitorResponse {
+	if visitor == nil {
+		return nil
+	}
+
+	keys := make([]string, len(visitor.Keys))
+	copy(keys, visitor.Keys)
+
+	divisions := make([]int32, len(visitor.ErpDivisions))
+	copy(divisions, visitor.ErpDivisions)
+
+	return &VisitorResponse{
+		Id:                visitor.Id,
+		Name:              visitor.Name,
+		Surname:           visitor.Surname,
+		FullName:          visitor.FullName,
+		Email:             visitor.Email,
+		IsStudent:         visitor.IsStudent,
+		Grade:             visitor.Grade,
+		Image:             visitor.Image,
+		ErpID:             visitor.ErpID,
+		ErpSchoolID:       visitor.ErpSchoolID,
+		ErpYearGroupID:    visitor.ErpYearGroupID,
+		ErpDivisions:      divisions,
+		UpdatedAt:         visitor.UpdatedAt,
+		DeletedAt:         visitor.DeletedAt,
+		Keys:              keys,
+		ImportedFromISAMS: visitor.IsImportedFromISAMS(),
+	}
+}
+
+func newVisitorResponses(visitors []*entity.Visitor) []*VisitorResponse {
+	responses := make([]*VisitorResponse, 0, len(visitors))
+	for _, visitor := range visitors {
+		responses = append(responses, newVisitorResponse(visitor))
+	}
+
+	return responses
+}
+
+func (a *AdminAPI) GetAllVisitors() ([]*VisitorResponse, error) {
 	visitors, err := a.VisitorRepo.FindAll()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get visitors: %w", err)
@@ -24,10 +83,10 @@ func (a *AdminAPI) GetAllVisitors() ([]*entity.Visitor, error) {
 		v.Keys = keys
 	}
 
-	return visitors, nil
+	return newVisitorResponses(visitors), nil
 }
 
-func (a *AdminAPI) GetVisitor(id int32) (*entity.Visitor, error) {
+func (a *AdminAPI) GetVisitor(id int32) (*VisitorResponse, error) {
 	visitor, err := a.VisitorRepo.FindById(id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find visitor: %w", err)
@@ -42,10 +101,10 @@ func (a *AdminAPI) GetVisitor(id int32) (*entity.Visitor, error) {
 	}
 	visitor.Keys = keys
 
-	return visitor, nil
+	return newVisitorResponse(visitor), nil
 }
 
-func (a *AdminAPI) CreateVisitor(name, surname string, isStudent bool, grade *int, email string, keys []string) (*entity.Visitor, error) {
+func (a *AdminAPI) CreateVisitor(name, surname string, isStudent bool, grade *int, email string, keys []string) (*VisitorResponse, error) {
 	visitor := &entity.Visitor{
 		Name:      name,
 		Surname:   surname,
@@ -76,10 +135,10 @@ func (a *AdminAPI) CreateVisitor(name, surname string, isStudent bool, grade *in
 	}
 	visitor.Keys = savedKeys
 
-	return visitor, nil
+	return newVisitorResponse(visitor), nil
 }
 
-func (a *AdminAPI) UpdateVisitor(id int32, name, surname string, isStudent bool, grade *int, email string, keys []string) (*entity.Visitor, error) {
+func (a *AdminAPI) UpdateVisitor(id int32, name, surname string, isStudent bool, grade *int, email string, keys []string) (*VisitorResponse, error) {
 	visitor, err := a.VisitorRepo.FindById(id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find visitor: %w", err)
@@ -142,10 +201,10 @@ func (a *AdminAPI) UpdateVisitor(id int32, name, surname string, isStudent bool,
 	}
 	visitor.Keys = savedKeys
 
-	return visitor, nil
+	return newVisitorResponse(visitor), nil
 }
 
-func (a *AdminAPI) UploadVisitorImage(id int32, filename string, data []byte) (*entity.Visitor, error) {
+func (a *AdminAPI) UploadVisitorImage(id int32, filename string, data []byte) (*VisitorResponse, error) {
 	visitor, err := a.VisitorRepo.FindById(id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find visitor: %w", err)
@@ -173,7 +232,7 @@ func (a *AdminAPI) UploadVisitorImage(id int32, filename string, data []byte) (*
 	}
 
 	visitor.Image = imageURL
-	return visitor, nil
+	return newVisitorResponse(visitor), nil
 }
 
 func (a *AdminAPI) AddVisitorKey(visitorID int32, key string) error {
