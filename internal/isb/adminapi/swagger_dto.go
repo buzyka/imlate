@@ -1,5 +1,7 @@
 package adminapi
 
+import usecase "github.com/buzyka/imlate/internal/usecase/adminapi"
+
 // ErrorResponse is a shared error payload for admin handlers.
 type ErrorResponse struct {
 	Error string `json:"error"`
@@ -39,3 +41,9 @@ type LoginRequest struct {
 type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
+
+// VisitorResponse documents admin visitor payloads.
+type VisitorResponse = usecase.VisitorResponse
+
+// VisitorListResponse documents visitor list payloads.
+type VisitorListResponse = []usecase.VisitorResponse

@@ -35,6 +35,14 @@ type VisitDetails struct {
 	Key     string   `json:"key"`
 }
 
+func (v *Visitor) IsImportedFromISAMS() bool {
+	if v == nil {
+		return false
+	}
+
+	return v.ErpID != 0 && v.ErpSchoolID != ""
+}
+
 func (v *Visitor) GetSyncHash() uint64 {
 	if v.SyncHash == 0 {
 		v.SyncHash = v.calcSyncHash()
