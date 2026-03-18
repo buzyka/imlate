@@ -1,20 +1,42 @@
 basePath: /
 definitions:
-  adminapi.AddKeyRequest:
+  github_com_buzyka_imlate_internal_domain_entity.User:
     properties:
-      key:
+      created_at:
         type: string
-    required:
-    - key
+      deleted_at:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      role:
+        $ref: '#/definitions/github_com_buzyka_imlate_internal_domain_entity.UserRole'
+      surname:
+        type: string
+      updated_at:
+        type: string
+      username:
+        type: string
     type: object
-  adminapi.AuthErrorResponse:
+  github_com_buzyka_imlate_internal_domain_entity.UserRole:
+    enum:
+    - admin
+    - terminal
+    type: string
+    x-enum-varnames:
+    - UserRoleAdmin
+    - UserRoleTerminal
+  github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse:
     properties:
       code:
         type: integer
       message:
         type: string
     type: object
-  adminapi.AuthTokenResponse:
+  github_com_buzyka_imlate_internal_isb_adminapi.AuthTokenResponse:
     properties:
       access_token:
         type: string
@@ -25,14 +47,68 @@ definitions:
       token_type:
         type: string
     type: object
-  adminapi.CreateUserRequest:
+  github_com_buzyka_imlate_internal_isb_adminapi.DashboardResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  github_com_buzyka_imlate_internal_isb_adminapi.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  github_com_buzyka_imlate_internal_isb_adminapi.RefreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  github_com_buzyka_imlate_internal_usecase_adminapi.ReportsVisitsResponseItem:
+    properties:
+      duration_minutes:
+        type: integer
+      is_student:
+        type: boolean
+      name:
+        type: string
+      sign_status:
+        type: string
+      signed_in:
+        type: string
+      signed_out:
+        type: string
+      surname:
+        type: string
+      visit_date:
+        type: string
+      visitor_id:
+        type: integer
+      visits_count:
+        type: integer
+      year_group:
+        type: integer
+    type: object
+  internal_isb_adminapi.AddKeyRequest:
+    properties:
+      key:
+        type: string
+    required:
+    - key
+    type: object
+  internal_isb_adminapi.CreateUserRequest:
     properties:
       name:
         type: string
       password:
         type: string
       role:
-        $ref: '#/definitions/entity.UserRole'
+        $ref: '#/definitions/github_com_buzyka_imlate_internal_domain_entity.UserRole'
       surname:
         type: string
       username:
@@ -44,7 +120,7 @@ definitions:
     - surname
     - username
     type: object
-  adminapi.CreateVisitorRequest:
+  internal_isb_adminapi.CreateVisitorRequest:
     properties:
       email:
         type: string
@@ -63,39 +139,34 @@ definitions:
     required:
     - name
     type: object
-  adminapi.DashboardResponse:
-    properties:
-      message:
-        type: string
-    type: object
-  adminapi.ErrorResponse:
+  internal_isb_adminapi.ErrorResponse:
     properties:
       error:
         type: string
     type: object
-  adminapi.LoginRequest:
-    properties:
-      password:
-        type: string
-      username:
-        type: string
-    required:
-    - password
-    - username
-    type: object
-  adminapi.MessageResponse:
+  internal_isb_adminapi.MessageResponse:
     properties:
       message:
         type: string
     type: object
-  adminapi.RefreshRequest:
+  internal_isb_adminapi.ReportsVisitsResponse:
     properties:
-      refresh_token:
-        type: string
-    required:
-    - refresh_token
+      data:
+        items:
+          $ref: '#/definitions/github_com_buzyka_imlate_internal_usecase_adminapi.ReportsVisitsResponseItem'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        description: total matching records count for the given filters (without pagination)
+        type: integer
+      total_pages:
+        description: total pages count based on total records and page size
+        type: integer
     type: object
-  adminapi.UpdatePasswordRequest:
+  internal_isb_adminapi.UpdatePasswordRequest:
     properties:
       password:
         minLength: 6
@@ -103,14 +174,14 @@ definitions:
     required:
     - password
     type: object
-  adminapi.UpdateUserRequest:
+  internal_isb_adminapi.UpdateUserRequest:
     properties:
       is_active:
         type: boolean
       name:
         type: string
       role:
-        $ref: '#/definitions/entity.UserRole'
+        $ref: '#/definitions/github_com_buzyka_imlate_internal_domain_entity.UserRole'
       surname:
         type: string
     required:
@@ -118,7 +189,7 @@ definitions:
     - role
     - surname
     type: object
-  adminapi.UpdateVisitorRequest:
+  internal_isb_adminapi.UpdateVisitorRequest:
     properties:
       email:
         type: string
@@ -137,7 +208,7 @@ definitions:
     required:
     - name
     type: object
-  adminapi.VisitorResponse:
+  internal_isb_adminapi.VisitorResponse:
     properties:
       deleted_at:
         type: string
@@ -174,35 +245,6 @@ definitions:
       updated_at:
         type: string
     type: object
-  entity.User:
-    properties:
-      created_at:
-        type: string
-      deleted_at:
-        type: string
-      id:
-        type: string
-      is_active:
-        type: boolean
-      name:
-        type: string
-      role:
-        $ref: '#/definitions/entity.UserRole'
-      surname:
-        type: string
-      updated_at:
-        type: string
-      username:
-        type: string
-    type: object
-  entity.UserRole:
-    enum:
-    - admin
-    - terminal
-    type: string
-    x-enum-varnames:
-    - UserRoleAdmin
-    - UserRoleTerminal
 info:
   contact:
     email: support@swagger.io
@@ -223,15 +265,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/entity.User'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_domain_entity.User'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Get current authenticated admin user
@@ -247,20 +289,75 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/adminapi.DashboardResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.DashboardResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/adminapi.AuthErrorResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/adminapi.AuthErrorResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Get admin dashboard greeting
       tags:
       - admin-dashboard
+  /admin-api/reports/visits:
+    get:
+      description: Returns paginated visitor attendance information aggregated per
+        visitor per day for a given date range.
+      parameters:
+      - description: Start date (YYYY-MM-DD, inclusive)
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: End date (YYYY-MM-DD, inclusive)
+        in: query
+        name: to
+        required: true
+        type: string
+      - description: Filter by student flag
+        in: query
+        name: is_student
+        type: boolean
+      - description: Filter by year group
+        in: query
+        name: year_group
+        type: integer
+      - description: Filter by sign status (not_signed, signed_in, signed_out)
+        in: query
+        name: sign_status
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Records per page (default 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_isb_adminapi.ReportsVisitsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get visitor attendance report
+      tags:
+      - admin-reports
   /admin-api/users:
     get:
       description: Returns all users available in the administration area.
@@ -271,12 +368,12 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/entity.User'
+              $ref: '#/definitions/github_com_buzyka_imlate_internal_domain_entity.User'
             type: array
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: List admin users
@@ -292,18 +389,18 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/adminapi.CreateUserRequest'
+          $ref: '#/definitions/internal_isb_adminapi.CreateUserRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/entity.User'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_domain_entity.User'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Create admin user
@@ -324,15 +421,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/adminapi.MessageResponse'
+            $ref: '#/definitions/internal_isb_adminapi.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Delete admin user
@@ -352,15 +449,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/entity.User'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_domain_entity.User'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Get user by ID
@@ -381,18 +478,18 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/adminapi.UpdateUserRequest'
+          $ref: '#/definitions/internal_isb_adminapi.UpdateUserRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/entity.User'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_domain_entity.User'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Update admin user
@@ -414,18 +511,18 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/adminapi.UpdatePasswordRequest'
+          $ref: '#/definitions/internal_isb_adminapi.UpdatePasswordRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/adminapi.MessageResponse'
+            $ref: '#/definitions/internal_isb_adminapi.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Update user password
@@ -441,12 +538,12 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/adminapi.VisitorResponse'
+              $ref: '#/definitions/internal_isb_adminapi.VisitorResponse'
             type: array
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: List visitors
@@ -462,18 +559,18 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/adminapi.CreateVisitorRequest'
+          $ref: '#/definitions/internal_isb_adminapi.CreateVisitorRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/adminapi.VisitorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.VisitorResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Create visitor
@@ -494,15 +591,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/adminapi.MessageResponse'
+            $ref: '#/definitions/internal_isb_adminapi.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Delete visitor
@@ -522,15 +619,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/adminapi.VisitorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.VisitorResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Get visitor by ID
@@ -551,18 +648,18 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/adminapi.UpdateVisitorRequest'
+          $ref: '#/definitions/internal_isb_adminapi.UpdateVisitorRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/adminapi.VisitorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.VisitorResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Update visitor
@@ -590,15 +687,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/adminapi.VisitorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.VisitorResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Upload visitor image
@@ -620,18 +717,18 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/adminapi.AddKeyRequest'
+          $ref: '#/definitions/internal_isb_adminapi.AddKeyRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/adminapi.MessageResponse'
+            $ref: '#/definitions/internal_isb_adminapi.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Add visitor key
@@ -657,11 +754,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/adminapi.MessageResponse'
+            $ref: '#/definitions/internal_isb_adminapi.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Remove visitor key
@@ -680,22 +777,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/adminapi.LoginRequest'
+          $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.LoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/adminapi.AuthTokenResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthTokenResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/adminapi.AuthErrorResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/adminapi.AuthErrorResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse'
       summary: Login for admin API
       tags:
       - auth
@@ -710,22 +807,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/adminapi.RefreshRequest'
+          $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.RefreshRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/adminapi.AuthTokenResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthTokenResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/adminapi.AuthErrorResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/adminapi.AuthErrorResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse'
       summary: Refresh admin JWT token
       tags:
       - auth
