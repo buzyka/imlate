@@ -16,6 +16,7 @@ Guide for agentic coding tools working in this repository.
 - Setup/build/run:
   - `make install-mod`
   - `make build-app`
+  - `make dist`
   - `make start-app`
 - Environment helpers:
   - `make start`, `make stop`, `make restart`, `make restart-app`, `make status`
@@ -24,6 +25,10 @@ Guide for agentic coding tools working in this repository.
   - `go mod download`
   - `go build -o tracker cmd/app/main.go`
   - `go run cmd/app/main.go`
+- Distribution build:
+  - `make dist` builds `dist/app` inside the app container for `linux/amd64` by default.
+  - Override target platform with `make dist GOOS=linux GOARCH=arm64`.
+  - The command recreates `dist/`, sets executable permissions on `dist/app`, and copies `migrations/` plus `website/`.
 
 ## Lint Commands
 - `make gol` -> `golangci-lint run`
@@ -58,7 +63,7 @@ Guide for agentic coding tools working in this repository.
 - Mixed DB engine naming exists (`mysql`, `sqlite`, `sqlite3`); follow nearby code.
 - Auth config is validated on startup: `AUTH_TOKEN_SECRET` must be at least 32 characters.
 - `ERP_INTEGRATION_ENABLED=false` disables ERP-dependent behavior even if other ERP vars are set.
-- Do not commit local artifacts: `.env`, `tracker`, `coverage.out`, `coverage-report.out`.
+- Do not commit local artifacts: `.env`, `tracker`, `dist/`, `coverage.out`, `coverage-report.out`.
 
 ## Style Guidelines
 - Formatting and imports:
