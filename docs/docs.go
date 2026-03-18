@@ -1247,6 +1247,9 @@ const docTemplate = `{
                 "image": {
                     "type": "string"
                 },
+                "imported_from_isams": {
+                    "type": "boolean"
+                },
                 "is_student": {
                     "type": "boolean"
                 },
