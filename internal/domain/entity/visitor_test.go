@@ -70,3 +70,50 @@ func TestVisitor_GetSyncHash(t *testing.T) {
 	}
 	assert.NotEqual(t, v1.GetSyncHash(), v7.GetSyncHash(), "Hash should change when ErpDivisions length changes")
 }
+
+func TestVisitor_IsImportedFromISAMS(t *testing.T) {
+	tests := []struct {
+		name     string
+		visitor  *Visitor
+		expected bool
+	}{
+		{
+			name:     "nil visitor",
+			visitor:  nil,
+			expected: false,
+		},
+		{
+			name: "has ERP id and school id",
+			visitor: &Visitor{
+				ErpID:       42,
+				ErpSchoolID: "S42",
+			},
+			expected: true,
+		},
+		{
+			name: "missing ERP id",
+			visitor: &Visitor{
+				ErpSchoolID: "S42",
+			},
+			expected: false,
+		},
+		{
+			name: "missing school id",
+			visitor: &Visitor{
+				ErpID: 42,
+			},
+			expected: false,
+		},
+		{
+			name:     "missing both ERP fields",
+			visitor:  &Visitor{},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.visitor.IsImportedFromISAMS())
+		})
+	}
+}

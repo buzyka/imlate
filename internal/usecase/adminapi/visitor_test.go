@@ -30,7 +30,7 @@ func TestGetAllVisitors_Success(t *testing.T) {
 	api, mockRepo := newVisitorTestAPI()
 
 	visitors := []*entity.Visitor{
-		{Id: 1, Name: "Alice", Surname: "Smith"},
+		{Id: 1, Name: "Alice", Surname: "Smith", ErpID: 1001, ErpSchoolID: "S1001"},
 		{Id: 2, Name: "Bob", Surname: "Jones"},
 	}
 	mockRepo.On("FindAll", []provider.VisitorFilterOption(nil)).Return(visitors, nil)
@@ -43,6 +43,8 @@ func TestGetAllVisitors_Success(t *testing.T) {
 	assert.Len(t, result, 2)
 	assert.Equal(t, []string{"KEY1"}, result[0].Keys)
 	assert.Equal(t, []string{"KEY2", "KEY3"}, result[1].Keys)
+	assert.True(t, result[0].ImportedFromISAMS)
+	assert.False(t, result[1].ImportedFromISAMS)
 	mockRepo.AssertExpectations(t)
 }
 
@@ -61,7 +63,7 @@ func TestGetAllVisitors_Error(t *testing.T) {
 func TestGetVisitor_Success(t *testing.T) {
 	api, mockRepo := newVisitorTestAPI()
 
-	visitor := &entity.Visitor{Id: 1, Name: "Alice", Surname: "Smith"}
+	visitor := &entity.Visitor{Id: 1, Name: "Alice", Surname: "Smith", ErpID: 1001, ErpSchoolID: "S1001"}
 	mockRepo.On("FindById", int32(1)).Return(visitor, nil)
 	mockRepo.On("FindKeysByVisitorId", int32(1)).Return([]string{"KEY1"}, nil)
 
@@ -70,6 +72,7 @@ func TestGetVisitor_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "Alice", result.Name)
 	assert.Equal(t, []string{"KEY1"}, result.Keys)
+	assert.True(t, result.ImportedFromISAMS)
 	mockRepo.AssertExpectations(t)
 }
 
@@ -105,6 +108,7 @@ func TestCreateVisitor_Success(t *testing.T) {
 	assert.True(t, result.IsStudent)
 	assert.Equal(t, intPtr(5), result.Grade)
 	assert.Equal(t, []string{"KEY1"}, result.Keys)
+	assert.False(t, result.ImportedFromISAMS)
 	mockRepo.AssertExpectations(t)
 }
 
@@ -121,6 +125,7 @@ func TestCreateVisitor_IgnoreEmptyTrimmedKeys(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, int32(12), result.Id)
+	assert.False(t, result.ImportedFromISAMS)
 	mockRepo.AssertExpectations(t)
 }
 
@@ -150,6 +155,7 @@ func TestCreateVisitor_NoKeys(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, int32(11), result.Id)
 	assert.Equal(t, []string{}, result.Keys)
+	assert.False(t, result.ImportedFromISAMS)
 	mockRepo.AssertExpectations(t)
 }
 
@@ -171,6 +177,7 @@ func TestUpdateVisitor_Success(t *testing.T) {
 	assert.Equal(t, true, result.IsStudent)
 	assert.Equal(t, intPtr(3), result.Grade)
 	assert.Equal(t, []string{"NEW_KEY"}, result.Keys)
+	assert.False(t, result.ImportedFromISAMS)
 	mockRepo.AssertExpectations(t)
 }
 
@@ -283,4 +290,33 @@ func TestUploadVisitorImage_VisitorNotFound(t *testing.T) {
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "visitor not found")
 	mockRepo.AssertExpectations(t)
+}
+
+func TestNewVisitorResponse(t *testing.T) {
+	assert.Nil(t, newVisitorResponse(nil))
+
+	grade := 9
+	visitor := &entity.Visitor{
+		Id:           7,
+		Name:         "Alice",
+		Surname:      "Smith",
+		Email:        "alice@example.com",
+		IsStudent:    true,
+		Grade:        &grade,
+		Image:        "/img/alice.jpg",
+		ErpID:        555,
+		ErpSchoolID:  "S555",
+		ErpDivisions: []int32{1, 2},
+		Keys:         []string{"KEY1", "KEY2"},
+	}
+
+	result := newVisitorResponse(visitor)
+	list := newVisitorResponses([]*entity.Visitor{visitor})
+
+	assert.NotNil(t, result)
+	assert.True(t, result.ImportedFromISAMS)
+	assert.Equal(t, []string{"KEY1", "KEY2"}, result.Keys)
+	assert.Equal(t, []int32{1, 2}, result.ErpDivisions)
+	assert.Len(t, list, 1)
+	assert.Equal(t, result, list[0])
 }

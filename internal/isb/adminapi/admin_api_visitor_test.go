@@ -43,7 +43,7 @@ func TestListVisitorsHandler_Success(t *testing.T) {
 	c.Request = httptest.NewRequest(http.MethodGet, "/admin-api/visitors", nil)
 
 	visitors := []*entity.Visitor{
-		{Id: 1, Name: "Alice", Surname: "Smith"},
+		{Id: 1, Name: "Alice", Surname: "Smith", ErpID: 1001, ErpSchoolID: "S1001"},
 		{Id: 2, Name: "Bob", Surname: "Jones"},
 	}
 	mockRepo.On("FindAll", []provider.VisitorFilterOption(nil)).Return(visitors, nil)
@@ -53,10 +53,12 @@ func TestListVisitorsHandler_Success(t *testing.T) {
 	controller.ListVisitorsHandler()(c)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	var result []entity.Visitor
+	var result []usecase.VisitorResponse
 	err := json.Unmarshal(w.Body.Bytes(), &result)
 	assert.NoError(t, err)
 	assert.Len(t, result, 2)
+	assert.True(t, result[0].ImportedFromISAMS)
+	assert.False(t, result[1].ImportedFromISAMS)
 	mockRepo.AssertExpectations(t)
 }
 
@@ -81,17 +83,18 @@ func TestGetVisitorHandler_Success(t *testing.T) {
 	c.Request = httptest.NewRequest(http.MethodGet, "/admin-api/visitors/1", nil)
 	c.Params = gin.Params{{Key: "id", Value: "1"}}
 
-	visitor := &entity.Visitor{Id: 1, Name: "Alice", Surname: "Smith"}
+	visitor := &entity.Visitor{Id: 1, Name: "Alice", Surname: "Smith", ErpID: 1001, ErpSchoolID: "S1001"}
 	mockRepo.On("FindById", int32(1)).Return(visitor, nil)
 	mockRepo.On("FindKeysByVisitorId", int32(1)).Return([]string{"KEY1"}, nil)
 
 	controller.GetVisitorHandler()(c)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	var result entity.Visitor
+	var result usecase.VisitorResponse
 	err := json.Unmarshal(w.Body.Bytes(), &result)
 	assert.NoError(t, err)
 	assert.Equal(t, "Alice", result.Name)
+	assert.True(t, result.ImportedFromISAMS)
 	mockRepo.AssertExpectations(t)
 }
 
@@ -147,11 +150,12 @@ func TestCreateVisitorHandler_Success(t *testing.T) {
 	controller.CreateVisitorHandler()(c)
 
 	assert.Equal(t, http.StatusCreated, w.Code)
-	var result entity.Visitor
+	var result usecase.VisitorResponse
 	err := json.Unmarshal(w.Body.Bytes(), &result)
 	assert.NoError(t, err)
 	assert.Equal(t, int32(10), result.Id)
 	assert.Equal(t, "Alice", result.Name)
+	assert.False(t, result.ImportedFromISAMS)
 	mockRepo.AssertExpectations(t)
 }
 
@@ -214,10 +218,11 @@ func TestUpdateVisitorHandler_Success(t *testing.T) {
 	controller.UpdateVisitorHandler()(c)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	var result entity.Visitor
+	var result usecase.VisitorResponse
 	err := json.Unmarshal(w.Body.Bytes(), &result)
 	assert.NoError(t, err)
 	assert.Equal(t, "Updated", result.Name)
+	assert.False(t, result.ImportedFromISAMS)
 	mockRepo.AssertExpectations(t)
 }
 
