@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"path/filepath"
 
 	gjwt "github.com/appleboy/gin-jwt/v3"
 	_ "github.com/buzyka/imlate/docs"
@@ -42,7 +43,9 @@ import (
 // @description Protected admin routes require admin role.
 func main() {
 	envFiles := []string{".env"}
-	if rootPath, err := util.GetRootPath(); err == nil {
+	rootPath := "."
+	if rp, err := util.GetRootPath(); err == nil {
+		rootPath = rp
 		if util.FileExists(rootPath + "/.env") {
 			envFiles = append(envFiles, rootPath+"/.env")
 		}
@@ -70,8 +73,8 @@ func main() {
 	// Start Gin server
 	r := gin.Default()
 
-	r.Static("/assets", "./website/assets")
-	r.Static("/output", "./output")
+	r.Static("/assets", filepath.Join(rootPath, "website", "assets"))
+	r.Static("/output", filepath.Join(rootPath, "output"))
 
 	// Define gita simple GET route
 	r.GET("/ping", func(ctx *gin.Context) {
@@ -81,15 +84,15 @@ func main() {
 	})
 
 	r.GET("/", func(ctx *gin.Context) {
-		ctx.File("website/reader.html")
+		ctx.File(filepath.Join(rootPath, "website", "reader.html"))
 	})
 
 	r.GET("/manual", func(ctx *gin.Context) {
-		ctx.File("website/index.html")
+		ctx.File(filepath.Join(rootPath, "website", "index.html"))
 	})
 
 	r.GET("/add", func(ctx *gin.Context) {
-		ctx.File("website/add-key.html")
+		ctx.File(filepath.Join(rootPath, "website", "add-key.html"))
 	})
 
 	// Add Routes for swagger documentation
@@ -97,14 +100,14 @@ func main() {
 
 	// administration panel routes
 	adminHandler := func(ctx *gin.Context) {
-		ctx.File("website/admin/index.html")
+		ctx.File(filepath.Join(rootPath, "website", "admin", "index.html"))
 	}
 	r.GET("/admin", adminHandler)
 	r.GET("/admin/users", adminHandler)
 	r.GET("/admin/admin-users", adminHandler)
 	r.GET("/admin/login", adminHandler)
 
-	r.Static("/admin/assets", "./website/admin/assets")
+	r.Static("/admin/assets", filepath.Join(rootPath, "website", "admin", "assets"))
 
 	searchController := &search.SearchController{}
 	container.MustFill(container.Global, searchController)

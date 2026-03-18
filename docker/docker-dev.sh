@@ -87,6 +87,18 @@ build_app() {
     print_success "Application built successfully"
 }
 
+# Build distribution bundle
+dist() {
+    local target_goos="${1:-linux}"
+    local target_goarch="${2:-amd64}"
+    local go_bin="/usr/local/go/bin/go"
+
+    print_info "Building distribution for ${target_goos}/${target_goarch}..."
+    check_docker
+    exec_app bash -lc "mkdir -p /app/dist && rm -rf /app/dist/* && GOOS=${target_goos} GOARCH=${target_goarch} ${go_bin} build -o /app/dist/app cmd/app/main.go && chmod 755 /app/dist/app && cp -R /app/migrations /app/dist/migrations && cp -R /app/website /app/dist/website"
+    print_success "Distribution bundle created in dist/"
+}
+
 # Run golangci-lint
 gol() {
     print_info "Running golangci-lint..."
@@ -194,6 +206,7 @@ Commands:
   # Build & Run
   install-mod        Install Go modules
   build-app          Build the application
+  dist [GOOS GOARCH] Build distribution bundle
   run-app            Run the application
   
   # Testing & Linting
@@ -219,6 +232,7 @@ Commands:
 Examples:
   $0 start           # Start the development environment
   $0 got             # Run tests
+  $0 dist            # Build dist/app for linux/amd64
   $0 logs app        # View application logs
   $0 exec bash       # Open a bash shell in the app container
 
@@ -247,6 +261,9 @@ case "$1" in
         ;;
     build-app)
         build_app
+        ;;
+    dist)
+        dist "$2" "$3"
         ;;
     run-app)
         run_app

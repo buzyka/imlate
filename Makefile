@@ -1,4 +1,4 @@
-.PHONY: help start stop restart status logs install-mod build-app got gotc gol golf migrate-up migrate-down mysql clean rebuild restart-app swag
+.PHONY: help start stop restart status logs install-mod build-app dist got gotc gol golf migrate-up migrate-down mysql clean rebuild restart-app swag
 
 # Default target
 help:
@@ -32,6 +32,9 @@ install-mod:
 
 build-app:
 	@./docker/docker-dev.sh build-app
+
+dist:
+	@./docker/docker-dev.sh dist "$(GOOS)" "$(GOARCH)"
 
 start-app:
 	@./docker/docker-dev.sh run-app
