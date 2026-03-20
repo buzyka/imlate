@@ -40,7 +40,7 @@ func TestStore_Success(t *testing.T) {
 	expectedTime := time.Now()
 
 	mock.ExpectExec("INSERT INTO track").
-		WithArgs(int32(123), strPtr("KEY123"), true, nil, nil).
+		WithArgs(int32(123), "KEY123", true, nil, nil).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	rows := sqlmock.NewRows([]string{"id", "visitor_id", "key_id", "sign_in", "admin_id", "description", "created_at"}).
@@ -78,7 +78,7 @@ func TestStore_InsertError(t *testing.T) {
 
 	expectedError := errors.New("insert failed")
 	mock.ExpectExec("INSERT INTO track").
-		WithArgs(int32(123), strPtr("KEY123"), true, nil, nil).
+		WithArgs(int32(123), "KEY123", true, nil, nil).
 		WillReturnError(expectedError)
 
 	result, err := repo.Store(visitTrack)
@@ -104,7 +104,7 @@ func TestStore_LastInsertIdError(t *testing.T) {
 
 	expectedError := errors.New("last insert id error")
 	mock.ExpectExec("INSERT INTO track").
-		WithArgs(int32(123), strPtr("KEY123"), true, nil, nil).
+		WithArgs(int32(123), "KEY123", true, nil, nil).
 		WillReturnResult(sqlmock.NewErrorResult(expectedError))
 
 	result, err := repo.Store(visitTrack)
@@ -136,7 +136,7 @@ func TestStore_GetByIdError(t *testing.T) {
 	}
 
 	mock.ExpectExec("INSERT INTO track").
-		WithArgs(int32(123), strPtr("KEY123"), true, nil, nil).
+		WithArgs(int32(123), "KEY123", true, nil, nil).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	expectedError := errors.New("query failed")
@@ -404,7 +404,7 @@ func TestStore_SignedInFalse(t *testing.T) {
 	expectedTime := time.Now()
 
 	mock.ExpectExec("INSERT INTO track").
-		WithArgs(int32(789), strPtr("KEYOUT"), false, nil, nil).
+		WithArgs(int32(789), "KEYOUT", false, nil, nil).
 		WillReturnResult(sqlmock.NewResult(10, 1))
 
 	rows := sqlmock.NewRows([]string{"id", "visitor_id", "key_id", "sign_in", "admin_id", "description", "created_at"}).
@@ -450,7 +450,7 @@ func TestStore_WithAdminIDAndDescription(t *testing.T) {
 	expectedTime := time.Now()
 
 	mock.ExpectExec("INSERT INTO track").
-		WithArgs(int32(123), strPtr("KEY123"), true, adminID.String(), &desc).
+		WithArgs(int32(123), "KEY123", true, adminID.String(), &desc).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	rows := sqlmock.NewRows([]string{"id", "visitor_id", "key_id", "sign_in", "admin_id", "description", "created_at"}).
