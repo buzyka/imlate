@@ -15,7 +15,6 @@ import (
 	"github.com/buzyka/imlate/internal/isb/adminapi"
 	"github.com/buzyka/imlate/internal/isb/search"
 	"github.com/buzyka/imlate/internal/isb/tracker"
-	"github.com/buzyka/imlate/internal/isb/visitor"
 	"github.com/gin-gonic/gin"
 	"github.com/golobby/container/v3"
 	"github.com/subosito/gotenv"
@@ -87,14 +86,6 @@ func main() {
 		ctx.File(filepath.Join(rootPath, "website", "reader.html"))
 	})
 
-	r.GET("/manual", func(ctx *gin.Context) {
-		ctx.File(filepath.Join(rootPath, "website", "index.html"))
-	})
-
-	r.GET("/add", func(ctx *gin.Context) {
-		ctx.File(filepath.Join(rootPath, "website", "add-key.html"))
-	})
-
 	// Add Routes for swagger documentation
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 
@@ -113,15 +104,11 @@ func main() {
 	container.MustFill(container.Global, searchController)
 	r.GET("/search/:id", searchController.SearchHandler())
 
-	apiRouteGroup := r.Group("/api")
 	trackerController := &tracker.TrackerController{}
 	container.MustFill(container.Global, trackerController)
 	r.POST("/change-time", trackerController.ChangeTimeHandler())
 	r.POST("/track", trackerController.TrackHandler())
 	r.POST("/find-and-track", trackerController.FindAndTrackHandler())
-	visitorController := &visitor.VisitorController{}
-	container.MustFill(container.Global, visitorController)
-	apiRouteGroup.PATCH("/add-key", visitorController.AddKeyHandler())
 
 	registerAdminRoutes(r)
 
@@ -170,6 +157,7 @@ func registerAdminRoutes(r *gin.Engine) {
 	adminGroup.DELETE("/visitors/:id", adminController.DeleteVisitorHandler())
 
 	adminGroup.GET("/reports/visits", adminController.VisitsReportsHandler())
+	adminGroup.POST("/track/visit", adminController.ManualTrackHandler())
 }
 
 // adminLoginHandler godoc

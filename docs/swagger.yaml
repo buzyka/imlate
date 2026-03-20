@@ -29,6 +29,43 @@ definitions:
     x-enum-varnames:
     - UserRoleAdmin
     - UserRoleTerminal
+  github_com_buzyka_imlate_internal_domain_entity.Visitor:
+    properties:
+      deleted_at:
+        type: string
+      email:
+        type: string
+      full_name:
+        type: string
+      grade:
+        type: integer
+      id:
+        type: integer
+      image:
+        type: string
+      is_student:
+        type: boolean
+      isams_divisions:
+        items:
+          type: integer
+        type: array
+      isams_id:
+        type: integer
+      isams_school_id:
+        type: string
+      isams_year_group_id:
+        type: integer
+      keys:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      surname:
+        type: string
+      updated_at:
+        type: string
+    type: object
   github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse:
     properties:
       code:
@@ -143,6 +180,26 @@ definitions:
     properties:
       error:
         type: string
+    type: object
+  internal_isb_adminapi.ManualTrackRequest:
+    properties:
+      description:
+        type: string
+      signed_in:
+        type: boolean
+      visitor_id:
+        type: integer
+    required:
+    - visitor_id
+    type: object
+  internal_isb_adminapi.ManualTrackResponse:
+    properties:
+      track_date:
+        type: string
+      track_type:
+        type: string
+      visitor:
+        $ref: '#/definitions/github_com_buzyka_imlate_internal_domain_entity.Visitor'
     type: object
   internal_isb_adminapi.MessageResponse:
     properties:
@@ -358,6 +415,48 @@ paths:
       summary: Get visitor attendance report
       tags:
       - admin-reports
+  /admin-api/track/visit:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Manually records a visitor sign-in/sign-out event on behalf of a visitor by an admin.
+        Used when a visitor forgot their key, lost it, or is otherwise unable to use it.
+      parameters:
+      - description: Track request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_isb_adminapi.ManualTrackRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_isb_adminapi.ManualTrackResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Manual visitor track
+      tags:
+      - admin-tracking
   /admin-api/users:
     get:
       description: Returns all users available in the administration area.
