@@ -51,7 +51,7 @@ func (ac *AdminAPIController) ManualTrackHandler() gin.HandlerFunc {
 			return
 		}
 
-		var req ManualTrackRequest
+		req := ManualTrackRequest{SignedIn: true}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return

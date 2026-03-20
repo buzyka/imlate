@@ -16,11 +16,15 @@ import (
 
 
 
+// Request defines the payload for internal tracker endpoints (/track, /find-and-track).
+// AdminID identifies the admin user (with role "terminal") operating the physical
+// trackpoint device that sends these requests. The value is stored in the track.admin_id
+// column and is used for audit purposes to know which terminal recorded the visit.
 type Request struct {
-	VisitorID    int32   `json:"visitor_id"`
-	VisitKey     string  `json:"visit_key"`
-	SignedIn     bool    `json:"signed_in"`
-	TrackpointID *string `json:"trackpoint_id"`
+	VisitorID int32   `json:"visitor_id"`
+	VisitKey  string  `json:"visit_key"`
+	SignedIn  bool    `json:"signed_in"`
+	AdminID   *string `json:"admin_id"`
 }
 
 type TrackerController struct {
@@ -50,10 +54,15 @@ func (tc *TrackerController) TrackHandler() gin.HandlerFunc {
 			VisitKey:  &Request.VisitKey,
 			SignedIn:  Request.SignedIn,
 		}
-		if Request.TrackpointID != nil {
-			parsed, pErr := uuid.Parse(*Request.TrackpointID)
+		if Request.AdminID != nil {
+			parsed, pErr := uuid.Parse(*Request.AdminID)
 			if pErr == nil {
 				track.AdminID = &parsed
+			} else {
+				ctx.JSON(http.StatusBadRequest, gin.H{
+					"error": fmt.Sprintf("invalid admin_id: must be a valid UUID, got %q", *Request.AdminID),
+				})
+				return
 			}
 		}
 		track.Visitor, err = tc.VisitorRepository.FindById(Request.VisitorID)
@@ -94,10 +103,15 @@ func (tc *TrackerController) FindAndTrackHandler() gin.HandlerFunc {
 			VisitKey: &Request.VisitKey,
 			SignedIn: Request.SignedIn,
 		}
-		if Request.TrackpointID != nil {
-			parsed, pErr := uuid.Parse(*Request.TrackpointID)
+		if Request.AdminID != nil {
+			parsed, pErr := uuid.Parse(*Request.AdminID)
 			if pErr == nil {
 				track.AdminID = &parsed
+			} else {
+				ctx.JSON(http.StatusBadRequest, gin.H{
+					"error": fmt.Sprintf("invalid admin_id: must be a valid UUID, got %q", *Request.AdminID),
+				})
+				return
 			}
 		}
 		visitDetails, err := tc.VisitorRepository.FindByKey(Request.VisitKey)

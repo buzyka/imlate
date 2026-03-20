@@ -208,7 +208,9 @@ func TestTrackHandler_StoreError(t *testing.T) {
 	mockTrackRepo.AssertExpectations(t)
 }
 
-func TestTrackHandler_WithTrackpointID(t *testing.T) {
+// admin_id in the tracker Request identifies the admin user with role "terminal"
+// that operates the physical trackpoint device. It is stored in the track.admin_id column.
+func TestTrackHandler_WithAdminID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mockVisitorRepo := new(providertest.VisitorRepositoryMock)
 	mockTrackRepo := new(providertest.VisitorTrackRepositoryMock)
@@ -218,13 +220,13 @@ func TestTrackHandler_WithTrackpointID(t *testing.T) {
 	}
 
 	visitor := &entity.Visitor{Id: 123, Name: "Jane", Surname: "Smith"}
-	trackpointID := uuid.New().String()
+	terminalAdminID := uuid.New().String()
 
 	requestData := Request{
-		VisitorID:    123,
-		VisitKey:     "KEY456",
-		SignedIn:     true,
-		TrackpointID: &trackpointID,
+		VisitorID: 123,
+		VisitKey:  "KEY456",
+		SignedIn:  true,
+		AdminID:   &terminalAdminID,
 	}
 
 	createdAt := time.Now()
@@ -239,7 +241,7 @@ func TestTrackHandler_WithTrackpointID(t *testing.T) {
 
 	mockVisitorRepo.On("FindById", int32(123)).Return(visitor, nil)
 	mockTrackRepo.On("Store", mock.MatchedBy(func(vt *entity.VisitTrack) bool {
-		return vt.AdminID != nil && vt.AdminID.String() == trackpointID
+		return vt.AdminID != nil && vt.AdminID.String() == terminalAdminID
 	})).Return(storedTrack, nil)
 
 	w := httptest.NewRecorder()
@@ -256,7 +258,7 @@ func TestTrackHandler_WithTrackpointID(t *testing.T) {
 	mockTrackRepo.AssertExpectations(t)
 }
 
-func TestTrackHandler_WithInvalidTrackpointID(t *testing.T) {
+func TestTrackHandler_WithInvalidAdminID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mockVisitorRepo := new(providertest.VisitorRepositoryMock)
 	mockTrackRepo := new(providertest.VisitorTrackRepositoryMock)
@@ -265,30 +267,14 @@ func TestTrackHandler_WithInvalidTrackpointID(t *testing.T) {
 		TrackRepository:   mockTrackRepo,
 	}
 
-	visitor := &entity.Visitor{Id: 123, Name: "Jane", Surname: "Smith"}
 	invalidID := "not-a-uuid"
 
 	requestData := Request{
-		VisitorID:    123,
-		VisitKey:     "KEY456",
-		SignedIn:     true,
-		TrackpointID: &invalidID,
-	}
-
-	createdAt := time.Now()
-	storedTrack := &entity.VisitTrack{
-		Id:        1,
-		VisitorId: 123,
-		VisitKey:  strPtr("KEY456"),
+		VisitorID: 123,
+		VisitKey:  "KEY456",
 		SignedIn:  true,
-		Visitor:   visitor,
-		CreatedAt: createdAt,
+		AdminID:   &invalidID,
 	}
-
-	mockVisitorRepo.On("FindById", int32(123)).Return(visitor, nil)
-	mockTrackRepo.On("Store", mock.MatchedBy(func(vt *entity.VisitTrack) bool {
-		return vt.AdminID == nil
-	})).Return(storedTrack, nil)
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -299,12 +285,14 @@ func TestTrackHandler_WithInvalidTrackpointID(t *testing.T) {
 
 	controller.TrackHandler()(c)
 
-	assert.Equal(t, http.StatusOK, w.Code)
-	mockVisitorRepo.AssertExpectations(t)
-	mockTrackRepo.AssertExpectations(t)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var response map[string]string
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Contains(t, response["error"], "invalid admin_id")
 }
 
-func TestTrackHandler_WithNilTrackpointID(t *testing.T) {
+func TestTrackHandler_WithNilAdminID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mockVisitorRepo := new(providertest.VisitorRepositoryMock)
 	mockTrackRepo := new(providertest.VisitorTrackRepositoryMock)
@@ -762,7 +750,7 @@ func TestFindAndTrackHandler_CountFromStartOfDay(t *testing.T) {
 	mockTrackRepo.AssertExpectations(t)
 }
 
-func TestFindAndTrackHandler_WithTrackpointID(t *testing.T) {
+func TestFindAndTrackHandler_WithAdminID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mockVisitorRepo := new(providertest.VisitorRepositoryMock)
 	mockTrackRepo := new(providertest.VisitorTrackRepositoryMock)
@@ -773,12 +761,12 @@ func TestFindAndTrackHandler_WithTrackpointID(t *testing.T) {
 
 	visitor := &entity.Visitor{Id: 456, Name: "Bob", Surname: "Johnson"}
 	visitDetails := &entity.VisitDetails{Visitor: visitor, Key: "FIND123"}
-	trackpointID := uuid.New().String()
+	terminalAdminID := uuid.New().String()
 
 	requestData := Request{
-		VisitKey:     "FIND123",
-		SignedIn:     true,
-		TrackpointID: &trackpointID,
+		VisitKey: "FIND123",
+		SignedIn: true,
+		AdminID:  &terminalAdminID,
 	}
 
 	createdAt := time.Now()
@@ -793,7 +781,7 @@ func TestFindAndTrackHandler_WithTrackpointID(t *testing.T) {
 
 	mockVisitorRepo.On("FindByKey", "FIND123").Return(visitDetails, nil)
 	mockTrackRepo.On("Store", mock.MatchedBy(func(vt *entity.VisitTrack) bool {
-		return vt.AdminID != nil && vt.AdminID.String() == trackpointID
+		return vt.AdminID != nil && vt.AdminID.String() == terminalAdminID
 	})).Return(storedTrack, nil)
 	mockTrackRepo.On("CountEventsByVisitorIdSince", int32(456), mock.AnythingOfType("time.Time")).Return(1, nil)
 
@@ -816,7 +804,7 @@ func TestFindAndTrackHandler_WithTrackpointID(t *testing.T) {
 	mockTrackRepo.AssertExpectations(t)
 }
 
-func TestFindAndTrackHandler_WithInvalidTrackpointID(t *testing.T) {
+func TestFindAndTrackHandler_WithInvalidAdminID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mockVisitorRepo := new(providertest.VisitorRepositoryMock)
 	mockTrackRepo := new(providertest.VisitorTrackRepositoryMock)
@@ -825,31 +813,13 @@ func TestFindAndTrackHandler_WithInvalidTrackpointID(t *testing.T) {
 		TrackRepository:   mockTrackRepo,
 	}
 
-	visitor := &entity.Visitor{Id: 456, Name: "Bob", Surname: "Johnson"}
-	visitDetails := &entity.VisitDetails{Visitor: visitor, Key: "FIND123"}
 	invalidID := "not-a-uuid"
 
 	requestData := Request{
-		VisitKey:     "FIND123",
-		SignedIn:     true,
-		TrackpointID: &invalidID,
+		VisitKey: "FIND123",
+		SignedIn: true,
+		AdminID:  &invalidID,
 	}
-
-	createdAt := time.Now()
-	storedTrack := &entity.VisitTrack{
-		Id:        2,
-		VisitorId: 456,
-		VisitKey:  strPtr("FIND123"),
-		SignedIn:  true,
-		Visitor:   visitor,
-		CreatedAt: createdAt,
-	}
-
-	mockVisitorRepo.On("FindByKey", "FIND123").Return(visitDetails, nil)
-	mockTrackRepo.On("Store", mock.MatchedBy(func(vt *entity.VisitTrack) bool {
-		return vt.AdminID == nil
-	})).Return(storedTrack, nil)
-	mockTrackRepo.On("CountEventsByVisitorIdSince", int32(456), mock.AnythingOfType("time.Time")).Return(1, nil)
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -860,9 +830,11 @@ func TestFindAndTrackHandler_WithInvalidTrackpointID(t *testing.T) {
 
 	controller.FindAndTrackHandler()(c)
 
-	assert.Equal(t, http.StatusOK, w.Code)
-	mockVisitorRepo.AssertExpectations(t)
-	mockTrackRepo.AssertExpectations(t)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var response map[string]string
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Contains(t, response["error"], "invalid admin_id")
 }
 
 func TestChangeTimeHandler_InvalidJSON(t *testing.T) {

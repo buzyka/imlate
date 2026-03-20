@@ -68,6 +68,7 @@ func TestManualTrackHandler_Success_SignIn(t *testing.T) {
 
 	body, _ := json.Marshal(ManualTrackRequest{
 		VisitorID:   456,
+		SignedIn:    true,
 		Description: &desc,
 	})
 	c.Request = httptest.NewRequest(http.MethodPost, "/admin-api/track/visit", bytes.NewReader(body))
@@ -111,7 +112,7 @@ func TestManualTrackHandler_Success_SignOut(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Set("id", adminUser)
 
-	body, _ := json.Marshal(ManualTrackRequest{VisitorID: 456})
+	body, _ := json.Marshal(ManualTrackRequest{VisitorID: 456, SignedIn: false})
 	c.Request = httptest.NewRequest(http.MethodPost, "/admin-api/track/visit", bytes.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 
@@ -284,7 +285,7 @@ func TestManualTrackHandler_VisitorNotFound(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Set("id", adminUser)
 
-	body, _ := json.Marshal(ManualTrackRequest{VisitorID: 999})
+	body, _ := json.Marshal(ManualTrackRequest{VisitorID: 999, SignedIn: true})
 	c.Request = httptest.NewRequest(http.MethodPost, "/admin-api/track/visit", bytes.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 
@@ -305,7 +306,7 @@ func TestManualTrackHandler_VisitorNilResult(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Set("id", adminUser)
 
-	body, _ := json.Marshal(ManualTrackRequest{VisitorID: 456})
+	body, _ := json.Marshal(ManualTrackRequest{VisitorID: 456, SignedIn: true})
 	c.Request = httptest.NewRequest(http.MethodPost, "/admin-api/track/visit", bytes.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 
@@ -328,7 +329,7 @@ func TestManualTrackHandler_StoreError(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Set("id", adminUser)
 
-	body, _ := json.Marshal(ManualTrackRequest{VisitorID: 456})
+	body, _ := json.Marshal(ManualTrackRequest{VisitorID: 456, SignedIn: true})
 	c.Request = httptest.NewRequest(http.MethodPost, "/admin-api/track/visit", bytes.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 
@@ -368,7 +369,7 @@ func TestManualTrackHandler_CountEventsError(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Set("id", adminUser)
 
-	body, _ := json.Marshal(ManualTrackRequest{VisitorID: 456})
+	body, _ := json.Marshal(ManualTrackRequest{VisitorID: 456, SignedIn: true})
 	c.Request = httptest.NewRequest(http.MethodPost, "/admin-api/track/visit", bytes.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 
@@ -408,7 +409,44 @@ func TestManualTrackHandler_NilDescription(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Set("id", adminUser)
 
-	body, _ := json.Marshal(ManualTrackRequest{VisitorID: 456})
+	body, _ := json.Marshal(ManualTrackRequest{VisitorID: 456, SignedIn: true})
+	c.Request = httptest.NewRequest(http.MethodPost, "/admin-api/track/visit", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	controller.ManualTrackHandler()(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockVisitorRepo.AssertExpectations(t)
+	mockTrackRepo.AssertExpectations(t)
+}
+
+func TestManualTrackHandler_DefaultSignedInTrue(t *testing.T) {
+	mockVisitorRepo, mockTrackRepo, controller := setupTrackTest()
+
+	adminUser := &entity.User{ID: uuid.New(), Role: entity.UserRoleAdmin}
+	visitor := &entity.Visitor{Id: 456, Name: "Bob", Surname: "Johnson"}
+
+	createdAt := time.Now()
+	storedTrack := &entity.VisitTrack{
+		Id:        1,
+		VisitorId: 456,
+		SignedIn:  true,
+		Visitor:   visitor,
+		AdminID:   &adminUser.ID,
+		CreatedAt: createdAt,
+	}
+
+	mockVisitorRepo.On("FindById", int32(456)).Return(visitor, nil)
+	mockTrackRepo.On("Store", mock.MatchedBy(func(vt *entity.VisitTrack) bool {
+		return vt.SignedIn == true
+	})).Return(storedTrack, nil)
+	mockTrackRepo.On("CountEventsByVisitorIdSince", int32(456), mock.AnythingOfType("time.Time")).Return(1, nil)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Set("id", adminUser)
+
+	body, _ := json.Marshal(map[string]interface{}{"visitor_id": 456})
 	c.Request = httptest.NewRequest(http.MethodPost, "/admin-api/track/visit", bytes.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 
