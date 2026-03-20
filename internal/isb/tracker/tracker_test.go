@@ -12,11 +12,13 @@ import (
 	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/provider/providertest"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-func intPtr(i int) *int { return &i }
+func intPtr(i int) *int   { return &i }
+func strPtr(s string) *string { return &s }
 
 func TestTrackHandler_Success(t *testing.T) {
 	// Setup
@@ -46,7 +48,7 @@ func TestTrackHandler_Success(t *testing.T) {
 	storedTrack := &entity.VisitTrack{
 		Id:        1,
 		VisitorId: 123,
-		VisitKey:  "KEY456",
+		VisitKey:  strPtr("KEY456"),
 		SignedIn:  true,
 		Visitor:   visitor,
 		CreatedAt: createdAt,
@@ -206,6 +208,148 @@ func TestTrackHandler_StoreError(t *testing.T) {
 	mockTrackRepo.AssertExpectations(t)
 }
 
+func TestTrackHandler_WithTrackpointID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockVisitorRepo := new(providertest.VisitorRepositoryMock)
+	mockTrackRepo := new(providertest.VisitorTrackRepositoryMock)
+	controller := &TrackerController{
+		VisitorRepository: mockVisitorRepo,
+		TrackRepository:   mockTrackRepo,
+	}
+
+	visitor := &entity.Visitor{Id: 123, Name: "Jane", Surname: "Smith"}
+	trackpointID := uuid.New().String()
+
+	requestData := Request{
+		VisitorID:    123,
+		VisitKey:     "KEY456",
+		SignedIn:     true,
+		TrackpointID: &trackpointID,
+	}
+
+	createdAt := time.Now()
+	storedTrack := &entity.VisitTrack{
+		Id:        1,
+		VisitorId: 123,
+		VisitKey:  strPtr("KEY456"),
+		SignedIn:  true,
+		Visitor:   visitor,
+		CreatedAt: createdAt,
+	}
+
+	mockVisitorRepo.On("FindById", int32(123)).Return(visitor, nil)
+	mockTrackRepo.On("Store", mock.MatchedBy(func(vt *entity.VisitTrack) bool {
+		return vt.AdminID != nil && vt.AdminID.String() == trackpointID
+	})).Return(storedTrack, nil)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	jsonData, _ := json.Marshal(requestData)
+	req, _ := http.NewRequest(http.MethodPost, "/track", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	c.Request = req
+
+	controller.TrackHandler()(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockVisitorRepo.AssertExpectations(t)
+	mockTrackRepo.AssertExpectations(t)
+}
+
+func TestTrackHandler_WithInvalidTrackpointID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockVisitorRepo := new(providertest.VisitorRepositoryMock)
+	mockTrackRepo := new(providertest.VisitorTrackRepositoryMock)
+	controller := &TrackerController{
+		VisitorRepository: mockVisitorRepo,
+		TrackRepository:   mockTrackRepo,
+	}
+
+	visitor := &entity.Visitor{Id: 123, Name: "Jane", Surname: "Smith"}
+	invalidID := "not-a-uuid"
+
+	requestData := Request{
+		VisitorID:    123,
+		VisitKey:     "KEY456",
+		SignedIn:     true,
+		TrackpointID: &invalidID,
+	}
+
+	createdAt := time.Now()
+	storedTrack := &entity.VisitTrack{
+		Id:        1,
+		VisitorId: 123,
+		VisitKey:  strPtr("KEY456"),
+		SignedIn:  true,
+		Visitor:   visitor,
+		CreatedAt: createdAt,
+	}
+
+	mockVisitorRepo.On("FindById", int32(123)).Return(visitor, nil)
+	mockTrackRepo.On("Store", mock.MatchedBy(func(vt *entity.VisitTrack) bool {
+		return vt.AdminID == nil
+	})).Return(storedTrack, nil)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	jsonData, _ := json.Marshal(requestData)
+	req, _ := http.NewRequest(http.MethodPost, "/track", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	c.Request = req
+
+	controller.TrackHandler()(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockVisitorRepo.AssertExpectations(t)
+	mockTrackRepo.AssertExpectations(t)
+}
+
+func TestTrackHandler_WithNilTrackpointID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockVisitorRepo := new(providertest.VisitorRepositoryMock)
+	mockTrackRepo := new(providertest.VisitorTrackRepositoryMock)
+	controller := &TrackerController{
+		VisitorRepository: mockVisitorRepo,
+		TrackRepository:   mockTrackRepo,
+	}
+
+	visitor := &entity.Visitor{Id: 123, Name: "Jane", Surname: "Smith"}
+
+	requestData := Request{
+		VisitorID: 123,
+		VisitKey:  "KEY456",
+		SignedIn:  true,
+	}
+
+	createdAt := time.Now()
+	storedTrack := &entity.VisitTrack{
+		Id:        1,
+		VisitorId: 123,
+		VisitKey:  strPtr("KEY456"),
+		SignedIn:  true,
+		Visitor:   visitor,
+		CreatedAt: createdAt,
+	}
+
+	mockVisitorRepo.On("FindById", int32(123)).Return(visitor, nil)
+	mockTrackRepo.On("Store", mock.MatchedBy(func(vt *entity.VisitTrack) bool {
+		return vt.AdminID == nil
+	})).Return(storedTrack, nil)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	jsonData, _ := json.Marshal(requestData)
+	req, _ := http.NewRequest(http.MethodPost, "/track", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	c.Request = req
+
+	controller.TrackHandler()(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockVisitorRepo.AssertExpectations(t)
+	mockTrackRepo.AssertExpectations(t)
+}
+
 func TestFindAndTrackHandler_Success(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
@@ -238,7 +382,7 @@ func TestFindAndTrackHandler_Success(t *testing.T) {
 	storedTrack := &entity.VisitTrack{
 		Id:        2,
 		VisitorId: 456,
-		VisitKey:  "FIND123",
+		VisitKey:  strPtr("FIND123"),
 		SignedIn:  true,
 		Visitor:   visitor,
 		CreatedAt: createdAt,
@@ -305,7 +449,7 @@ func TestFindAndTrackHandler_SignOut(t *testing.T) {
 	storedTrack := &entity.VisitTrack{
 		Id:        2,
 		VisitorId: 456,
-		VisitKey:  "FIND123",
+		VisitKey:  strPtr("FIND123"),
 		SignedIn:  false,
 		Visitor:   visitor,
 		CreatedAt: createdAt,
@@ -532,7 +676,7 @@ func TestFindAndTrackHandler_CountEventsError(t *testing.T) {
 	storedTrack := &entity.VisitTrack{
 		Id:        2,
 		VisitorId: 456,
-		VisitKey:  "FIND123",
+		VisitKey:  strPtr("FIND123"),
 		SignedIn:  true,
 		Visitor:   visitor,
 		CreatedAt: createdAt,
@@ -583,7 +727,7 @@ func TestFindAndTrackHandler_CountFromStartOfDay(t *testing.T) {
 	storedTrack := &entity.VisitTrack{
 		Id:        2,
 		VisitorId: 456,
-		VisitKey:  "FIND123",
+		VisitKey:  strPtr("FIND123"),
 		SignedIn:  true,
 		Visitor:   visitor,
 		CreatedAt: createdAt,
@@ -614,6 +758,109 @@ func TestFindAndTrackHandler_CountFromStartOfDay(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "sign-in", response.TrackType)
 
+	mockVisitorRepo.AssertExpectations(t)
+	mockTrackRepo.AssertExpectations(t)
+}
+
+func TestFindAndTrackHandler_WithTrackpointID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockVisitorRepo := new(providertest.VisitorRepositoryMock)
+	mockTrackRepo := new(providertest.VisitorTrackRepositoryMock)
+	controller := &TrackerController{
+		VisitorRepository: mockVisitorRepo,
+		TrackRepository:   mockTrackRepo,
+	}
+
+	visitor := &entity.Visitor{Id: 456, Name: "Bob", Surname: "Johnson"}
+	visitDetails := &entity.VisitDetails{Visitor: visitor, Key: "FIND123"}
+	trackpointID := uuid.New().String()
+
+	requestData := Request{
+		VisitKey:     "FIND123",
+		SignedIn:     true,
+		TrackpointID: &trackpointID,
+	}
+
+	createdAt := time.Now()
+	storedTrack := &entity.VisitTrack{
+		Id:        2,
+		VisitorId: 456,
+		VisitKey:  strPtr("FIND123"),
+		SignedIn:  true,
+		Visitor:   visitor,
+		CreatedAt: createdAt,
+	}
+
+	mockVisitorRepo.On("FindByKey", "FIND123").Return(visitDetails, nil)
+	mockTrackRepo.On("Store", mock.MatchedBy(func(vt *entity.VisitTrack) bool {
+		return vt.AdminID != nil && vt.AdminID.String() == trackpointID
+	})).Return(storedTrack, nil)
+	mockTrackRepo.On("CountEventsByVisitorIdSince", int32(456), mock.AnythingOfType("time.Time")).Return(1, nil)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	jsonData, _ := json.Marshal(requestData)
+	req, _ := http.NewRequest(http.MethodPost, "/findtrack", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	c.Request = req
+
+	controller.FindAndTrackHandler()(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var response TrackResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "sign-in", response.TrackType)
+
+	mockVisitorRepo.AssertExpectations(t)
+	mockTrackRepo.AssertExpectations(t)
+}
+
+func TestFindAndTrackHandler_WithInvalidTrackpointID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockVisitorRepo := new(providertest.VisitorRepositoryMock)
+	mockTrackRepo := new(providertest.VisitorTrackRepositoryMock)
+	controller := &TrackerController{
+		VisitorRepository: mockVisitorRepo,
+		TrackRepository:   mockTrackRepo,
+	}
+
+	visitor := &entity.Visitor{Id: 456, Name: "Bob", Surname: "Johnson"}
+	visitDetails := &entity.VisitDetails{Visitor: visitor, Key: "FIND123"}
+	invalidID := "not-a-uuid"
+
+	requestData := Request{
+		VisitKey:     "FIND123",
+		SignedIn:     true,
+		TrackpointID: &invalidID,
+	}
+
+	createdAt := time.Now()
+	storedTrack := &entity.VisitTrack{
+		Id:        2,
+		VisitorId: 456,
+		VisitKey:  strPtr("FIND123"),
+		SignedIn:  true,
+		Visitor:   visitor,
+		CreatedAt: createdAt,
+	}
+
+	mockVisitorRepo.On("FindByKey", "FIND123").Return(visitDetails, nil)
+	mockTrackRepo.On("Store", mock.MatchedBy(func(vt *entity.VisitTrack) bool {
+		return vt.AdminID == nil
+	})).Return(storedTrack, nil)
+	mockTrackRepo.On("CountEventsByVisitorIdSince", int32(456), mock.AnythingOfType("time.Time")).Return(1, nil)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	jsonData, _ := json.Marshal(requestData)
+	req, _ := http.NewRequest(http.MethodPost, "/findtrack", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	c.Request = req
+
+	controller.FindAndTrackHandler()(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
 	mockVisitorRepo.AssertExpectations(t)
 	mockTrackRepo.AssertExpectations(t)
 }

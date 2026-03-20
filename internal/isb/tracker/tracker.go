@@ -11,14 +11,16 @@ import (
 	"github.com/buzyka/imlate/internal/infrastructure/util"
 	"github.com/buzyka/imlate/internal/usecase/tracking"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 
 
 type Request struct {
-	VisitorID int32 `json:"visitor_id"`
-	VisitKey  string `json:"visit_key"`
-	SignedIn  bool `json:"signed_in"`
+	VisitorID    int32   `json:"visitor_id"`
+	VisitKey     string  `json:"visit_key"`
+	SignedIn     bool    `json:"signed_in"`
+	TrackpointID *string `json:"trackpoint_id"`
 }
 
 type TrackerController struct {
@@ -45,8 +47,14 @@ func (tc *TrackerController) TrackHandler() gin.HandlerFunc {
 		}
 		track := &entity.VisitTrack{
 			VisitorId: Request.VisitorID,
-			VisitKey:  Request.VisitKey,
+			VisitKey:  &Request.VisitKey,
 			SignedIn:  Request.SignedIn,
+		}
+		if Request.TrackpointID != nil {
+			parsed, pErr := uuid.Parse(*Request.TrackpointID)
+			if pErr == nil {
+				track.AdminID = &parsed
+			}
 		}
 		track.Visitor, err = tc.VisitorRepository.FindById(Request.VisitorID)
 		if err != nil {
@@ -83,8 +91,14 @@ func (tc *TrackerController) FindAndTrackHandler() gin.HandlerFunc {
 			return
 		}
 		track := &entity.VisitTrack{
-			VisitKey: Request.VisitKey,
+			VisitKey: &Request.VisitKey,
 			SignedIn: Request.SignedIn,
+		}
+		if Request.TrackpointID != nil {
+			parsed, pErr := uuid.Parse(*Request.TrackpointID)
+			if pErr == nil {
+				track.AdminID = &parsed
+			}
 		}
 		visitDetails, err := tc.VisitorRepository.FindByKey(Request.VisitKey)
 		if err != nil || visitDetails.Visitor == nil {

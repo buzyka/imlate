@@ -9,18 +9,18 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/provider"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
+func strPtr(s string) *string { return &s }
+
 func TestStore_Success(t *testing.T) {
-	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
 	defer func() { _ = db.Close() }()
 
-	repo := &VisitorTrack{
-		Connection: db,
-	}
+	repo := &VisitorTrack{Connection: db}
 
 	visitor := &entity.Visitor{
 		Id:      123,
@@ -32,64 +32,57 @@ func TestStore_Success(t *testing.T) {
 
 	visitTrack := &entity.VisitTrack{
 		VisitorId: 123,
-		VisitKey:  "KEY123",
+		VisitKey:  strPtr("KEY123"),
 		SignedIn:  true,
 		Visitor:   visitor,
 	}
 
 	expectedTime := time.Now()
 
-	// Expect INSERT
 	mock.ExpectExec("INSERT INTO track").
-		WithArgs(int32(123), "KEY123", true).
+		WithArgs(int32(123), strPtr("KEY123"), true, nil, nil).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	// Expect SELECT for GetById
-	rows := sqlmock.NewRows([]string{"id", "visitor_id", "key_id", "sign_in", "created_at"}).
-		AddRow(1, 123, "KEY123", true, expectedTime.Format("2006-01-02 15:04:05"))
+	rows := sqlmock.NewRows([]string{"id", "visitor_id", "key_id", "sign_in", "admin_id", "description", "created_at"}).
+		AddRow(1, 123, "KEY123", true, nil, nil, expectedTime.Format("2006-01-02 15:04:05"))
 
-	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.created_at FROM track AS t WHERE id = ?").
+	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.admin_id, t.description, t.created_at FROM track AS t WHERE id = ?").
 		WithArgs(int64(1)).
 		WillReturnRows(rows)
 
-	// Execute
 	result, err := repo.Store(visitTrack)
 
-	// Assert
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.Equal(t, 1, result.Id)
 	assert.Equal(t, int32(123), result.VisitorId)
-	assert.Equal(t, "KEY123", result.VisitKey)
+	assert.Equal(t, strPtr("KEY123"), result.VisitKey)
 	assert.Equal(t, true, result.SignedIn)
+	assert.Nil(t, result.AdminID)
+	assert.Nil(t, result.Description)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
 func TestStore_InsertError(t *testing.T) {
-	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
 	defer func() { _ = db.Close() }()
 
-	repo := &VisitorTrack{
-		Connection: db,
-	}
+	repo := &VisitorTrack{Connection: db}
 
 	visitTrack := &entity.VisitTrack{
 		VisitorId: 123,
-		VisitKey:  "KEY123",
+		VisitKey:  strPtr("KEY123"),
 		SignedIn:  true,
 	}
 
 	expectedError := errors.New("insert failed")
 	mock.ExpectExec("INSERT INTO track").
-		WithArgs(int32(123), "KEY123", true).
+		WithArgs(int32(123), strPtr("KEY123"), true, nil, nil).
 		WillReturnError(expectedError)
 
-	// Execute
 	result, err := repo.Store(visitTrack)
 
-	// Assert
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Equal(t, expectedError, err)
@@ -97,30 +90,25 @@ func TestStore_InsertError(t *testing.T) {
 }
 
 func TestStore_LastInsertIdError(t *testing.T) {
-	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
 	defer func() { _ = db.Close() }()
 
-	repo := &VisitorTrack{
-		Connection: db,
-	}
+	repo := &VisitorTrack{Connection: db}
 
 	visitTrack := &entity.VisitTrack{
 		VisitorId: 123,
-		VisitKey:  "KEY123",
+		VisitKey:  strPtr("KEY123"),
 		SignedIn:  true,
 	}
 
 	expectedError := errors.New("last insert id error")
 	mock.ExpectExec("INSERT INTO track").
-		WithArgs(int32(123), "KEY123", true).
+		WithArgs(int32(123), strPtr("KEY123"), true, nil, nil).
 		WillReturnResult(sqlmock.NewErrorResult(expectedError))
 
-	// Execute
 	result, err := repo.Store(visitTrack)
 
-	// Assert
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Equal(t, expectedError, err)
@@ -128,14 +116,11 @@ func TestStore_LastInsertIdError(t *testing.T) {
 }
 
 func TestStore_GetByIdError(t *testing.T) {
-	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
 	defer func() { _ = db.Close() }()
 
-	repo := &VisitorTrack{
-		Connection: db,
-	}
+	repo := &VisitorTrack{Connection: db}
 
 	visitor := &entity.Visitor{
 		Id:      123,
@@ -145,24 +130,22 @@ func TestStore_GetByIdError(t *testing.T) {
 
 	visitTrack := &entity.VisitTrack{
 		VisitorId: 123,
-		VisitKey:  "KEY123",
+		VisitKey:  strPtr("KEY123"),
 		SignedIn:  true,
 		Visitor:   visitor,
 	}
 
 	mock.ExpectExec("INSERT INTO track").
-		WithArgs(int32(123), "KEY123", true).
+		WithArgs(int32(123), strPtr("KEY123"), true, nil, nil).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	expectedError := errors.New("query failed")
-	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.created_at FROM track AS t WHERE id = ?").
+	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.admin_id, t.description, t.created_at FROM track AS t WHERE id = ?").
 		WithArgs(int64(1)).
 		WillReturnError(expectedError)
 
-	// Execute
 	result, err := repo.Store(visitTrack)
 
-	// Assert
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Equal(t, expectedError, err)
@@ -170,90 +153,77 @@ func TestStore_GetByIdError(t *testing.T) {
 }
 
 func TestGetById_Success(t *testing.T) {
-	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
 	defer func() { _ = db.Close() }()
 
-	repo := &VisitorTrack{
-		Connection: db,
-	}
+	repo := &VisitorTrack{Connection: db}
 
 	expectedTime := time.Date(2023, 12, 10, 14, 30, 0, 0, time.UTC)
 
-	rows := sqlmock.NewRows([]string{"id", "visitor_id", "key_id", "sign_in", "created_at"}).
-		AddRow(5, 456, "KEY789", false, expectedTime.Format("2006-01-02 15:04:05"))
+	rows := sqlmock.NewRows([]string{"id", "visitor_id", "key_id", "sign_in", "admin_id", "description", "created_at"}).
+		AddRow(5, 456, "KEY789", false, nil, nil, expectedTime.Format("2006-01-02 15:04:05"))
 
-	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.created_at FROM track AS t WHERE id = ?").
+	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.admin_id, t.description, t.created_at FROM track AS t WHERE id = ?").
 		WithArgs(int64(5)).
 		WillReturnRows(rows)
 
-	// Execute
 	result, err := repo.GetById(5)
 
-	// Assert
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.Equal(t, 5, result.Id)
 	assert.Equal(t, int32(456), result.VisitorId)
-	assert.Equal(t, "KEY789", result.VisitKey)
+	assert.Equal(t, strPtr("KEY789"), result.VisitKey)
 	assert.Equal(t, false, result.SignedIn)
+	assert.Nil(t, result.AdminID)
+	assert.Nil(t, result.Description)
 	assert.Equal(t, expectedTime.Format("2006-01-02 15:04:05"), result.CreatedAt.Format("2006-01-02 15:04:05"))
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
 func TestGetById_RFC3339(t *testing.T) {
-	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
 	defer func() { _ = db.Close() }()
 
-	repo := &VisitorTrack{
-		Connection: db,
-	}
+	repo := &VisitorTrack{Connection: db}
 
 	expectedTime := time.Date(2025, 12, 27, 11, 6, 22, 0, time.UTC)
 	rfc3339Time := "2025-12-27T11:06:22Z"
 
-	rows := sqlmock.NewRows([]string{"id", "visitor_id", "key_id", "sign_in", "created_at"}).
-		AddRow(5, 456, "KEY789", false, rfc3339Time)
+	rows := sqlmock.NewRows([]string{"id", "visitor_id", "key_id", "sign_in", "admin_id", "description", "created_at"}).
+		AddRow(5, 456, "KEY789", false, nil, nil, rfc3339Time)
 
-	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.created_at FROM track AS t WHERE id = ?").
+	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.admin_id, t.description, t.created_at FROM track AS t WHERE id = ?").
 		WithArgs(int64(5)).
 		WillReturnRows(rows)
 
-	// Execute
 	result, err := repo.GetById(5)
 
-	// Assert
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.Equal(t, 5, result.Id)
 	assert.Equal(t, int32(456), result.VisitorId)
-	assert.Equal(t, "KEY789", result.VisitKey)
+	assert.Equal(t, strPtr("KEY789"), result.VisitKey)
 	assert.Equal(t, false, result.SignedIn)
 	assert.Equal(t, expectedTime.Unix(), result.CreatedAt.Unix())
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
 func TestGetById_NotFound(t *testing.T) {
-	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
 	defer func() { _ = db.Close() }()
 
-	repo := &VisitorTrack{
-		Connection: db,
-	}
+	repo := &VisitorTrack{Connection: db}
 
-	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.created_at FROM track AS t WHERE id = ?").
+	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.admin_id, t.description, t.created_at FROM track AS t WHERE id = ?").
 		WithArgs(int64(999)).
 		WillReturnError(sql.ErrNoRows)
 
-	// Execute
 	result, err := repo.GetById(999)
 
-	// Assert
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Equal(t, sql.ErrNoRows, err)
@@ -261,24 +231,19 @@ func TestGetById_NotFound(t *testing.T) {
 }
 
 func TestGetById_DatabaseError(t *testing.T) {
-	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
 	defer func() { _ = db.Close() }()
 
-	repo := &VisitorTrack{
-		Connection: db,
-	}
+	repo := &VisitorTrack{Connection: db}
 
 	expectedError := errors.New("connection timeout")
-	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.created_at FROM track AS t WHERE id = ?").
+	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.admin_id, t.description, t.created_at FROM track AS t WHERE id = ?").
 		WithArgs(int64(1)).
 		WillReturnError(expectedError)
 
-	// Execute
 	result, err := repo.GetById(1)
 
-	// Assert
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Equal(t, expectedError, err)
@@ -286,26 +251,21 @@ func TestGetById_DatabaseError(t *testing.T) {
 }
 
 func TestGetById_InvalidTimeFormat(t *testing.T) {
-	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
 	defer func() { _ = db.Close() }()
 
-	repo := &VisitorTrack{
-		Connection: db,
-	}
+	repo := &VisitorTrack{Connection: db}
 
-	rows := sqlmock.NewRows([]string{"id", "visitor_id", "key_id", "sign_in", "created_at"}).
-		AddRow(5, 456, "KEY789", false, "invalid-date")
+	rows := sqlmock.NewRows([]string{"id", "visitor_id", "key_id", "sign_in", "admin_id", "description", "created_at"}).
+		AddRow(5, 456, "KEY789", false, nil, nil, "invalid-date")
 
-	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.created_at FROM track AS t WHERE id = ?").
+	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.admin_id, t.description, t.created_at FROM track AS t WHERE id = ?").
 		WithArgs(int64(5)).
 		WillReturnRows(rows)
 
-	// Execute
 	result, err := repo.GetById(5)
 
-	// Assert
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "parsing time")
@@ -422,14 +382,11 @@ func TestCountEventsByVisitorIdSince_ScanError(t *testing.T) {
 }
 
 func TestStore_SignedInFalse(t *testing.T) {
-	// Setup
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
 	defer func() { _ = db.Close() }()
 
-	repo := &VisitorTrack{
-		Connection: db,
-	}
+	repo := &VisitorTrack{Connection: db}
 
 	visitor := &entity.Visitor{
 		Id:      789,
@@ -439,7 +396,7 @@ func TestStore_SignedInFalse(t *testing.T) {
 
 	visitTrack := &entity.VisitTrack{
 		VisitorId: 789,
-		VisitKey:  "KEYOUT",
+		VisitKey:  strPtr("KEYOUT"),
 		SignedIn:  false,
 		Visitor:   visitor,
 	}
@@ -447,24 +404,125 @@ func TestStore_SignedInFalse(t *testing.T) {
 	expectedTime := time.Now()
 
 	mock.ExpectExec("INSERT INTO track").
-		WithArgs(int32(789), "KEYOUT", false).
+		WithArgs(int32(789), strPtr("KEYOUT"), false, nil, nil).
 		WillReturnResult(sqlmock.NewResult(10, 1))
 
-	rows := sqlmock.NewRows([]string{"id", "visitor_id", "key_id", "sign_in", "created_at"}).
-		AddRow(10, 789, "KEYOUT", false, expectedTime.Format("2006-01-02 15:04:05"))
+	rows := sqlmock.NewRows([]string{"id", "visitor_id", "key_id", "sign_in", "admin_id", "description", "created_at"}).
+		AddRow(10, 789, "KEYOUT", false, nil, nil, expectedTime.Format("2006-01-02 15:04:05"))
 
-	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.created_at FROM track AS t WHERE id = ?").
+	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.admin_id, t.description, t.created_at FROM track AS t WHERE id = ?").
 		WithArgs(int64(10)).
 		WillReturnRows(rows)
 
-	// Execute
 	result, err := repo.Store(visitTrack)
 
-	// Assert
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.Equal(t, 10, result.Id)
 	assert.Equal(t, false, result.SignedIn)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestStore_WithAdminIDAndDescription(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer func() { _ = db.Close() }()
+
+	repo := &VisitorTrack{Connection: db}
+
+	adminID := uuid.New()
+	desc := "visitor forgot key"
+	visitor := &entity.Visitor{
+		Id:      123,
+		Name:    "John",
+		Surname: "Doe",
+	}
+
+	visitTrack := &entity.VisitTrack{
+		VisitorId:   123,
+		VisitKey:    strPtr("KEY123"),
+		SignedIn:    true,
+		Visitor:     visitor,
+		AdminID:     &adminID,
+		Description: &desc,
+	}
+
+	expectedTime := time.Now()
+
+	mock.ExpectExec("INSERT INTO track").
+		WithArgs(int32(123), strPtr("KEY123"), true, adminID.String(), &desc).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	rows := sqlmock.NewRows([]string{"id", "visitor_id", "key_id", "sign_in", "admin_id", "description", "created_at"}).
+		AddRow(1, 123, "KEY123", true, adminID.String(), desc, expectedTime.Format("2006-01-02 15:04:05"))
+
+	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.admin_id, t.description, t.created_at FROM track AS t WHERE id = ?").
+		WithArgs(int64(1)).
+		WillReturnRows(rows)
+
+	result, err := repo.Store(visitTrack)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, 1, result.Id)
+	assert.NotNil(t, result.AdminID)
+	assert.Equal(t, adminID, *result.AdminID)
+	assert.NotNil(t, result.Description)
+	assert.Equal(t, desc, *result.Description)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetById_WithAdminIDAndDescription(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer func() { _ = db.Close() }()
+
+	repo := &VisitorTrack{Connection: db}
+
+	adminID := uuid.New()
+	desc := "manual entry"
+	expectedTime := time.Date(2026, 3, 10, 14, 30, 0, 0, time.UTC)
+
+	rows := sqlmock.NewRows([]string{"id", "visitor_id", "key_id", "sign_in", "admin_id", "description", "created_at"}).
+		AddRow(5, 456, "KEY789", true, adminID.String(), desc, expectedTime.Format("2006-01-02 15:04:05"))
+
+	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.admin_id, t.description, t.created_at FROM track AS t WHERE id = ?").
+		WithArgs(int64(5)).
+		WillReturnRows(rows)
+
+	result, err := repo.GetById(5)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, 5, result.Id)
+	assert.NotNil(t, result.AdminID)
+	assert.Equal(t, adminID, *result.AdminID)
+	assert.NotNil(t, result.Description)
+	assert.Equal(t, desc, *result.Description)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetById_InvalidAdminID(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer func() { _ = db.Close() }()
+
+	repo := &VisitorTrack{Connection: db}
+
+	expectedTime := time.Date(2026, 3, 10, 14, 30, 0, 0, time.UTC)
+
+	rows := sqlmock.NewRows([]string{"id", "visitor_id", "key_id", "sign_in", "admin_id", "description", "created_at"}).
+		AddRow(5, 456, "KEY789", true, "not-a-uuid", nil, expectedTime.Format("2006-01-02 15:04:05"))
+
+	mock.ExpectQuery("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.admin_id, t.description, t.created_at FROM track AS t WHERE id = ?").
+		WithArgs(int64(5)).
+		WillReturnRows(rows)
+
+	result, err := repo.GetById(5)
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "invalid admin_id")
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
