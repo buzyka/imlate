@@ -12,6 +12,7 @@ import (
 
 	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/provider"
+	"github.com/google/uuid"
 )
 
 type VisitorTrack struct {
@@ -19,11 +20,18 @@ type VisitorTrack struct {
 }
 
 func (r *VisitorTrack) Store(vt *entity.VisitTrack) (*entity.VisitTrack, error) {
+	var adminIDStr *string
+	if vt.AdminID != nil {
+		s := vt.AdminID.String()
+		adminIDStr = &s
+	}
 	res, err := r.Connection.Exec(
-		"INSERT INTO track (visitor_id, key_id, sign_in, created_at) VALUES (?, ?, ?,  NOW())",
+		"INSERT INTO track (visitor_id, key_id, sign_in, admin_id, description, created_at) VALUES (?, ?, ?, ?, ?, NOW())",
 		vt.VisitorId,
 		vt.VisitKey,
 		vt.SignedIn,
+		adminIDStr,
+		vt.Description,
 	)
 	if err != nil {
 		return nil, err
@@ -45,18 +53,37 @@ func (r *VisitorTrack) Store(vt *entity.VisitTrack) (*entity.VisitTrack, error) 
 
 func (r *VisitorTrack) GetById(id int64) (*entity.VisitTrack, error) {
 	var createdAtRaw []byte
+	var keyIDRaw sql.NullString
+	var adminIDRaw sql.NullString
+	var descriptionRaw sql.NullString
 
-	row := r.Connection.QueryRow("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.created_at FROM track AS t WHERE id = ?", id)
+	row := r.Connection.QueryRow("SELECT t.id, t.visitor_id, t.key_id, t.sign_in, t.admin_id, t.description, t.created_at FROM track AS t WHERE id = ?", id)
 	track := &entity.VisitTrack{}
 	err := row.Scan(
 		&track.Id,
 		&track.VisitorId,
-		&track.VisitKey,
+		&keyIDRaw,
 		&track.SignedIn,
+		&adminIDRaw,
+		&descriptionRaw,
 		&createdAtRaw,
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	if keyIDRaw.Valid {
+		track.VisitKey = &keyIDRaw.String
+	}
+	if adminIDRaw.Valid {
+		parsed, err := uuid.Parse(adminIDRaw.String)
+		if err != nil {
+			return nil, fmt.Errorf("invalid admin_id: %w", err)
+		}
+		track.AdminID = &parsed
+	}
+	if descriptionRaw.Valid {
+		track.Description = &descriptionRaw.String
 	}
 
 	track.CreatedAt, err = time.Parse("2006-01-02 15:04:05", string(createdAtRaw))

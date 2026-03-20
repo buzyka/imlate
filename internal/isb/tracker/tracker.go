@@ -11,14 +11,20 @@ import (
 	"github.com/buzyka/imlate/internal/infrastructure/util"
 	"github.com/buzyka/imlate/internal/usecase/tracking"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 
 
+// Request defines the payload for internal tracker endpoints (/track, /find-and-track).
+// AdminID identifies the admin user (with role "terminal") operating the physical
+// trackpoint device that sends these requests. The value is stored in the track.admin_id
+// column and is used for audit purposes to know which terminal recorded the visit.
 type Request struct {
-	VisitorID int32 `json:"visitor_id"`
-	VisitKey  string `json:"visit_key"`
-	SignedIn  bool `json:"signed_in"`
+	VisitorID int32   `json:"visitor_id"`
+	VisitKey  string  `json:"visit_key"`
+	SignedIn  bool    `json:"signed_in"`
+	AdminID   *string `json:"admin_id"`
 }
 
 type TrackerController struct {
@@ -45,8 +51,19 @@ func (tc *TrackerController) TrackHandler() gin.HandlerFunc {
 		}
 		track := &entity.VisitTrack{
 			VisitorId: Request.VisitorID,
-			VisitKey:  Request.VisitKey,
+			VisitKey:  &Request.VisitKey,
 			SignedIn:  Request.SignedIn,
+		}
+		if Request.AdminID != nil {
+			parsed, pErr := uuid.Parse(*Request.AdminID)
+			if pErr == nil {
+				track.AdminID = &parsed
+			} else {
+				ctx.JSON(http.StatusBadRequest, gin.H{
+					"error": fmt.Sprintf("invalid admin_id: must be a valid UUID, got %q", *Request.AdminID),
+				})
+				return
+			}
 		}
 		track.Visitor, err = tc.VisitorRepository.FindById(Request.VisitorID)
 		if err != nil {
@@ -83,8 +100,19 @@ func (tc *TrackerController) FindAndTrackHandler() gin.HandlerFunc {
 			return
 		}
 		track := &entity.VisitTrack{
-			VisitKey: Request.VisitKey,
+			VisitKey: &Request.VisitKey,
 			SignedIn: Request.SignedIn,
+		}
+		if Request.AdminID != nil {
+			parsed, pErr := uuid.Parse(*Request.AdminID)
+			if pErr == nil {
+				track.AdminID = &parsed
+			} else {
+				ctx.JSON(http.StatusBadRequest, gin.H{
+					"error": fmt.Sprintf("invalid admin_id: must be a valid UUID, got %q", *Request.AdminID),
+				})
+				return
+			}
 		}
 		visitDetails, err := tc.VisitorRepository.FindByKey(Request.VisitKey)
 		if err != nil || visitDetails.Visitor == nil {
