@@ -170,6 +170,69 @@
                 }
             }
         },
+        "/admin-api/track/visit": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Manually records a visitor sign-in/sign-out event on behalf of a visitor by an admin.\nUsed when a visitor forgot their key, lost it, or is otherwise unable to use it.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-tracking"
+                ],
+                "summary": "Manual visitor track",
+                "parameters": [
+                    {
+                        "description": "Track request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_isb_adminapi.ManualTrackRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_isb_adminapi.ManualTrackResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/admin-api/users": {
             "get": {
                 "security": [
@@ -948,6 +1011,62 @@
                 "UserRoleTerminal"
             ]
         },
+        "github_com_buzyka_imlate_internal_domain_entity.Visitor": {
+            "type": "object",
+            "properties": {
+                "deleted_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "grade": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "image": {
+                    "type": "string"
+                },
+                "is_student": {
+                    "type": "boolean"
+                },
+                "isams_divisions": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "isams_id": {
+                    "type": "integer"
+                },
+                "isams_school_id": {
+                    "type": "string"
+                },
+                "isams_year_group_id": {
+                    "type": "integer"
+                },
+                "keys": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "surname": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse": {
             "type": "object",
             "properties": {
@@ -1120,6 +1239,37 @@
             "properties": {
                 "error": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_isb_adminapi.ManualTrackRequest": {
+            "type": "object",
+            "required": [
+                "visitor_id"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "signed_in": {
+                    "type": "boolean"
+                },
+                "visitor_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_isb_adminapi.ManualTrackResponse": {
+            "type": "object",
+            "properties": {
+                "track_date": {
+                    "type": "string"
+                },
+                "track_type": {
+                    "type": "string"
+                },
+                "visitor": {
+                    "$ref": "#/definitions/github_com_buzyka_imlate_internal_domain_entity.Visitor"
                 }
             }
         },

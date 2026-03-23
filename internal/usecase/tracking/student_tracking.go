@@ -102,6 +102,9 @@ func (s *StudentTracker) getPeriods(erpClient erp.Client, divisions []int32) (*e
 	}
 	schedule := &entity.Schedule{}
 	for _, division := range divisions {
+		if division <= 0 {
+			continue
+		}
 		resp, err := erpClient.GetCurrentRegistrationPeriodsForDivision(division)
 		if err != nil {
 			s.Logger.Errorf("StudentTracker: Error getting registration periods for division %d: %v", division, err)
