@@ -8,13 +8,12 @@ import (
 
 	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/provider"
+	httpauth "github.com/buzyka/imlate/internal/infrastructure/http/auth"
 	"github.com/buzyka/imlate/internal/infrastructure/util"
 	"github.com/buzyka/imlate/internal/usecase/tracking"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
-
-
 
 // Request defines the payload for internal tracker endpoints (/track, /find-and-track).
 // AdminID identifies the admin user (with role "terminal") operating the physical
@@ -28,21 +27,21 @@ type Request struct {
 }
 
 type TrackerController struct {
-	VisitorRepository provider.VisitorRepository `container:"type"`
-	TrackRepository provider.VisitorTrackRepository `container:"type"`
-	StudentTracker *tracking.StudentTracker `container:"type"`
+	VisitorRepository provider.VisitorRepository      `container:"type"`
+	TrackRepository   provider.VisitorTrackRepository `container:"type"`
+	StudentTracker    *tracking.StudentTracker        `container:"type"`
 }
 
 type TrackResponse struct {
-	Visitor *entity.Visitor `json:"visitor"`
-	TrackType string `json:"track_type"`
-	TrackDate string `json:"track_date"`
+	Visitor   *entity.Visitor `json:"visitor"`
+	TrackType string          `json:"track_type"`
+	TrackDate string          `json:"track_date"`
 }
 
 func (tc *TrackerController) TrackHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var Request Request
-		err := ctx.Bind(&Request);
+		err := ctx.Bind(&Request)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
@@ -54,7 +53,11 @@ func (tc *TrackerController) TrackHandler() gin.HandlerFunc {
 			VisitKey:  &Request.VisitKey,
 			SignedIn:  Request.SignedIn,
 		}
-		if Request.AdminID != nil {
+		if termUser, exists := ctx.Get(httpauth.TerminalUserContextKey); exists {
+			if tu, ok := termUser.(*entity.User); ok {
+				track.AdminID = &tu.ID
+			}
+		} else if Request.AdminID != nil {
 			parsed, pErr := uuid.Parse(*Request.AdminID)
 			if pErr == nil {
 				track.AdminID = &parsed
@@ -81,10 +84,10 @@ func (tc *TrackerController) TrackHandler() gin.HandlerFunc {
 		}
 		ctx.JSON(http.StatusOK, gin.H{
 			"message": "tracked",
-			"id": Request.VisitorID,
-			"vk": Request.VisitKey,
-			"tr": Request.SignedIn,
-			"cr": track.CreatedAt.Format("2006-01-02 15:04:05"),	
+			"id":      Request.VisitorID,
+			"vk":      Request.VisitKey,
+			"tr":      Request.SignedIn,
+			"cr":      track.CreatedAt.Format("2006-01-02 15:04:05"),
 		})
 	}
 }
@@ -92,7 +95,7 @@ func (tc *TrackerController) TrackHandler() gin.HandlerFunc {
 func (tc *TrackerController) FindAndTrackHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var Request Request
-		err := ctx.Bind(&Request);
+		err := ctx.Bind(&Request)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
@@ -103,7 +106,11 @@ func (tc *TrackerController) FindAndTrackHandler() gin.HandlerFunc {
 			VisitKey: &Request.VisitKey,
 			SignedIn: Request.SignedIn,
 		}
-		if Request.AdminID != nil {
+		if termUser, exists := ctx.Get(httpauth.TerminalUserContextKey); exists {
+			if tu, ok := termUser.(*entity.User); ok {
+				track.AdminID = &tu.ID
+			}
+		} else if Request.AdminID != nil {
 			parsed, pErr := uuid.Parse(*Request.AdminID)
 			if pErr == nil {
 				track.AdminID = &parsed
@@ -130,18 +137,17 @@ func (tc *TrackerController) FindAndTrackHandler() gin.HandlerFunc {
 			})
 			return
 		}
-	
 
 		eType := "sign-in"
 		startDate := time.Date(track.CreatedAt.Year(), track.CreatedAt.Month(), track.CreatedAt.Day(), 0, 0, 0, 0, time.Local)
 		eCount, err := tc.TrackRepository.CountEventsByVisitorIdSince(track.VisitorId, startDate)
 		if err == nil {
-			if eCount % 2 == 0 {
+			if eCount%2 == 0 {
 				eType = "sign-out"
 			}
 		}
 
-		if 	track.Visitor.IsStudent {
+		if track.Visitor.IsStudent {
 			if err := tc.StudentTracker.Track(ctx, track.Visitor); err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{
 					"error": err.Error(),
@@ -151,7 +157,7 @@ func (tc *TrackerController) FindAndTrackHandler() gin.HandlerFunc {
 		}
 
 		response := TrackResponse{
-			Visitor: track.Visitor,
+			Visitor:   track.Visitor,
 			TrackType: eType,
 			TrackDate: track.CreatedAt.Format("2006-01-02 15:04:05"),
 		}
@@ -193,7 +199,7 @@ func (tc *TrackerController) ChangeTimeHandler() gin.HandlerFunc {
 	}
 }
 
-type FakeTrackerService struct {}
+type FakeTrackerService struct{}
 
 func (fts FakeTrackerService) Track(id string) error {
 	return nil
