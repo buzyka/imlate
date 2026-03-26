@@ -58,7 +58,7 @@ func (ac *AdminAPIController) RegisterTerminalHandler() gin.HandlerFunc {
 				c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 				return
 			}
-			if err.Error() == "authentication failed" {
+			if errors.Is(err, usecase.ErrAuthenticationFailed) {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid admin credentials"})
 				return
 			}

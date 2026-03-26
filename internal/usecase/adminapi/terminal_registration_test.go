@@ -55,7 +55,7 @@ func TestRegisterTerminal_AdminNotFound(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
-	assert.Equal(t, "authentication failed", err.Error())
+	assert.ErrorIs(t, err, ErrAuthenticationFailed)
 	mockRepo.AssertExpectations(t)
 }
 
@@ -69,7 +69,8 @@ func TestRegisterTerminal_AdminRepoError(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
-	assert.Equal(t, "authentication failed", err.Error())
+	assert.Contains(t, err.Error(), "failed to find admin user")
+	assert.NotErrorIs(t, err, ErrAuthenticationFailed)
 	mockRepo.AssertExpectations(t)
 }
 
@@ -84,7 +85,7 @@ func TestRegisterTerminal_WrongPassword(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
-	assert.Equal(t, "authentication failed", err.Error())
+	assert.ErrorIs(t, err, ErrAuthenticationFailed)
 	mockRepo.AssertExpectations(t)
 }
 
@@ -100,7 +101,7 @@ func TestRegisterTerminal_NotAdminRole(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
-	assert.Equal(t, "authentication failed", err.Error())
+	assert.ErrorIs(t, err, ErrAuthenticationFailed)
 	mockRepo.AssertExpectations(t)
 }
 
@@ -116,7 +117,7 @@ func TestRegisterTerminal_InactiveAdmin(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
-	assert.Equal(t, "authentication failed", err.Error())
+	assert.ErrorIs(t, err, ErrAuthenticationFailed)
 	mockRepo.AssertExpectations(t)
 }
 

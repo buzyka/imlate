@@ -272,6 +272,7 @@
         }
 
         function showRegistrationModal() {
+            regModalOpen = true;
             document.getElementById('registrationOverlay').style.display = 'block';
             document.getElementById('regError').style.display = 'none';
             document.getElementById('regConflict').style.display = 'none';
@@ -279,6 +280,7 @@
         }
 
         function hideRegistrationModal() {
+            regModalOpen = false;
             $('#terminalRegModal').modal('hide');
             document.getElementById('registrationOverlay').style.display = 'none';
         }
@@ -362,15 +364,25 @@
             showRegistrationModal();
         }
 
+        // ---- RFID & focus setup (must be before registration check) ----
+        var rfidInput = document.getElementById('rfidInput');
+        var cardIdDisplay = document.getElementById('cardIdDisplay');
+        var readerInstructionImage = document.getElementById('readerInstructionImage');
+
+        var regModalOpen = false;
+
+        $('#terminalRegModal').on('shown.bs.modal', function() {
+            regModalOpen = true;
+        });
+        $('#terminalRegModal').on('hidden.bs.modal', function() {
+            regModalOpen = false;
+            rfidInput.focus();
+        });
+
         // ---- On page load: check registration ----
         if (!isTerminalRegistered()) {
             showRegistrationModal();
         }
-
-        // ---- RFID Tracking ----
-        var rfidInput = document.getElementById('rfidInput');
-        var cardIdDisplay = document.getElementById('cardIdDisplay');
-        var readerInstructionImage = document.getElementById('readerInstructionImage');
 
         var rfidData = '';
 
@@ -469,16 +481,6 @@
                 };
                 xhr.send(JSON.stringify(payload));
             }
-        });
-
-        var regModalOpen = false;
-
-        $('#terminalRegModal').on('shown.bs.modal', function() {
-            regModalOpen = true;
-        });
-        $('#terminalRegModal').on('hidden.bs.modal', function() {
-            regModalOpen = false;
-            rfidInput.focus();
         });
 
         window.addEventListener('focus', function() {

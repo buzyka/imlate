@@ -14,6 +14,7 @@ import (
 const generatedPasswordLength = 32
 
 var ErrTerminalAlreadyExists = errors.New("terminal with this name already exists")
+var ErrAuthenticationFailed = errors.New("authentication failed")
 
 type TerminalRegistrationResult struct {
 	AuthToken    string `json:"auth_token"`
@@ -25,19 +26,19 @@ type TerminalRegistrationResult struct {
 func (a *AdminAPI) RegisterTerminal(adminLogin, adminPassword, terminalName string, forceUpdate bool) (*TerminalRegistrationResult, error) {
 	admin, err := a.UserRepo.FindByUsername(adminLogin)
 	if err != nil {
-		return nil, fmt.Errorf("authentication failed")
+		return nil, fmt.Errorf("failed to find admin user: %w", err)
 	}
 	if admin == nil || admin.ID == uuid.Nil {
-		return nil, fmt.Errorf("authentication failed")
+		return nil, ErrAuthenticationFailed
 	}
 	if !admin.PasswordValidate(adminPassword) {
-		return nil, fmt.Errorf("authentication failed")
+		return nil, ErrAuthenticationFailed
 	}
 	if admin.Role != entity.UserRoleAdmin {
-		return nil, fmt.Errorf("authentication failed")
+		return nil, ErrAuthenticationFailed
 	}
 	if !admin.IsActive {
-		return nil, fmt.Errorf("authentication failed")
+		return nil, ErrAuthenticationFailed
 	}
 
 	rawPassword, err := generateSecurePassword()
@@ -71,7 +72,7 @@ func (a *AdminAPI) RegisterTerminal(adminLogin, adminPassword, terminalName stri
 
 		return &TerminalRegistrationResult{
 			AuthToken:    rawPassword,
-			TerminalName: existing.Name,
+			TerminalName: existing.UserName,
 			Username:     existing.UserName,
 			Role:         string(existing.Role),
 		}, nil
@@ -99,7 +100,7 @@ func (a *AdminAPI) RegisterTerminal(adminLogin, adminPassword, terminalName stri
 
 	return &TerminalRegistrationResult{
 		AuthToken:    rawPassword,
-		TerminalName: terminalUser.Name,
+		TerminalName: terminalUser.UserName,
 		Username:     terminalUser.UserName,
 		Role:         string(terminalUser.Role),
 	}, nil

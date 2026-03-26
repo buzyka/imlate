@@ -3,6 +3,7 @@ package adminapi
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -112,6 +113,29 @@ func TestRegisterTerminalHandler_AuthFailed(t *testing.T) {
 	var errResp map[string]string
 	assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
 	assert.Equal(t, "invalid admin credentials", errResp["error"])
+	repo.AssertExpectations(t)
+}
+
+func TestRegisterTerminalHandler_DBError_Returns500(t *testing.T) {
+	repo := new(providertest.UserRepositoryMock)
+	repo.On("FindByUsername", "admin").Return(nil, errors.New("db connection refused"))
+
+	engine, rec := setupRegHandler(repo)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"admin_login":    "admin",
+		"admin_password": "admin-pass",
+		"terminal_name":  "term-1",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/register-terminal", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	engine.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+
+	var errResp map[string]string
+	assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+	assert.Contains(t, errResp["error"], "failed to find admin user")
 	repo.AssertExpectations(t)
 }
 
