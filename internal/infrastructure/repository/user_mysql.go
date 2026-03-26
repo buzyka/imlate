@@ -15,7 +15,7 @@ type UserMySQL struct {
 
 func (r *UserMySQL) FindByID(id uuid.UUID) (*entity.User, error) {
 	row := r.Connection.QueryRow(
-		"SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE id = ? AND deleted_at IS NULL",
+		"SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE id = ? AND deleted_at IS NULL",
 		id.String(),
 	)
 	return r.scanUser(row)
@@ -23,7 +23,7 @@ func (r *UserMySQL) FindByID(id uuid.UUID) (*entity.User, error) {
 
 func (r *UserMySQL) FindByUsername(username string) (*entity.User, error) {
 	row := r.Connection.QueryRow(
-		"SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE username = ? AND deleted_at IS NULL",
+		"SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE username = ? AND deleted_at IS NULL",
 		username,
 	)
 	return r.scanUser(row)
@@ -31,7 +31,7 @@ func (r *UserMySQL) FindByUsername(username string) (*entity.User, error) {
 
 func (r *UserMySQL) FindAll() ([]*entity.User, error) {
 	rows, err := r.Connection.Query(
-		"SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL ORDER BY created_at ASC",
+		"SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL ORDER BY created_at ASC",
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query users: %w", err)
@@ -53,8 +53,13 @@ func (r *UserMySQL) FindAll() ([]*entity.User, error) {
 }
 
 func (r *UserMySQL) Create(user *entity.User) error {
+	var createdByStr *string
+	if user.CreatedBy != nil {
+		s := user.CreatedBy.String()
+		createdByStr = &s
+	}
 	_, err := r.Connection.Exec(
-		"INSERT INTO users (id, username, password, name, surname, role, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		"INSERT INTO users (id, username, password, name, surname, role, is_active, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		user.ID.String(),
 		user.UserName,
 		user.Password,
@@ -62,6 +67,7 @@ func (r *UserMySQL) Create(user *entity.User) error {
 		user.Surname,
 		string(user.Role),
 		user.IsActive,
+		createdByStr,
 		user.CreatedAt,
 		user.UpdatedAt,
 	)
@@ -72,14 +78,20 @@ func (r *UserMySQL) Create(user *entity.User) error {
 }
 
 func (r *UserMySQL) Update(user *entity.User) error {
+	var createdByStr *string
+	if user.CreatedBy != nil {
+		s := user.CreatedBy.String()
+		createdByStr = &s
+	}
 	result, err := r.Connection.Exec(
-		"UPDATE users SET username = ?, password = ?, name = ?, surname = ?, role = ?, is_active = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
+		"UPDATE users SET username = ?, password = ?, name = ?, surname = ?, role = ?, is_active = ?, created_by = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
 		user.UserName,
 		user.Password,
 		user.Name,
 		user.Surname,
 		string(user.Role),
 		user.IsActive,
+		createdByStr,
 		user.UpdatedAt,
 		user.ID.String(),
 	)
@@ -118,6 +130,7 @@ func (r *UserMySQL) Delete(id uuid.UUID) error {
 func (r *UserMySQL) scanUser(row *sql.Row) (*entity.User, error) {
 	var idStr string
 	var role string
+	var createdByRaw sql.NullString
 	var deletedAt sql.NullTime
 	var updatedAt sql.NullTime
 	var createdAt sql.NullTime
@@ -131,6 +144,7 @@ func (r *UserMySQL) scanUser(row *sql.Row) (*entity.User, error) {
 		&user.Surname,
 		&role,
 		&user.IsActive,
+		&createdByRaw,
 		&createdAt,
 		&updatedAt,
 		&deletedAt,
@@ -148,6 +162,13 @@ func (r *UserMySQL) scanUser(row *sql.Row) (*entity.User, error) {
 	}
 	user.ID = parsedID
 	user.Role = entity.UserRole(role)
+	if createdByRaw.Valid {
+		parsed, err := uuid.Parse(createdByRaw.String)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse created_by: %w", err)
+		}
+		user.CreatedBy = &parsed
+	}
 	if createdAt.Valid {
 		user.CreatedAt = createdAt.Time
 	}
@@ -163,6 +184,7 @@ func (r *UserMySQL) scanUser(row *sql.Row) (*entity.User, error) {
 func (r *UserMySQL) scanFromRows(rows *sql.Rows) (*entity.User, error) {
 	var idStr string
 	var role string
+	var createdByRaw sql.NullString
 	var deletedAt sql.NullTime
 	var updatedAt sql.NullTime
 	var createdAt sql.NullTime
@@ -176,6 +198,7 @@ func (r *UserMySQL) scanFromRows(rows *sql.Rows) (*entity.User, error) {
 		&user.Surname,
 		&role,
 		&user.IsActive,
+		&createdByRaw,
 		&createdAt,
 		&updatedAt,
 		&deletedAt,
@@ -190,6 +213,13 @@ func (r *UserMySQL) scanFromRows(rows *sql.Rows) (*entity.User, error) {
 	}
 	user.ID = parsedID
 	user.Role = entity.UserRole(role)
+	if createdByRaw.Valid {
+		parsed, err := uuid.Parse(createdByRaw.String)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse created_by: %w", err)
+		}
+		user.CreatedBy = &parsed
+	}
 	if createdAt.Valid {
 		user.CreatedAt = createdAt.Time
 	}

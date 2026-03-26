@@ -104,11 +104,18 @@ func main() {
 	container.MustFill(container.Global, searchController)
 	r.GET("/search/:id", searchController.SearchHandler())
 
+	var terminalAuth httpauth.TerminalAuthMiddleware
+	container.MustFill(container.Global, &terminalAuth)
+
 	trackerController := &tracker.TrackerController{}
 	container.MustFill(container.Global, trackerController)
 	r.POST("/change-time", trackerController.ChangeTimeHandler())
-	r.POST("/track", trackerController.TrackHandler())
-	r.POST("/find-and-track", trackerController.FindAndTrackHandler())
+	r.POST("/track", terminalAuth.MiddlewareFunc(), trackerController.TrackHandler())
+	r.POST("/find-and-track", terminalAuth.MiddlewareFunc(), trackerController.FindAndTrackHandler())
+
+	adminController := &adminapi.AdminAPIController{}
+	container.MustFill(container.Global, adminController)
+	r.POST("/register-terminal", adminController.RegisterTerminalHandler())
 
 	registerAdminRoutes(r)
 

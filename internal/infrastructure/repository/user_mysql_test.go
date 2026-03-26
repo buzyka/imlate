@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var userColumns = []string{"id", "username", "password", "name", "surname", "role", "is_active", "created_at", "updated_at", "deleted_at"}
+var userColumns = []string{"id", "username", "password", "name", "surname", "role", "is_active", "created_by", "created_at", "updated_at", "deleted_at"}
 
 func newUserRepo(t *testing.T) (*UserMySQL, sqlmock.Sqlmock, *sql.DB) {
 	t.Helper()
@@ -33,9 +33,9 @@ func TestUserMySQL_FindByID_Success(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 
 	rows := sqlmock.NewRows(userColumns).
-		AddRow(uid.String(), "admin", "$2a$10$hash", "Admin", "User", "admin", true, now, now, nil)
+		AddRow(uid.String(), "admin", "$2a$10$hash", "Admin", "User", "admin", true, nil, now, now, nil)
 
-	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE id = \\? AND deleted_at IS NULL").
+	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE id = \\? AND deleted_at IS NULL").
 		WithArgs(uid.String()).
 		WillReturnRows(rows)
 
@@ -65,7 +65,7 @@ func TestUserMySQL_FindByID_NotFound(t *testing.T) {
 
 	uid := uuid.New()
 
-	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE id = \\? AND deleted_at IS NULL").
+	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE id = \\? AND deleted_at IS NULL").
 		WithArgs(uid.String()).
 		WillReturnError(sql.ErrNoRows)
 
@@ -87,7 +87,7 @@ func TestUserMySQL_FindByID_DBError(t *testing.T) {
 	uid := uuid.New()
 	expectedError := errors.New("database connection error")
 
-	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE id = \\? AND deleted_at IS NULL").
+	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE id = \\? AND deleted_at IS NULL").
 		WithArgs(uid.String()).
 		WillReturnError(expectedError)
 
@@ -109,9 +109,9 @@ func TestUserMySQL_FindByID_InvalidUUID(t *testing.T) {
 	uid := uuid.New()
 
 	rows := sqlmock.NewRows(userColumns).
-		AddRow("not-a-valid-uuid", "admin", "$2a$10$hash", "Admin", "User", "admin", true, time.Now(), time.Now(), nil)
+		AddRow("not-a-valid-uuid", "admin", "$2a$10$hash", "Admin", "User", "admin", true, nil, time.Now(), time.Now(), nil)
 
-	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE id = \\? AND deleted_at IS NULL").
+	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE id = \\? AND deleted_at IS NULL").
 		WithArgs(uid.String()).
 		WillReturnRows(rows)
 
@@ -136,9 +136,9 @@ func TestUserMySQL_FindByUsername_Success(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 
 	rows := sqlmock.NewRows(userColumns).
-		AddRow(uid.String(), "terminal", "$2a$10$hash", "Terminal", "User", "terminal", true, now, now, nil)
+		AddRow(uid.String(), "terminal", "$2a$10$hash", "Terminal", "User", "terminal", true, nil, now, now, nil)
 
-	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE username = \\? AND deleted_at IS NULL").
+	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE username = \\? AND deleted_at IS NULL").
 		WithArgs("terminal").
 		WillReturnRows(rows)
 
@@ -160,7 +160,7 @@ func TestUserMySQL_FindByUsername_NotFound(t *testing.T) {
 	repo, mock, db := newUserRepo(t)
 	defer func() { _ = db.Close() }()
 
-	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE username = \\? AND deleted_at IS NULL").
+	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE username = \\? AND deleted_at IS NULL").
 		WithArgs("nonexistent").
 		WillReturnError(sql.ErrNoRows)
 
@@ -181,7 +181,7 @@ func TestUserMySQL_FindByUsername_DBError(t *testing.T) {
 
 	expectedError := errors.New("connection refused")
 
-	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE username = \\? AND deleted_at IS NULL").
+	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE username = \\? AND deleted_at IS NULL").
 		WithArgs("admin").
 		WillReturnError(expectedError)
 
@@ -207,10 +207,10 @@ func TestUserMySQL_FindAll_Success(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 
 	rows := sqlmock.NewRows(userColumns).
-		AddRow(uid1.String(), "admin", "$2a$10$hash1", "Admin", "User", "admin", true, now, now, nil).
-		AddRow(uid2.String(), "terminal", "$2a$10$hash2", "Terminal", "User", "terminal", true, now, now, nil)
+		AddRow(uid1.String(), "admin", "$2a$10$hash1", "Admin", "User", "admin", true, nil, now, now, nil).
+		AddRow(uid2.String(), "terminal", "$2a$10$hash2", "Terminal", "User", "terminal", true, nil, now, now, nil)
 
-	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL ORDER BY created_at ASC").
+	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL ORDER BY created_at ASC").
 		WillReturnRows(rows)
 
 	// Execute
@@ -235,7 +235,7 @@ func TestUserMySQL_FindAll_Empty(t *testing.T) {
 
 	rows := sqlmock.NewRows(userColumns)
 
-	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL ORDER BY created_at ASC").
+	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL ORDER BY created_at ASC").
 		WillReturnRows(rows)
 
 	// Execute
@@ -255,7 +255,7 @@ func TestUserMySQL_FindAll_DBError(t *testing.T) {
 
 	expectedError := errors.New("query failed")
 
-	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL ORDER BY created_at ASC").
+	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL ORDER BY created_at ASC").
 		WillReturnError(expectedError)
 
 	// Execute
@@ -275,9 +275,9 @@ func TestUserMySQL_FindAll_ScanError(t *testing.T) {
 
 	// Return a row with invalid UUID to trigger scan/parse error
 	rows := sqlmock.NewRows(userColumns).
-		AddRow("invalid-uuid", "admin", "$2a$10$hash", "Admin", "User", "admin", true, time.Now(), time.Now(), nil)
+		AddRow("invalid-uuid", "admin", "$2a$10$hash", "Admin", "User", "admin", true, nil, time.Now(), time.Now(), nil)
 
-	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL ORDER BY created_at ASC").
+	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL ORDER BY created_at ASC").
 		WillReturnRows(rows)
 
 	// Execute
@@ -299,10 +299,10 @@ func TestUserMySQL_FindAll_RowsError(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 
 	rows := sqlmock.NewRows(userColumns).
-		AddRow(uid.String(), "admin", "$2a$10$hash", "Admin", "User", "admin", true, now, now, nil).
+		AddRow(uid.String(), "admin", "$2a$10$hash", "Admin", "User", "admin", true, nil, now, now, nil).
 		RowError(0, errors.New("row iteration error"))
 
-	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL ORDER BY created_at ASC").
+	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL ORDER BY created_at ASC").
 		WillReturnRows(rows)
 
 	// Execute
@@ -337,7 +337,7 @@ func TestUserMySQL_Create_Success(t *testing.T) {
 	}
 
 	mock.ExpectExec("INSERT INTO users").
-		WithArgs(uid.String(), "newuser", "$2a$10$somehash", "New", "User", "admin", true, now, now).
+		WithArgs(uid.String(), "newuser", "$2a$10$somehash", "New", "User", "admin", true, nil, now, now).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	// Execute
@@ -368,7 +368,7 @@ func TestUserMySQL_Create_Error(t *testing.T) {
 	}
 
 	mock.ExpectExec("INSERT INTO users").
-		WithArgs(uid.String(), "duplicate", "$2a$10$somehash", "Dup", "User", "terminal", true, now, now).
+		WithArgs(uid.String(), "duplicate", "$2a$10$somehash", "Dup", "User", "terminal", true, nil, now, now).
 		WillReturnError(errors.New("duplicate entry"))
 
 	// Execute
@@ -401,7 +401,7 @@ func TestUserMySQL_Update_Success(t *testing.T) {
 	}
 
 	mock.ExpectExec("UPDATE users SET").
-		WithArgs("updated", "$2a$10$newhash", "Updated", "User", "admin", true, now, uid.String()).
+		WithArgs("updated", "$2a$10$newhash", "Updated", "User", "admin", true, nil, now, uid.String()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	// Execute
@@ -431,7 +431,7 @@ func TestUserMySQL_Update_NotFound(t *testing.T) {
 	}
 
 	mock.ExpectExec("UPDATE users SET").
-		WithArgs("ghost", "$2a$10$hash", "Ghost", "User", "terminal", true, now, uid.String()).
+		WithArgs("ghost", "$2a$10$hash", "Ghost", "User", "terminal", true, nil, now, uid.String()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
 
 	// Execute
@@ -462,7 +462,7 @@ func TestUserMySQL_Update_DBError(t *testing.T) {
 	}
 
 	mock.ExpectExec("UPDATE users SET").
-		WithArgs("admin", "$2a$10$hash", "Admin", "User", "admin", true, now, uid.String()).
+		WithArgs("admin", "$2a$10$hash", "Admin", "User", "admin", true, nil, now, uid.String()).
 		WillReturnError(errors.New("connection lost"))
 
 	// Execute
@@ -493,7 +493,7 @@ func TestUserMySQL_Update_RowsAffectedError(t *testing.T) {
 	}
 
 	mock.ExpectExec("UPDATE users SET").
-		WithArgs("admin", "$2a$10$hash", "Admin", "User", "admin", true, now, uid.String()).
+		WithArgs("admin", "$2a$10$hash", "Admin", "User", "admin", true, nil, now, uid.String()).
 		WillReturnResult(sqlmock.NewErrorResult(errors.New("rows affected error")))
 
 	// Execute
@@ -596,9 +596,9 @@ func TestUserMySQL_FindByID_NullTimestamps(t *testing.T) {
 	uid := uuid.New()
 
 	rows := sqlmock.NewRows(userColumns).
-		AddRow(uid.String(), "admin", "$2a$10$hash", "Admin", "User", "admin", true, nil, nil, nil)
+		AddRow(uid.String(), "admin", "$2a$10$hash", "Admin", "User", "admin", true, nil, nil, nil, nil)
 
-	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE id = \\? AND deleted_at IS NULL").
+	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE id = \\? AND deleted_at IS NULL").
 		WithArgs(uid.String()).
 		WillReturnRows(rows)
 
@@ -624,9 +624,9 @@ func TestUserMySQL_FindByID_WithDeletedAt(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 
 	rows := sqlmock.NewRows(userColumns).
-		AddRow(uid.String(), "admin", "$2a$10$hash", "Admin", "User", "admin", false, now, now, now)
+		AddRow(uid.String(), "admin", "$2a$10$hash", "Admin", "User", "admin", false, nil, now, now, now)
 
-	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE id = \\? AND deleted_at IS NULL").
+	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE id = \\? AND deleted_at IS NULL").
 		WithArgs(uid.String()).
 		WillReturnRows(rows)
 
@@ -652,9 +652,9 @@ func TestUserMySQL_FindAll_NullTimestamps(t *testing.T) {
 	uid := uuid.New()
 
 	rows := sqlmock.NewRows(userColumns).
-		AddRow(uid.String(), "admin", "$2a$10$hash", "Admin", "User", "admin", true, nil, nil, nil)
+		AddRow(uid.String(), "admin", "$2a$10$hash", "Admin", "User", "admin", true, nil, nil, nil, nil)
 
-	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL ORDER BY created_at ASC").
+	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL ORDER BY created_at ASC").
 		WillReturnRows(rows)
 
 	// Execute
@@ -678,9 +678,9 @@ func TestUserMySQL_FindAll_WithDeletedAt(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 
 	rows := sqlmock.NewRows(userColumns).
-		AddRow(uid.String(), "admin", "$2a$10$hash", "Admin", "User", "admin", true, now, now, now)
+		AddRow(uid.String(), "admin", "$2a$10$hash", "Admin", "User", "admin", true, nil, now, now, now)
 
-	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL ORDER BY created_at ASC").
+	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL ORDER BY created_at ASC").
 		WillReturnRows(rows)
 
 	// Execute
@@ -702,7 +702,7 @@ func TestUserMySQL_FindAll_RowScanError(t *testing.T) {
 	rows := sqlmock.NewRows([]string{"id", "username"}).
 		AddRow("some-id", "admin")
 
-	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL ORDER BY created_at ASC").
+	mock.ExpectQuery("SELECT id, username, password, name, surname, role, is_active, created_by, created_at, updated_at, deleted_at FROM users WHERE deleted_at IS NULL ORDER BY created_at ASC").
 		WillReturnRows(rows)
 
 	// Execute
