@@ -23,6 +23,7 @@ type User struct {
 	Surname   string     `json:"surname"`
 	Role      UserRole   `json:"role"`
 	IsActive  bool       `json:"is_active"`
+	CreatedBy *uuid.UUID `json:"created_by,omitempty"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
 	DeletedAt *time.Time `json:"deleted_at"`
