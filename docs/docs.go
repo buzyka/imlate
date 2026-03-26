@@ -509,6 +509,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin-api/version": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns the current application version. In development returns \"2.0.x-dev\", in production the actual release version.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-system"
+                ],
+                "summary": "Get application version",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.VersionResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/admin-api/visitors": {
             "get": {
                 "security": [
@@ -1132,6 +1169,14 @@ const docTemplate = `{
             ],
             "properties": {
                 "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_buzyka_imlate_internal_isb_adminapi.VersionResponse": {
+            "type": "object",
+            "properties": {
+                "version": {
                     "type": "string"
                 }
             }
