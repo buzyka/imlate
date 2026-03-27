@@ -198,6 +198,48 @@ run_app() {
     exec_app go run cmd/app/main.go
 }
 
+# Update admin UI from GitHub release
+update_ui() {
+    local ver="$1"
+    if [ -z "$ver" ]; then
+        print_error "Version is required. Usage: make update-ui version=0.1.1"
+        exit 1
+    fi
+
+    local url="https://github.com/buzyka/imlate-front/releases/download/v${ver}/imlate-ui-v${ver}.zip"
+    local zip_file="/tmp/imlate-ui-v${ver}.zip"
+    local admin_dir="website/admin"
+    local backup_dir="website/admin.bak"
+
+    print_info "Downloading UI v${ver} from ${url}..."
+    local http_code
+    http_code=$(curl -sL -w "%{http_code}" -o "$zip_file" "$url")
+    if [ "$http_code" != "200" ]; then
+        rm -f "$zip_file"
+        print_error "Failed to download: HTTP ${http_code}. Check that version v${ver} exists at ${url}"
+        exit 1
+    fi
+
+    if [ -d "$admin_dir" ]; then
+        rm -rf "$backup_dir"
+        mv "$admin_dir" "$backup_dir"
+    fi
+
+    if ! unzip -q "$zip_file" -d "website"; then
+        print_error "Failed to unzip archive. Restoring previous version..."
+        rm -rf "$admin_dir"
+        if [ -d "$backup_dir" ]; then
+            mv "$backup_dir" "$admin_dir"
+        fi
+        rm -f "$zip_file"
+        exit 1
+    fi
+
+    rm -rf "$backup_dir"
+    rm -f "$zip_file"
+    print_success "UI updated to v${ver}"
+}
+
 # Show help
 show_help() {
     cat << EOF
@@ -234,6 +276,9 @@ Commands:
   rebuild            Rebuild containers from scratch
   clean              Stop and remove all containers and volumes
   
+  # UI
+  update-ui <ver>    Download and install admin UI from GitHub release
+
   # Utilities
   exec <command>     Execute a command in the app container
   help               Show this help message
@@ -306,6 +351,9 @@ case "$1" in
         ;;
     restart-app)
         restart_app
+        ;;
+    update-ui)
+        update_ui "$2"
         ;;
     clean)
         clean
