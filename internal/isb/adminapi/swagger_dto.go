@@ -42,6 +42,11 @@ type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
+// VersionResponse is the success payload for the version endpoint.
+type VersionResponse struct {
+	Version string `json:"version"`
+}
+
 // VisitorResponse documents admin visitor payloads.
 type VisitorResponse = usecase.VisitorResponse
 

@@ -106,6 +106,11 @@ definitions:
     required:
     - refresh_token
     type: object
+  github_com_buzyka_imlate_internal_isb_adminapi.VersionResponse:
+    properties:
+      version:
+        type: string
+    type: object
   github_com_buzyka_imlate_internal_usecase_adminapi.ReportsVisitsResponseItem:
     properties:
       duration_minutes:
@@ -629,6 +634,30 @@ paths:
       summary: Update user password
       tags:
       - admin-users
+  /admin-api/version:
+    get:
+      description: Returns the current application version. In development returns
+        "2.0.x-dev", in production the actual release version.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.VersionResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get application version
+      tags:
+      - admin-system
   /admin-api/visitors:
     get:
       description: Returns all visitors available in the administration area.

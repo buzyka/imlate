@@ -25,7 +25,10 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-w -s" -o tracker cmd/app/main.go
+ARG APP_VERSION=2.0.x-dev
+RUN CGO_ENABLED=1 GOOS=linux go build \
+    -ldflags="-w -s -X github.com/buzyka/imlate/internal/version.Version=${APP_VERSION}" \
+    -o tracker cmd/app/main.go
 
 # Runtime stage - Debian 12 slim
 FROM debian:bookworm-slim

@@ -13,6 +13,7 @@ import (
 	httpauth "github.com/buzyka/imlate/internal/infrastructure/http/auth"
 	"github.com/buzyka/imlate/internal/infrastructure/util"
 	"github.com/buzyka/imlate/internal/isb/adminapi"
+	"github.com/buzyka/imlate/internal/version"
 	"github.com/buzyka/imlate/internal/isb/search"
 	"github.com/buzyka/imlate/internal/isb/tracker"
 	"github.com/gin-gonic/gin"
@@ -143,6 +144,7 @@ func registerAdminRoutes(r *gin.Engine) {
 
 	adminGroup := r.Group("/admin-api", authMiddleware.MiddlewareFunc())
 	adminGroup.GET("/dashboard", adminDashboardHandler)
+	adminGroup.GET("/version", adminVersionHandler)
 
 	adminController := &adminapi.AdminAPIController{}
 	container.MustFill(container.Global, adminController)
@@ -216,4 +218,21 @@ func adminDashboardHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Welcome to the admin dashboard!",
 	})
+}
+
+// adminVersionHandler godoc
+// @Summary      Get application version
+// @Description  Returns the current application version. In development returns "2.0.x-dev", in production the actual release version.
+// @Tags         admin-system
+// @Produce      json
+// @Success      200  {object}  adminapi.VersionResponse
+// @Failure      401  {object}  adminapi.AuthErrorResponse
+// @Failure      403  {object}  adminapi.AuthErrorResponse
+// @Security     ApiKeyAuth
+// @Router       /admin-api/version [get]
+func adminVersionHandler(c *gin.Context) {
+	resp := adminapi.VersionResponse{
+		Version: version.Version,
+	}
+	c.JSON(http.StatusOK, resp)
 }

@@ -83,7 +83,11 @@ install_mod() {
 # Build the application
 build_app() {
     print_info "Building application..."
-    exec_app go build -o tracker cmd/app/main.go
+    local ldflags=""
+    if [ -n "${APP_VERSION:-}" ]; then
+        ldflags="-X github.com/buzyka/imlate/internal/version.Version=${APP_VERSION}"
+    fi
+    exec_app go build -ldflags "${ldflags}" -o tracker cmd/app/main.go
     print_success "Application built successfully"
 }
 
@@ -93,9 +97,14 @@ dist() {
     local target_goarch="${2:-amd64}"
     local go_bin="/usr/local/go/bin/go"
 
+    local ldflags=""
+    if [ -n "${APP_VERSION:-}" ]; then
+        ldflags="-X github.com/buzyka/imlate/internal/version.Version=${APP_VERSION}"
+    fi
+
     print_info "Building distribution for ${target_goos}/${target_goarch}..."
     check_docker
-    exec_app bash -lc "mkdir -p /app/dist && rm -rf /app/dist/* && GOOS=${target_goos} GOARCH=${target_goarch} ${go_bin} build -o /app/dist/app cmd/app/main.go && chmod 755 /app/dist/app && cp -R /app/migrations /app/dist/migrations && cp -R /app/website /app/dist/website"
+    exec_app bash -lc "mkdir -p /app/dist && rm -rf /app/dist/* && GOOS=${target_goos} GOARCH=${target_goarch} ${go_bin} build -ldflags '${ldflags}' -o /app/dist/app cmd/app/main.go && chmod 755 /app/dist/app && cp -R /app/migrations /app/dist/migrations && cp -R /app/website /app/dist/website"
     print_success "Distribution bundle created in dist/"
 }
 
