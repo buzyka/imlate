@@ -28,11 +28,11 @@ type Config struct {
 	ERPMainRegistrationPeriodType   string `env:"ERP_MAIN_REGISTRATION_PERIOD_TYPE" envDefault:"AM"`
 	ERPDefaultLessonAbsenceCodeName string `env:"ERP_DEFAULT_LESSON_ABSENCE_CODE_NAME" envDefault:"O"`
 
-	StudentsImagePhotoDir       string `env:"STUDENTS_IMAGE_PHOTO_DIR" envDefault:"website/assets/img/students"`
-	StudentsImagePhotoURLPrefix string `env:"STUDENTS_IMAGE_PHOTO_URL_PREFIX" envDefault:"/assets/img/students"`
+	StudentsImagePhotoDir       string `env:"STUDENTS_IMAGE_PHOTO_DIR" envDefault:"storage/img/students"`
+	StudentsImagePhotoURLPrefix string `env:"STUDENTS_IMAGE_PHOTO_URL_PREFIX" envDefault:"/storage/img/students"`
 
-	VisitorImageDir       string `env:"VISITOR_IMAGE_DIR" envDefault:"website/assets/img/visitors"`
-	VisitorImageURLPrefix string `env:"VISITOR_IMAGE_URL_PREFIX" envDefault:"/assets/img/visitors"`
+	VisitorImageDir       string `env:"VISITOR_IMAGE_DIR" envDefault:"storage/img/visitors"`
+	VisitorImageURLPrefix string `env:"VISITOR_IMAGE_URL_PREFIX" envDefault:"/storage/img/visitors"`
 
 	AutoRegistrationYearGroups []int32 `env:"AUTO_REGISTRATION_YEAR_GROUPS" envSeparator:","`
 

@@ -175,6 +175,9 @@ func (s *StudentSync) SyncStudentPhotos() error {
 			continue
 		}
 		filePath := s.Config.StudentsImagePhotoDir
+		if err := os.MkdirAll(filePath, 0755); err != nil {
+			return fmt.Errorf("failed to create image directory: %w", err)
+		}
 		fileName := fmt.Sprintf("%s.%s", visitor.ErpSchoolID, photoResp.Extension)
 		if err := osWriteFile(filePath+"/"+fileName, photoResp.Data, 0644); err != nil {
 			return err

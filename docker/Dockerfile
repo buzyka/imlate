@@ -64,8 +64,8 @@ COPY migrations ./migrations
 COPY website ./website
 COPY storage ./storage
 
-# Create output directory
-RUN mkdir -p output
+# Create storage subdirectories for dynamic data
+RUN mkdir -p storage/img/visitors storage/img/students storage/output
 
 # Expose port
 EXPOSE 8080
