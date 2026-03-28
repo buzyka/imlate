@@ -370,6 +370,17 @@ func TestNewFromEnv_ERPIntegrationEnabled_True(t *testing.T) {
 	assert.True(t, cfg.ERPIntegrationEnabled)
 }
 
+func TestNewFromEnv_ImageStorageDefaults(t *testing.T) {
+	loadTestEnvVariables(t, map[string]string{})
+
+	cfg, err := NewFromEnv()
+	assert.NoError(t, err)
+	assert.Equal(t, "storage/img/students", cfg.StudentsImagePhotoDir)
+	assert.Equal(t, "/storage/img/students", cfg.StudentsImagePhotoURLPrefix)
+	assert.Equal(t, "storage/img/visitors", cfg.VisitorImageDir)
+	assert.Equal(t, "/storage/img/visitors", cfg.VisitorImageURLPrefix)
+}
+
 func TestNewFromEnv_CronScheduleDefaults(t *testing.T) {
 	loadTestEnvVariables(t, map[string]string{})
 
@@ -423,6 +434,8 @@ func resetConfigEnv(t *testing.T) {
 		"ERP_DEFAULT_LESSON_ABSENCE_CODE_NAME",
 		"STUDENTS_IMAGE_PHOTO_DIR",
 		"STUDENTS_IMAGE_PHOTO_URL_PREFIX",
+		"VISITOR_IMAGE_DIR",
+		"VISITOR_IMAGE_URL_PREFIX",
 		"AUTO_REGISTRATION_YEAR_GROUPS",
 		"FORCE_ERP_SYNC_ON_START",
 		"ERP_INTEGRATION_ENABLED",

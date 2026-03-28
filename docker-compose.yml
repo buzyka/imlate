@@ -45,6 +45,8 @@ services:
     volumes:
       - .:/app
       - go_modules:/go/pkg/mod
+      # For production: mount a persistent/external volume for dynamic data
+      # - storage_data:/app/storage
     depends_on:
       mysql:
         condition: service_healthy
@@ -64,6 +66,9 @@ volumes:
     driver: local
   go_modules:
     driver: local
+  # Uncomment for production persistent storage
+  # storage_data:
+  #   driver: local
 
 networks:
   imlate-network:
