@@ -74,7 +74,7 @@ func main() {
 	r := gin.Default()
 
 	r.Static("/assets", filepath.Join(rootPath, "website", "assets"))
-	r.Static("/output", filepath.Join(rootPath, "output"))
+	r.Static("/storage", filepath.Join(rootPath, "storage"))
 
 	// Define gita simple GET route
 	r.GET("/ping", func(ctx *gin.Context) {
