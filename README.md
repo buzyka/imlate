@@ -1,103 +1,126 @@
 # imlate
 
-A Go-based tracking application with Docker support.
+A visitor and student tracking system built with Go. Tracks sign-in/sign-out events via physical terminal devices or manual admin actions, provides an admin panel for visitor and user management, generates attendance reports, and optionally synchronizes student data with iSAMS (school management ERP).
+
+## Features
+
+- **Visitor tracking** -- sign-in/out via physical key readers or manual admin entry.
+- **Admin panel** -- web-based SPA for managing visitors, users, keys, and viewing reports.
+- **Attendance reports** -- paginated, filterable reports aggregated per visitor per day.
+- **Terminal authentication** -- dedicated auth scheme for physical tracking devices.
+- **iSAMS integration** (optional) -- syncs students, photos, registration codes, and writes back attendance/absence data.
+- **REST API** -- fully documented with Swagger/OpenAPI.
 
 ## Quick Start
 
-### Using Docker (Recommended)
-
 ```bash
-# Start the development environment
+# Clone the repository
+git clone git@github.com:buzyka/imlate.git
+cd imlate
+
+# Copy environment config and set AUTH_TOKEN_SECRET (min 32 chars)
+cp docker/.env.docker.example .env
+
+# Start the development environment (MySQL + Go app)
 make start
-# or
-./docker/docker-dev.sh start
 
-# Run tests
-make got
+# Verify
+curl http://localhost:8080/ping
+# {"message":"pong"}
 
-# Run linter with fix
-make golf
-
-# View logs
-make logs-app
+# View Swagger UI
+open http://localhost:8080/swagger/index.html
 ```
 
-See [docker/DOCKER.md](docker/DOCKER.md) for detailed Docker documentation.
-
-### Using devenv (Nix)
-
-```bash
-devenv up
-```
+See the [Getting Started guide](docs/getting-started/README.md) for full setup instructions including local (non-Docker) setup.
 
 ## Development Commands
 
-### With Docker/Make (same commands as devenv.nix)
-
-```bash
-make start           # Start development environment
-make stop            # Stop development environment
-make install-mod     # Install Go modules
-make build-app       # Build application
-make got             # Run tests
-make gotc            # Run tests with coverage
-make gol             # Run linter
-make golf            # Run linter with fix
-make start-app       # Start application
-make migrate-up      # Apply database migrations
-make mysql-shell     # Access MySQL shell
-make clean           # Clean up everything
-```
-
-### With devenv.nix
-
-```bash
-install-mod          # Install Go modules
-build-app            # Build application
-got                  # Run tests
-gotc                 # Run tests with coverage
-gol                  # Run linter
-golf                 # Run linter with fix
-start-app            # Start application
-```
+| Command | Description |
+|---------|-------------|
+| `make start` | Start Docker environment (MySQL + app) |
+| `make stop` | Stop Docker environment |
+| `make restart` | Restart everything |
+| `make restart-app` | Restart only the app container |
+| `make logs-app` | Tail application logs |
+| `make got` | Run all tests |
+| `make gotc` | Run tests with coverage |
+| `make gol` | Run linter |
+| `make golf` | Run linter with auto-fix |
+| `make swag` | Regenerate Swagger docs |
+| `make shell` | Open bash in app container |
+| `make mysql-shell` | Open MySQL CLI |
+| `make migrate-up` | Apply database migrations |
+| `make migrate-down` | Roll back last migration |
+| `make migrate-create name=...` | Create new migration |
+| `make dist` | Build distributable binary |
 
 ## Project Structure
 
 ```
 .
-├── cmd/
-│   └── app/
-│       └── main.go          # Application entry point
+├── cmd/app/main.go              # Application entry point
 ├── internal/
-│   ├── config/              # Configuration
-│   ├── infrastructure/      # Infrastructure layer
-│   └── isb/                 # Business logic
-├── migrations/              # Database migrations
-├── website/                 # Static web assets
-├── docker/                  # Docker-related files
-│   ├── Dockerfile           # Production build
-│   ├── Dockerfile.dev       # Development build
-│   ├── docker-dev.sh        # Docker management script
-│   ├── mysql/               # MySQL initialization
-│   └── DOCKER.md            # Docker documentation
-├── docker-compose.yml       # Docker Compose configuration
-└── Makefile                 # Make commands (same as devenv.nix)
+│   ├── config/                  # Environment-based configuration
+│   ├── domain/
+│   │   ├── entity/              # Core data structures
+│   │   ├── provider/            # Repository interfaces
+│   │   └── erp/                 # ERP client interface
+│   ├── usecase/                 # Business logic
+│   │   ├── adminapi/            # Admin operations, reports
+│   │   ├── tracking/            # Student attendance tracking
+│   │   └── synchroniser/        # ERP data sync
+│   ├── isb/                     # HTTP handlers (Gin)
+│   │   ├── adminapi/            # Admin API handlers
+│   │   ├── tracker/             # Tracker device handlers
+│   │   └── search/              # Visitor search handler
+│   └── infrastructure/
+│       ├── db/                  # Database connection + auto-migration
+│       ├── repository/          # SQL implementations
+│       ├── http/auth/           # JWT + terminal authentication
+│       ├── integration/isams/   # iSAMS REST client
+│       ├── gocontainer/         # Dependency injection
+│       ├── cron/                # Scheduled jobs
+│       └── logging/             # Zap logger
+├── migrations/                  # SQL migrations (golang-migrate)
+├── website/                     # Static UI (reader, admin SPA)
+├── docker/                      # Dockerfiles, scripts, MySQL init
+├── docs/                        # Developer documentation + Swagger
+├── docker-compose.yml           # Development environment
+└── Makefile                     # Command shortcuts
 ```
 
 ## Documentation
 
-- [Docker Setup](docker/DOCKER.md) - Complete Docker development guide
-- [Migrations](migrations/) - Database migration files
+- [Getting Started](docs/getting-started/README.md) -- Setup, prerequisites, first run
+- [Configuration](docs/getting-started/configuration.md) -- All environment variables
+- [Architecture](docs/architecture/README.md) -- System design and package structure
+- [API Reference](docs/api/README.md) -- Endpoints, auth, Swagger
+- [Contributing](docs/contributing/README.md) -- Workflow, style, migrations
+- [Infrastructure](docs/infrastructure/README.md) -- Docker, CI, database
+- [Testing](docs/testing/README.md) -- Test stack, patterns, coverage
 
 ## Requirements
 
-- Go 1.22.1+
-- Docker & Docker Compose (for Docker setup)
-- Nix with devenv (for devenv setup)
+- **Go** 1.25+ (included in Docker setup)
+- **Docker** 20.10+ with Docker Compose v2
+- **Make** (any version)
 
-## Environment Variables
+## Environment
 
-See `docker/.env.docker.example` for Docker environment variables.
+All configuration is via environment variables. Copy the example file and set `AUTH_TOKEN_SECRET`:
 
-- `ERP_INTEGRATION_ENABLED` controls iSAMS/ERP integration features. Default is `false`.
-- `AUTH_TOKEN_SECRET` is required for admin JWT auth and must be at least 32 characters.
+```bash
+cp docker/.env.docker.example .env
+```
+
+Key variables:
+- `AUTH_TOKEN_SECRET` -- JWT signing secret (required, min 32 characters)
+- `ERP_INTEGRATION_ENABLED` -- enable iSAMS integration (default `false`)
+- `DATABASE_*` -- database connection settings
+
+See the full [Configuration Reference](docs/getting-started/configuration.md).
+
+## License
+
+Private repository.
