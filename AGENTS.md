@@ -8,6 +8,14 @@ Guide for agentic coding tools working in this repository.
 - Main stacks: Gin, JWT auth, Swagger, MySQL/SQLite, golang-migrate, zap, testify
 - Core layout: `cmd/`, `internal/{config,domain,usecase,infrastructure,isb}`, `migrations/`, `website/`
 
+## Developer Documentation
+For detailed documentation beyond this agent guide, see [`docs/`](docs/README.md):
+- [Architecture & package map](docs/architecture/README.md) -- layered design, DI, request flow.
+- [API reference](docs/api/README.md) -- all endpoints, auth schemes, Swagger annotations.
+- [Configuration](docs/getting-started/configuration.md) -- full env var reference.
+- [Testing patterns](docs/testing/README.md) -- test stack, mocks, coverage.
+- [Infrastructure](docs/infrastructure/README.md) -- Docker, CI, migrations.
+
 ## Command Sources Of Truth
 - Prefer: `Makefile`, `docker/docker-dev.sh`, `.github/workflows/go-tests.yml`, `README.md`.
 - `devenv.nix` is partly stale; prefer Make/Docker/CI docs.
