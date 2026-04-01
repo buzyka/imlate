@@ -16,6 +16,7 @@ No authentication required.
 | `GET` | `/` | Reader terminal UI (HTML) |
 | `GET` | `/swagger/*any` | Swagger UI |
 | `GET` | `/admin` | Admin SPA |
+| `GET` | `/admin/settings` | Admin SPA settings route |
 | `GET` | `/search/:id` | Look up a visitor by key |
 | `POST` | `/login` | Admin JWT authentication |
 | `POST` | `/refresh` | Refresh JWT token |
@@ -66,6 +67,15 @@ All under `/admin-api/*`. Require a valid JWT token with `admin` role.
 | `POST` | `/admin-api/visitors/:id/key` | Add a key to a visitor |
 | `DELETE` | `/admin-api/visitors/:id/key/:key` | Remove a key from a visitor |
 | `DELETE` | `/admin-api/visitors/:id` | Delete a visitor (soft delete) |
+
+**Theme Management**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/admin-api/theme` | Get current tracking-page theme and animation settings |
+| `POST` | `/admin-api/theme/assets/:slot` | Upload a custom asset for a theme slot |
+| `DELETE` | `/admin-api/theme/assets/:slot` | Reset a theme slot to its default asset |
+| `PUT` | `/admin-api/theme/settings` | Update welcome/goodbye animation durations |
 
 **Reports and Tracking**
 

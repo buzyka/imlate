@@ -45,13 +45,13 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -76,19 +76,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.DashboardResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.DashboardResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthErrorResponse"
                         }
                     }
                 }
@@ -159,19 +159,201 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ReportsVisitsResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ReportsVisitsResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin-api/theme": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns current tracking page theme assets and timing settings.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-theme"
+                ],
+                "summary": "Get current theme",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_usecase_theme.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin-api/theme/assets/{slot}": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Uploads a custom asset for the given theme slot.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-theme"
+                ],
+                "summary": "Upload theme asset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Theme slot",
+                        "name": "slot",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Theme asset file",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_usecase_theme.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Removes a custom asset assignment and restores the default slot asset.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-theme"
+                ],
+                "summary": "Reset theme asset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Theme slot",
+                        "name": "slot",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_usecase_theme.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin-api/theme/settings": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Updates welcome and goodbye animation durations for the tracking page.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-theme"
+                ],
+                "summary": "Update theme settings",
+                "parameters": [
+                    {
+                        "description": "Theme settings request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.UpdateThemeSettingsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_usecase_theme.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -202,7 +384,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ManualTrackRequest"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ManualTrackRequest"
                         }
                     }
                 ],
@@ -210,31 +392,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ManualTrackResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ManualTrackResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -268,7 +450,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -297,7 +479,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.CreateUserRequest"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.CreateUserRequest"
                         }
                     }
                 ],
@@ -311,7 +493,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -351,13 +533,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -393,7 +575,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.UpdateUserRequest"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.UpdateUserRequest"
                         }
                     }
                 ],
@@ -407,7 +589,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -439,19 +621,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.MessageResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -489,7 +671,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.UpdatePasswordRequest"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.UpdatePasswordRequest"
                         }
                     }
                 ],
@@ -497,13 +679,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.MessageResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -528,19 +710,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.VersionResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.VersionResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthErrorResponse"
                         }
                     }
                 }
@@ -567,14 +749,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/internal_isb_adminapi.VisitorResponse"
+                                "$ref": "#/definitions/internal_http_controller_adminapi.VisitorResponse"
                             }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -603,7 +785,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.CreateVisitorRequest"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.CreateVisitorRequest"
                         }
                     }
                 ],
@@ -611,13 +793,13 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.VisitorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.VisitorResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -651,19 +833,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.VisitorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.VisitorResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -699,7 +881,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.UpdateVisitorRequest"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.UpdateVisitorRequest"
                         }
                     }
                 ],
@@ -707,13 +889,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.VisitorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.VisitorResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -745,19 +927,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.MessageResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -801,19 +983,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.VisitorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.VisitorResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -851,7 +1033,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.AddKeyRequest"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.AddKeyRequest"
                         }
                     }
                 ],
@@ -859,13 +1041,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.MessageResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -906,13 +1088,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.MessageResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_isb_adminapi.ErrorResponse"
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -938,7 +1120,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.LoginRequest"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.LoginRequest"
                         }
                     }
                 ],
@@ -946,19 +1128,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthTokenResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthTokenResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthErrorResponse"
                         }
                     }
                 }
@@ -984,7 +1166,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.RefreshRequest"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.RefreshRequest"
                         }
                     }
                 ],
@@ -992,19 +1174,77 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthTokenResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthTokenResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse"
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/register-terminal": {
+            "post": {
+                "description": "Validates admin credentials and creates (or force-updates) a terminal user.\nReturns the generated password as ` + "`" + `auth_token` + "`" + `. This token is only returned\nat creation or regeneration time and should be stored securely by the client.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "terminal"
+                ],
+                "summary": "Register a terminal",
+                "parameters": [
+                    {
+                        "description": "Terminal registration request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.RegisterTerminalRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.RegisterTerminalResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Terminal with this name already exists",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
                         }
                     }
                 }
@@ -1016,6 +1256,9 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
                     "type": "string"
                 },
                 "deleted_at": {
@@ -1111,7 +1354,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse": {
+        "github_com_buzyka_imlate_internal_http_controller_adminapi.AuthErrorResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -1122,7 +1365,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_buzyka_imlate_internal_isb_adminapi.AuthTokenResponse": {
+        "github_com_buzyka_imlate_internal_http_controller_adminapi.AuthTokenResponse": {
             "type": "object",
             "properties": {
                 "access_token": {
@@ -1139,7 +1382,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_buzyka_imlate_internal_isb_adminapi.DashboardResponse": {
+        "github_com_buzyka_imlate_internal_http_controller_adminapi.DashboardResponse": {
             "type": "object",
             "properties": {
                 "message": {
@@ -1147,7 +1390,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_buzyka_imlate_internal_isb_adminapi.LoginRequest": {
+        "github_com_buzyka_imlate_internal_http_controller_adminapi.LoginRequest": {
             "type": "object",
             "required": [
                 "password",
@@ -1162,7 +1405,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_buzyka_imlate_internal_isb_adminapi.RefreshRequest": {
+        "github_com_buzyka_imlate_internal_http_controller_adminapi.RefreshRequest": {
             "type": "object",
             "required": [
                 "refresh_token"
@@ -1173,7 +1416,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_buzyka_imlate_internal_isb_adminapi.VersionResponse": {
+        "github_com_buzyka_imlate_internal_http_controller_adminapi.VersionResponse": {
             "type": "object",
             "properties": {
                 "version": {
@@ -1219,7 +1462,58 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_isb_adminapi.AddKeyRequest": {
+        "github_com_buzyka_imlate_internal_usecase_theme.AssetState": {
+            "type": "object",
+            "properties": {
+                "content_type": {
+                    "type": "string"
+                },
+                "current_url": {
+                    "type": "string"
+                },
+                "default_url": {
+                    "type": "string"
+                },
+                "is_custom": {
+                    "type": "boolean"
+                },
+                "size_bytes": {
+                    "type": "integer"
+                },
+                "slot": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_buzyka_imlate_internal_usecase_theme.Response": {
+            "type": "object",
+            "properties": {
+                "assets": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/github_com_buzyka_imlate_internal_usecase_theme.AssetState"
+                    }
+                },
+                "settings": {
+                    "$ref": "#/definitions/github_com_buzyka_imlate_internal_usecase_theme.Settings"
+                }
+            }
+        },
+        "github_com_buzyka_imlate_internal_usecase_theme.Settings": {
+            "type": "object",
+            "properties": {
+                "goodbye_duration_ms": {
+                    "type": "integer"
+                },
+                "welcome_duration_ms": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_http_controller_adminapi.AddKeyRequest": {
             "type": "object",
             "required": [
                 "key"
@@ -1230,7 +1524,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_isb_adminapi.CreateUserRequest": {
+        "internal_http_controller_adminapi.CreateUserRequest": {
             "type": "object",
             "required": [
                 "name",
@@ -1257,7 +1551,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_isb_adminapi.CreateVisitorRequest": {
+        "internal_http_controller_adminapi.CreateVisitorRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -1286,7 +1580,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_isb_adminapi.ErrorResponse": {
+        "internal_http_controller_adminapi.ErrorResponse": {
             "type": "object",
             "properties": {
                 "error": {
@@ -1294,7 +1588,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_isb_adminapi.ManualTrackRequest": {
+        "internal_http_controller_adminapi.ManualTrackRequest": {
             "type": "object",
             "required": [
                 "visitor_id"
@@ -1311,7 +1605,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_isb_adminapi.ManualTrackResponse": {
+        "internal_http_controller_adminapi.ManualTrackResponse": {
             "type": "object",
             "properties": {
                 "track_date": {
@@ -1325,7 +1619,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_isb_adminapi.MessageResponse": {
+        "internal_http_controller_adminapi.MessageResponse": {
             "type": "object",
             "properties": {
                 "message": {
@@ -1333,7 +1627,40 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_isb_adminapi.ReportsVisitsResponse": {
+        "internal_http_controller_adminapi.RegisterTerminalRequest": {
+            "type": "object",
+            "required": [
+                "admin_login",
+                "admin_password",
+                "terminal_name"
+            ],
+            "properties": {
+                "admin_login": {
+                    "type": "string"
+                },
+                "admin_password": {
+                    "type": "string"
+                },
+                "force_update": {
+                    "type": "boolean"
+                },
+                "terminal_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_http_controller_adminapi.RegisterTerminalResponse": {
+            "type": "object",
+            "properties": {
+                "auth_token": {
+                    "type": "string"
+                },
+                "terminal_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_http_controller_adminapi.ReportsVisitsResponse": {
             "type": "object",
             "properties": {
                 "data": {
@@ -1358,7 +1685,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_isb_adminapi.UpdatePasswordRequest": {
+        "internal_http_controller_adminapi.UpdatePasswordRequest": {
             "type": "object",
             "required": [
                 "password"
@@ -1370,7 +1697,22 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_isb_adminapi.UpdateUserRequest": {
+        "internal_http_controller_adminapi.UpdateThemeSettingsRequest": {
+            "type": "object",
+            "required": [
+                "goodbye_duration_ms",
+                "welcome_duration_ms"
+            ],
+            "properties": {
+                "goodbye_duration_ms": {
+                    "type": "integer"
+                },
+                "welcome_duration_ms": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_http_controller_adminapi.UpdateUserRequest": {
             "type": "object",
             "required": [
                 "name",
@@ -1392,7 +1734,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_isb_adminapi.UpdateVisitorRequest": {
+        "internal_http_controller_adminapi.UpdateVisitorRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -1421,7 +1763,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_isb_adminapi.VisitorResponse": {
+        "internal_http_controller_adminapi.VisitorResponse": {
             "type": "object",
             "properties": {
                 "deleted_at": {

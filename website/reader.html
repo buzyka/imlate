@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Info</title>
-    <link rel="icon" type="image/png" sizes="16x16" href="assets/img/favicon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ .FaviconURL }}">
 
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 
@@ -109,8 +109,8 @@
         <div class="row">
             <!-- Left column   style="display: none;" -->
             <div id="logo-block" class="col-6"
-                style=" background-image: url('assets/img/ISBLogo.jpg'); background-size: cover; background-position: center; min-height: 550px; ">
-                <img id="welcome" style="display: none;"  src="assets/img/welcome-images-server.gif" alt="Welcome" style="width: 100%; height: 100%;">
+                style=" background-image: url('{{ .LogoBackgroundURL }}'); background-size: cover; background-position: center; min-height: 550px; ">
+                <img id="welcome" style="display: none;"  src="{{ .WelcomeAnimationURL }}" alt="Welcome" style="width: 100%; height: 100%;">
             </div>
 
             <!-- Right column -->
@@ -124,7 +124,7 @@
                 <div class="row mb-1">
                     <div class="col-12">
                         <div id="cardIdDisplay">Please place the transponder on the reader.</div>
-                        <img id="readerInstructionImage" src="assets/img/reader.png" alt="RFID Reader" width="100%">
+                        <img id="readerInstructionImage" src="/assets/img/reader.png" alt="RFID Reader" width="100%">
                     </div>
                 </div>                 
 
@@ -247,6 +247,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
+        var welcomeDurationMs = {{ .WelcomeDurationMs }};
+        var goodbyeDurationMs = {{ .GoodbyeDurationMs }};
+
         // ---- Terminal Registration ----
         var terminalCredentials = {
             authToken: localStorage.getItem('auth_token'),
@@ -466,18 +469,19 @@
                     logoBlock.style.backgroundImage = '';
                     welcomeIcon.style.display = 'block';
                     if (studentData.track_type === 'sign-in') {
-                        welcomeIcon.src = 'assets/img/welcome-images-server.gif';
+                        welcomeIcon.src = '{{ .WelcomeAnimationURL }}';
                     } else {
-                        welcomeIcon.src = 'assets/img/good-bye.gif';
+                        welcomeIcon.src = '{{ .GoodbyeAnimationURL }}';
                     }
 
+                    var displayDuration = studentData.track_type === 'sign-in' ? welcomeDurationMs : goodbyeDurationMs;
                     setTimeout(function() {
-                        logoBlock.style.backgroundImage = 'url(assets/img/ISBLogo.jpg)';
+                        logoBlock.style.backgroundImage = "url('{{ .LogoBackgroundURL }}')";
                         welcomeIcon.style.display = 'none';
                         successMessage.style.display = 'none';
                         studentInfo.style.display = 'none';
                         readerInstructionImage.style.display = 'block';
-                    }, 1800);
+                    }, displayDuration);
                 };
                 xhr.send(JSON.stringify(payload));
             }

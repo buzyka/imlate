@@ -2,20 +2,22 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
 	"path/filepath"
 
 	gjwt "github.com/appleboy/gin-jwt/v3"
 	_ "github.com/buzyka/imlate/docs"
 	"github.com/buzyka/imlate/internal/config"
+	"github.com/buzyka/imlate/internal/http/controller/adminapi"
 	"github.com/buzyka/imlate/internal/infrastructure/cron"
 	"github.com/buzyka/imlate/internal/infrastructure/gocontainer"
 	httpauth "github.com/buzyka/imlate/internal/infrastructure/http/auth"
 	"github.com/buzyka/imlate/internal/infrastructure/util"
-	"github.com/buzyka/imlate/internal/isb/adminapi"
-	"github.com/buzyka/imlate/internal/version"
 	"github.com/buzyka/imlate/internal/isb/search"
 	"github.com/buzyka/imlate/internal/isb/tracker"
+	themeview "github.com/buzyka/imlate/internal/usecase/theme"
+	"github.com/buzyka/imlate/internal/version"
 	"github.com/gin-gonic/gin"
 	"github.com/golobby/container/v3"
 	"github.com/subosito/gotenv"
@@ -72,6 +74,7 @@ func main() {
 
 	// Start Gin server
 	r := gin.Default()
+	r.SetHTMLTemplate(template.Must(template.ParseFiles(filepath.Join(rootPath, "website", "reader.html"))))
 
 	r.Static("/assets", filepath.Join(rootPath, "website", "assets"))
 	r.Static("/storage", filepath.Join(rootPath, "storage"))
@@ -83,8 +86,15 @@ func main() {
 		})
 	})
 
+	themeService := &themeview.Service{}
+	container.MustFill(container.Global, themeService)
 	r.GET("/", func(ctx *gin.Context) {
-		ctx.File(filepath.Join(rootPath, "website", "reader.html"))
+		data, err := themeService.GetReaderPageData()
+		if err != nil {
+			ctx.HTML(http.StatusOK, "reader.html", themeview.DefaultReaderPageData())
+			return
+		}
+		ctx.HTML(http.StatusOK, "reader.html", data)
 	})
 
 	// Add Routes for swagger documentation
@@ -98,6 +108,8 @@ func main() {
 	r.GET("/admin/users", adminHandler)
 	r.GET("/admin/admin-users", adminHandler)
 	r.GET("/admin/login", adminHandler)
+	r.GET("/admin/settings", adminHandler)
+	r.GET("/admin/settings/", adminHandler)
 
 	r.Static("/admin/assets", filepath.Join(rootPath, "website", "admin", "assets"))
 
@@ -148,6 +160,10 @@ func registerAdminRoutes(r *gin.Engine) {
 
 	adminController := &adminapi.AdminAPIController{}
 	container.MustFill(container.Global, adminController)
+	adminGroup.GET("/theme", adminController.GetThemeHandler())
+	adminGroup.POST("/theme/assets/:slot", adminController.UploadThemeAssetHandler())
+	adminGroup.DELETE("/theme/assets/:slot", adminController.ResetThemeAssetHandler())
+	adminGroup.PUT("/theme/settings", adminController.UpdateThemeSettingsHandler())
 	adminGroup.GET("/current-user", adminController.CurrentUserHandler())
 	adminGroup.GET("/users", adminController.ListUsersHandler())
 	adminGroup.GET("/users/:id", adminController.GetUserHandler())

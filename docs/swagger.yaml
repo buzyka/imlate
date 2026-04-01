@@ -4,6 +4,8 @@ definitions:
     properties:
       created_at:
         type: string
+      created_by:
+        type: string
       deleted_at:
         type: string
       id:
@@ -66,14 +68,14 @@ definitions:
       updated_at:
         type: string
     type: object
-  github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse:
+  github_com_buzyka_imlate_internal_http_controller_adminapi.AuthErrorResponse:
     properties:
       code:
         type: integer
       message:
         type: string
     type: object
-  github_com_buzyka_imlate_internal_isb_adminapi.AuthTokenResponse:
+  github_com_buzyka_imlate_internal_http_controller_adminapi.AuthTokenResponse:
     properties:
       access_token:
         type: string
@@ -84,12 +86,12 @@ definitions:
       token_type:
         type: string
     type: object
-  github_com_buzyka_imlate_internal_isb_adminapi.DashboardResponse:
+  github_com_buzyka_imlate_internal_http_controller_adminapi.DashboardResponse:
     properties:
       message:
         type: string
     type: object
-  github_com_buzyka_imlate_internal_isb_adminapi.LoginRequest:
+  github_com_buzyka_imlate_internal_http_controller_adminapi.LoginRequest:
     properties:
       password:
         type: string
@@ -99,14 +101,14 @@ definitions:
     - password
     - username
     type: object
-  github_com_buzyka_imlate_internal_isb_adminapi.RefreshRequest:
+  github_com_buzyka_imlate_internal_http_controller_adminapi.RefreshRequest:
     properties:
       refresh_token:
         type: string
     required:
     - refresh_token
     type: object
-  github_com_buzyka_imlate_internal_isb_adminapi.VersionResponse:
+  github_com_buzyka_imlate_internal_http_controller_adminapi.VersionResponse:
     properties:
       version:
         type: string
@@ -136,14 +138,47 @@ definitions:
       year_group:
         type: integer
     type: object
-  internal_isb_adminapi.AddKeyRequest:
+  github_com_buzyka_imlate_internal_usecase_theme.AssetState:
+    properties:
+      content_type:
+        type: string
+      current_url:
+        type: string
+      default_url:
+        type: string
+      is_custom:
+        type: boolean
+      size_bytes:
+        type: integer
+      slot:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_buzyka_imlate_internal_usecase_theme.Response:
+    properties:
+      assets:
+        additionalProperties:
+          $ref: '#/definitions/github_com_buzyka_imlate_internal_usecase_theme.AssetState'
+        type: object
+      settings:
+        $ref: '#/definitions/github_com_buzyka_imlate_internal_usecase_theme.Settings'
+    type: object
+  github_com_buzyka_imlate_internal_usecase_theme.Settings:
+    properties:
+      goodbye_duration_ms:
+        type: integer
+      welcome_duration_ms:
+        type: integer
+    type: object
+  internal_http_controller_adminapi.AddKeyRequest:
     properties:
       key:
         type: string
     required:
     - key
     type: object
-  internal_isb_adminapi.CreateUserRequest:
+  internal_http_controller_adminapi.CreateUserRequest:
     properties:
       name:
         type: string
@@ -162,7 +197,7 @@ definitions:
     - surname
     - username
     type: object
-  internal_isb_adminapi.CreateVisitorRequest:
+  internal_http_controller_adminapi.CreateVisitorRequest:
     properties:
       email:
         type: string
@@ -181,12 +216,12 @@ definitions:
     required:
     - name
     type: object
-  internal_isb_adminapi.ErrorResponse:
+  internal_http_controller_adminapi.ErrorResponse:
     properties:
       error:
         type: string
     type: object
-  internal_isb_adminapi.ManualTrackRequest:
+  internal_http_controller_adminapi.ManualTrackRequest:
     properties:
       description:
         type: string
@@ -197,7 +232,7 @@ definitions:
     required:
     - visitor_id
     type: object
-  internal_isb_adminapi.ManualTrackResponse:
+  internal_http_controller_adminapi.ManualTrackResponse:
     properties:
       track_date:
         type: string
@@ -206,12 +241,34 @@ definitions:
       visitor:
         $ref: '#/definitions/github_com_buzyka_imlate_internal_domain_entity.Visitor'
     type: object
-  internal_isb_adminapi.MessageResponse:
+  internal_http_controller_adminapi.MessageResponse:
     properties:
       message:
         type: string
     type: object
-  internal_isb_adminapi.ReportsVisitsResponse:
+  internal_http_controller_adminapi.RegisterTerminalRequest:
+    properties:
+      admin_login:
+        type: string
+      admin_password:
+        type: string
+      force_update:
+        type: boolean
+      terminal_name:
+        type: string
+    required:
+    - admin_login
+    - admin_password
+    - terminal_name
+    type: object
+  internal_http_controller_adminapi.RegisterTerminalResponse:
+    properties:
+      auth_token:
+        type: string
+      terminal_name:
+        type: string
+    type: object
+  internal_http_controller_adminapi.ReportsVisitsResponse:
     properties:
       data:
         items:
@@ -228,7 +285,7 @@ definitions:
         description: total pages count based on total records and page size
         type: integer
     type: object
-  internal_isb_adminapi.UpdatePasswordRequest:
+  internal_http_controller_adminapi.UpdatePasswordRequest:
     properties:
       password:
         minLength: 6
@@ -236,7 +293,17 @@ definitions:
     required:
     - password
     type: object
-  internal_isb_adminapi.UpdateUserRequest:
+  internal_http_controller_adminapi.UpdateThemeSettingsRequest:
+    properties:
+      goodbye_duration_ms:
+        type: integer
+      welcome_duration_ms:
+        type: integer
+    required:
+    - goodbye_duration_ms
+    - welcome_duration_ms
+    type: object
+  internal_http_controller_adminapi.UpdateUserRequest:
     properties:
       is_active:
         type: boolean
@@ -251,7 +318,7 @@ definitions:
     - role
     - surname
     type: object
-  internal_isb_adminapi.UpdateVisitorRequest:
+  internal_http_controller_adminapi.UpdateVisitorRequest:
     properties:
       email:
         type: string
@@ -270,7 +337,7 @@ definitions:
     required:
     - name
     type: object
-  internal_isb_adminapi.VisitorResponse:
+  internal_http_controller_adminapi.VisitorResponse:
     properties:
       deleted_at:
         type: string
@@ -333,11 +400,11 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Get current authenticated admin user
@@ -353,15 +420,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.DashboardResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.DashboardResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Get admin dashboard greeting
@@ -408,20 +475,137 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ReportsVisitsResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ReportsVisitsResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Get visitor attendance report
       tags:
       - admin-reports
+  /admin-api/theme:
+    get:
+      description: Returns current tracking page theme assets and timing settings.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_usecase_theme.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get current theme
+      tags:
+      - admin-theme
+  /admin-api/theme/assets/{slot}:
+    delete:
+      description: Removes a custom asset assignment and restores the default slot
+        asset.
+      parameters:
+      - description: Theme slot
+        in: path
+        name: slot
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_usecase_theme.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Reset theme asset
+      tags:
+      - admin-theme
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a custom asset for the given theme slot.
+      parameters:
+      - description: Theme slot
+        in: path
+        name: slot
+        required: true
+        type: string
+      - description: Theme asset file
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_usecase_theme.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Upload theme asset
+      tags:
+      - admin-theme
+  /admin-api/theme/settings:
+    put:
+      consumes:
+      - application/json
+      description: Updates welcome and goodbye animation durations for the tracking
+        page.
+      parameters:
+      - description: Theme settings request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_http_controller_adminapi.UpdateThemeSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_usecase_theme.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Update theme settings
+      tags:
+      - admin-theme
   /admin-api/track/visit:
     post:
       consumes:
@@ -435,30 +619,30 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_isb_adminapi.ManualTrackRequest'
+          $ref: '#/definitions/internal_http_controller_adminapi.ManualTrackRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ManualTrackResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ManualTrackResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Manual visitor track
@@ -479,7 +663,7 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: List admin users
@@ -495,7 +679,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_isb_adminapi.CreateUserRequest'
+          $ref: '#/definitions/internal_http_controller_adminapi.CreateUserRequest'
       produces:
       - application/json
       responses:
@@ -506,7 +690,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Create admin user
@@ -527,15 +711,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.MessageResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Delete admin user
@@ -559,11 +743,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Get user by ID
@@ -584,7 +768,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_isb_adminapi.UpdateUserRequest'
+          $ref: '#/definitions/internal_http_controller_adminapi.UpdateUserRequest'
       produces:
       - application/json
       responses:
@@ -595,7 +779,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Update admin user
@@ -617,18 +801,18 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_isb_adminapi.UpdatePasswordRequest'
+          $ref: '#/definitions/internal_http_controller_adminapi.UpdatePasswordRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.MessageResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Update user password
@@ -644,15 +828,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.VersionResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.VersionResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Get application version
@@ -668,12 +852,12 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/internal_isb_adminapi.VisitorResponse'
+              $ref: '#/definitions/internal_http_controller_adminapi.VisitorResponse'
             type: array
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: List visitors
@@ -689,18 +873,18 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_isb_adminapi.CreateVisitorRequest'
+          $ref: '#/definitions/internal_http_controller_adminapi.CreateVisitorRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.VisitorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.VisitorResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Create visitor
@@ -721,15 +905,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.MessageResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Delete visitor
@@ -749,15 +933,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.VisitorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.VisitorResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Get visitor by ID
@@ -778,18 +962,18 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_isb_adminapi.UpdateVisitorRequest'
+          $ref: '#/definitions/internal_http_controller_adminapi.UpdateVisitorRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.VisitorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.VisitorResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Update visitor
@@ -817,15 +1001,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.VisitorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.VisitorResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Upload visitor image
@@ -847,18 +1031,18 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_isb_adminapi.AddKeyRequest'
+          $ref: '#/definitions/internal_http_controller_adminapi.AddKeyRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.MessageResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Add visitor key
@@ -884,11 +1068,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.MessageResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_isb_adminapi.ErrorResponse'
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
       security:
       - ApiKeyAuth: []
       summary: Remove visitor key
@@ -907,22 +1091,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.LoginRequest'
+          $ref: '#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.LoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthTokenResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthTokenResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthErrorResponse'
       summary: Login for admin API
       tags:
       - auth
@@ -937,25 +1121,66 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.RefreshRequest'
+          $ref: '#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.RefreshRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthTokenResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthTokenResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/github_com_buzyka_imlate_internal_isb_adminapi.AuthErrorResponse'
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthErrorResponse'
       summary: Refresh admin JWT token
       tags:
       - auth
+  /register-terminal:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Validates admin credentials and creates (or force-updates) a terminal user.
+        Returns the generated password as `auth_token`. This token is only returned
+        at creation or regeneration time and should be stored securely by the client.
+      parameters:
+      - description: Terminal registration request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_http_controller_adminapi.RegisterTerminalRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.RegisterTerminalResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
+        "409":
+          description: Terminal with this name already exists
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
+      summary: Register a terminal
+      tags:
+      - terminal
 securityDefinitions:
   ApiKeyAuth:
     description: |-
