@@ -9,7 +9,6 @@ import (
 	themeview "github.com/buzyka/imlate/internal/usecase/theme"
 	"github.com/buzyka/imlate/internal/usecase/tracking"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type AdminAPIController struct {
@@ -31,19 +30,8 @@ type AdminAPIController struct {
 // @Router       /admin-api/current-user [get]
 func (ac *AdminAPIController) CurrentUserHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		data, exists := c.Get("id")
-		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "user not found in auth context",
-			})
-			return
-		}
-
-		user, ok := data.(*entity.User)
+		user, ok := currentAdminUser(c)
 		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "invalid user data in auth context",
-			})
 			return
 		}
 
@@ -84,9 +72,8 @@ func (ac *AdminAPIController) ListUsersHandler() gin.HandlerFunc {
 // @Router       /admin-api/users/{id} [get]
 func (ac *AdminAPIController) GetUserHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id, err := uuid.Parse(c.Param("id"))
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		id, ok := parseUserUUID(c)
+		if !ok {
 			return
 		}
 
@@ -158,9 +145,8 @@ type UpdateUserRequest struct {
 // @Router       /admin-api/users/{id} [put]
 func (ac *AdminAPIController) UpdateUserHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id, err := uuid.Parse(c.Param("id"))
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		id, ok := parseUserUUID(c)
+		if !ok {
 			return
 		}
 
@@ -198,9 +184,8 @@ type UpdatePasswordRequest struct {
 // @Router       /admin-api/users/{id}/password [put]
 func (ac *AdminAPIController) UpdatePasswordHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id, err := uuid.Parse(c.Param("id"))
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		id, ok := parseUserUUID(c)
+		if !ok {
 			return
 		}
 
@@ -232,9 +217,8 @@ func (ac *AdminAPIController) UpdatePasswordHandler() gin.HandlerFunc {
 // @Router       /admin-api/users/{id} [delete]
 func (ac *AdminAPIController) DeleteUserHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id, err := uuid.Parse(c.Param("id"))
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		id, ok := parseUserUUID(c)
+		if !ok {
 			return
 		}
 

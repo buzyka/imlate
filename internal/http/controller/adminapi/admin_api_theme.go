@@ -58,30 +58,12 @@ func (ac *AdminAPIController) GetThemeHandler() gin.HandlerFunc {
 // @Router       /admin-api/theme/assets/{slot} [post]
 func (ac *AdminAPIController) UploadThemeAssetHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		fileHeader, err := c.FormFile("image")
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "image file is required"})
-			return
-		}
-		if fileHeader.Size > maxThemeAssetUploadSizeBytes {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "image file is too large (max 20MB)"})
+		filename, data, ok := readUploadedFormFile(c, "image", maxThemeAssetUploadSizeBytes)
+		if !ok {
 			return
 		}
 
-		file, err := openUploadedFile(fileHeader)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to open uploaded file"})
-			return
-		}
-		defer func() { _ = file.Close() }()
-
-		data, err := readUploadedFile(file)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read uploaded file"})
-			return
-		}
-
-		resp, err := ac.ThemeService.UploadAsset(c.Param("slot"), fileHeader.Filename, data)
+		resp, err := ac.ThemeService.UploadAsset(c.Param("slot"), filename, data)
 		if err != nil {
 			c.JSON(themeErrorStatus(err), gin.H{"error": err.Error()})
 			return

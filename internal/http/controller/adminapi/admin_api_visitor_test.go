@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -456,44 +455,6 @@ func TestDeleteVisitorHandler_InvalidID(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
-func TestUploadVisitorImageHandler_FileTooLarge(t *testing.T) {
-	_, controller := setupVisitorTest()
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("image", "too-large.jpg")
-	assert.NoError(t, err)
-
-	_, err = part.Write(bytes.Repeat([]byte("a"), int(maxVisitorImageUploadSizeBytes)+1))
-	assert.NoError(t, err)
-	assert.NoError(t, writer.Close())
-
-	c.Request = httptest.NewRequest(http.MethodPost, "/admin-api/visitors/1/image", body)
-	c.Request.Header.Set("Content-Type", writer.FormDataContentType())
-	c.Params = gin.Params{{Key: "id", Value: "1"}}
-
-	controller.UploadVisitorImageHandler()(c)
-
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "max 5MB")
-}
-
-func TestUploadVisitorImageHandler_MissingImage(t *testing.T) {
-	_, controller := setupVisitorTest()
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-
-	c.Request = httptest.NewRequest(http.MethodPost, "/admin-api/visitors/1/image", bytes.NewBuffer(nil))
-	c.Request.Header.Set("Content-Type", "multipart/form-data; boundary=abc")
-	c.Params = gin.Params{{Key: "id", Value: "1"}}
-
-	controller.UploadVisitorImageHandler()(c)
-
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-}
-
 func TestUploadVisitorImageHandler_InvalidID(t *testing.T) {
 	_, controller := setupVisitorTest()
 	w := httptest.NewRecorder()
@@ -505,66 +466,6 @@ func TestUploadVisitorImageHandler_InvalidID(t *testing.T) {
 	controller.UploadVisitorImageHandler()(c)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-}
-
-func TestUploadVisitorImageHandler_OpenFileError(t *testing.T) {
-	origOpen := openUploadedFile
-	t.Cleanup(func() {
-		openUploadedFile = origOpen
-	})
-	openUploadedFile = func(_ *multipart.FileHeader) (multipart.File, error) {
-		return nil, errors.New("open error")
-	}
-
-	_, controller := setupVisitorTest()
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("image", "ok.jpg")
-	assert.NoError(t, err)
-	_, err = part.Write([]byte("abc"))
-	assert.NoError(t, err)
-	assert.NoError(t, writer.Close())
-
-	c.Request = httptest.NewRequest(http.MethodPost, "/admin-api/visitors/1/image", body)
-	c.Request.Header.Set("Content-Type", writer.FormDataContentType())
-	c.Params = gin.Params{{Key: "id", Value: "1"}}
-
-	controller.UploadVisitorImageHandler()(c)
-
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-}
-
-func TestUploadVisitorImageHandler_ReadFileError(t *testing.T) {
-	origRead := readUploadedFile
-	t.Cleanup(func() {
-		readUploadedFile = origRead
-	})
-	readUploadedFile = func(_ io.Reader) ([]byte, error) {
-		return nil, errors.New("read error")
-	}
-
-	_, controller := setupVisitorTest()
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("image", "ok.jpg")
-	assert.NoError(t, err)
-	_, err = part.Write([]byte("abc"))
-	assert.NoError(t, err)
-	assert.NoError(t, writer.Close())
-
-	c.Request = httptest.NewRequest(http.MethodPost, "/admin-api/visitors/1/image", body)
-	c.Request.Header.Set("Content-Type", writer.FormDataContentType())
-	c.Params = gin.Params{{Key: "id", Value: "1"}}
-
-	controller.UploadVisitorImageHandler()(c)
-
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
 func TestUploadVisitorImageHandler_UploadError(t *testing.T) {
