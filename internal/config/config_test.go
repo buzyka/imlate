@@ -379,6 +379,8 @@ func TestNewFromEnv_ImageStorageDefaults(t *testing.T) {
 	assert.Equal(t, "/storage/img/students", cfg.StudentsImagePhotoURLPrefix)
 	assert.Equal(t, "storage/img/visitors", cfg.VisitorImageDir)
 	assert.Equal(t, "/storage/img/visitors", cfg.VisitorImageURLPrefix)
+	assert.Equal(t, "storage/theme", cfg.ThemeDir)
+	assert.Equal(t, "/storage/theme", cfg.ThemeURLPrefix)
 }
 
 func TestNewFromEnv_CronScheduleDefaults(t *testing.T) {
@@ -436,6 +438,8 @@ func resetConfigEnv(t *testing.T) {
 		"STUDENTS_IMAGE_PHOTO_URL_PREFIX",
 		"VISITOR_IMAGE_DIR",
 		"VISITOR_IMAGE_URL_PREFIX",
+		"THEME_DIR",
+		"THEME_URL_PREFIX",
 		"AUTO_REGISTRATION_YEAR_GROUPS",
 		"FORCE_ERP_SYNC_ON_START",
 		"ERP_INTEGRATION_ENABLED",

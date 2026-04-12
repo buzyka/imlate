@@ -16,10 +16,12 @@ internal/
     erp/                   ERP client interface (abstraction over iSAMS)
   usecase/
     adminapi/              Admin business logic (users, visitors, reports)
+    theme/                 Tracking page theme/customization logic
     tracking/              Student attendance tracking logic
     synchroniser/          ERP data sync (students, photos, codes)
+  http/
+    controller/adminapi/   Gin handlers for /admin-api routes
   isb/
-    adminapi/              Gin handlers for /admin-api routes
     tracker/               Gin handlers for /track, /find-and-track
     search/                Gin handler for /search/:id
     visitor/               Visitor-related delivery helpers
@@ -40,7 +42,7 @@ migrations/                SQL migration files (golang-migrate)
 
 ```mermaid
 graph TD
-  HTTP["HTTP Layer<br/>Gin handlers in isb/*"]
+  HTTP["HTTP Layer<br/>Gin handlers in http/controller/* and isb/*"]
   UseCase["Use Case Layer<br/>usecase/*"]
   Domain["Domain Layer<br/>domain/entity, domain/provider, domain/erp"]
   Infra["Infrastructure Layer<br/>infrastructure/*"]
@@ -55,7 +57,7 @@ graph TD
 
 - **Domain** defines entities and interfaces. It has no dependencies on other layers.
 - **Use Case** contains business logic orchestration (report generation, student tracking, ERP sync).
-- **HTTP** (isb/*) contains Gin handler functions that parse requests, call use cases or repositories, and return JSON responses.
+- **HTTP** contains Gin handler functions that parse requests, call use cases or repositories, and return JSON responses. Admin API controllers live in `internal/http/controller/adminapi`; terminal/public handlers remain in `internal/isb/*`.
 - **Infrastructure** implements domain interfaces (repositories, ERP client) and provides cross-cutting concerns (DB, auth, cron, logging).
 
 ## Request Flow
@@ -71,7 +73,7 @@ Gin Router (cmd/app/main.go)
   +--> Middleware (JWT or Terminal auth)
   |
   v
-Handler (internal/isb/*)
+Handler (internal/http/controller/* or internal/isb/*)
   |
   +--> Use Case (internal/usecase/*)  [optional, for complex logic]
   |
@@ -116,6 +118,7 @@ The application uses [golobby/container](https://github.com/golobby/container) f
 - `erp.Factory` (backed by `isams.ClientFactory`)
 - `*tracking.StudentTracker`
 - `*adminapi.AdminAPI`
+- `*theme.Service`
 
 Controllers and middleware use `container:"type"` struct tags and are filled via `container.MustFill` in `main.go`.
 

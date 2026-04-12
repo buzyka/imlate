@@ -6,7 +6,7 @@ Guide for agentic coding tools working in this repository.
 - Go `1.25.7`
 - Entry point: `cmd/app/main.go`
 - Main stacks: Gin, JWT auth, Swagger, MySQL/SQLite, golang-migrate, zap, testify
-- Core layout: `cmd/`, `internal/{config,domain,usecase,infrastructure,isb}`, `migrations/`, `website/`
+- Core layout: `cmd/`, `internal/{config,domain,usecase,http,infrastructure,isb}`, `migrations/`, `website/`
 
 ## Developer Documentation
 For detailed documentation beyond this agent guide, see [`docs/`](docs/README.md):

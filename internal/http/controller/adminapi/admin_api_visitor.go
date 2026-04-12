@@ -1,21 +1,12 @@
 package adminapi
 
 import (
-	"io"
-	"mime/multipart"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
 const maxVisitorImageUploadSizeBytes int64 = 5 * 1024 * 1024
-
-var openUploadedFile = func(fileHeader *multipart.FileHeader) (multipart.File, error) {
-	return fileHeader.Open()
-}
-
-var readUploadedFile = io.ReadAll
 
 type CreateVisitorRequest struct {
 	Name      string   `json:"name" binding:"required"`
@@ -37,16 +28,6 @@ type UpdateVisitorRequest struct {
 
 type AddKeyRequest struct {
 	Key string `json:"key" binding:"required"`
-}
-
-func parseVisitorID(c *gin.Context) (int32, bool) {
-	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
-	if err != nil || id <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid visitor ID"})
-		return 0, false
-	}
-	return int32(id), true
 }
 
 // ListVisitorsHandler godoc
@@ -181,31 +162,12 @@ func (ac *AdminAPIController) UploadVisitorImageHandler() gin.HandlerFunc {
 			return
 		}
 
-		fileHeader, err := c.FormFile("image")
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "image file is required"})
+		filename, data, ok := readUploadedFormFile(c, "image", maxVisitorImageUploadSizeBytes)
+		if !ok {
 			return
 		}
 
-		if fileHeader.Size > maxVisitorImageUploadSizeBytes {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "image file is too large (max 5MB)"})
-			return
-		}
-
-		file, err := openUploadedFile(fileHeader)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to open uploaded file"})
-			return
-		}
-		defer func() { _ = file.Close() }()
-
-		data, err := readUploadedFile(file)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read uploaded file"})
-			return
-		}
-
-		visitor, err := ac.AdminAPI.UploadVisitorImage(id, fileHeader.Filename, data)
+		visitor, err := ac.AdminAPI.UploadVisitorImage(id, filename, data)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return

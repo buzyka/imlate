@@ -39,15 +39,8 @@ type ManualTrackResponse struct {
 // @Router       /admin-api/track/visit [post]
 func (ac *AdminAPIController) ManualTrackHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		data, exists := c.Get("id")
-		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found in auth context"})
-			return
-		}
-
-		adminUser, ok := data.(*entity.User)
+		adminUser, ok := currentAdminUser(c)
 		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user data in auth context"})
 			return
 		}
 
