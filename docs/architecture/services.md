@@ -60,6 +60,14 @@ Admin panel business logic:
 - `GetReportsVisits()` -- paginated visit attendance report with date range, filters, sign-status logic.
 - User CRUD, visitor CRUD, terminal registration logic.
 
+### `internal/usecase/theme`
+
+Theme and tracking-page customization logic:
+
+- `Service` -- loads and persists `storage/theme/theme.json`, applies defaults, validates settings.
+- Builds public reader page data including favicon/logo/animation URLs and welcome/goodbye durations.
+- Handles custom asset assignment, reset-to-default, and theme response mapping for admin API.
+
 ### `internal/usecase/tracking`
 
 Student attendance tracking against ERP:
@@ -76,12 +84,13 @@ ERP data synchronization:
 
 ## HTTP Delivery Layer
 
-### `internal/isb/adminapi`
+### `internal/http/controller/adminapi`
 
 Gin handlers for `/admin-api/*` routes. Each handler is a method on `AdminAPIController` returning `gin.HandlerFunc`:
 
 - User management (CRUD, password update)
 - Visitor management (CRUD, keys, image upload)
+- Theme management (current theme, asset upload/reset, animation timing update)
 - `VisitsReportsHandler` -- attendance report endpoint
 - `ManualTrackHandler` -- manual sign-in/out by admin
 - `RegisterTerminalHandler` -- terminal device pairing

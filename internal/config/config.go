@@ -33,6 +33,8 @@ type Config struct {
 
 	VisitorImageDir       string `env:"VISITOR_IMAGE_DIR" envDefault:"storage/img/visitors"`
 	VisitorImageURLPrefix string `env:"VISITOR_IMAGE_URL_PREFIX" envDefault:"/storage/img/visitors"`
+	ThemeDir              string `env:"THEME_DIR" envDefault:"storage/theme"`
+	ThemeURLPrefix        string `env:"THEME_URL_PREFIX" envDefault:"/storage/theme"`
 
 	AutoRegistrationYearGroups []int32 `env:"AUTO_REGISTRATION_YEAR_GROUPS" envSeparator:","`
 

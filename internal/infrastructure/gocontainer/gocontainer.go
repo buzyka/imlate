@@ -13,6 +13,7 @@ import (
 	"github.com/buzyka/imlate/internal/infrastructure/repository"
 	"github.com/buzyka/imlate/internal/infrastructure/util"
 	"github.com/buzyka/imlate/internal/usecase/adminapi"
+	themeview "github.com/buzyka/imlate/internal/usecase/theme"
 	"github.com/buzyka/imlate/internal/usecase/tracking"
 	"github.com/golobby/container/v3"
 	"go.uber.org/zap"
@@ -81,6 +82,12 @@ func Build(cfg *config.Config) {
 		tracker := &tracking.StudentTracker{}
 		container.MustFill(container.Global, tracker)
 		return tracker
+	})
+
+	container.MustSingleton(container.Global, func() *themeview.Service {
+		svc := &themeview.Service{}
+		container.MustFill(container.Global, svc)
+		return svc
 	})
 
 	container.MustSingleton(container.Global, func() *adminapi.AdminAPI {
