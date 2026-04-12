@@ -1,8 +1,8 @@
 package theme
 
 const (
-	DefaultFaviconURL          = "/assets/img/favicon.png"
-	DefaultLogoBackgroundURL   = "/assets/img/ISBLogo.jpg"
+	DefaultFaviconURL          = "/assets/img/favicon.ico"
+	DefaultLogoBackgroundURL   = "/assets/img/default-logo.png"
 	DefaultWelcomeAnimationURL = "/assets/img/welcome-images-server.gif"
 	DefaultGoodbyeAnimationURL = "/assets/img/good-bye.gif"
 

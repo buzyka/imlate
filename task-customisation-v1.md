@@ -24,8 +24,8 @@
 Сейчас tracking page `/` отдается из `website/reader.html` как статический файл.
 
 Внутри страницы захардкожены:
-- `assets/img/favicon.png`
-- `assets/img/ISBLogo.jpg`
+- `assets/img/favicon.ico`
+- `assets/img/default-logo.png`
 - `assets/img/welcome-images-server.gif`
 - `assets/img/good-bye.gif`
 - timeout `1800` ms для скрытия анимации и возврата в исходное состояние
@@ -80,8 +80,8 @@ Frontend может показывать секунды, но API и manifest д
 - использовать дефолтные значения, если кастомизация не задана
 
 Fallback URLs:
-- `/assets/img/favicon.png`
-- `/assets/img/ISBLogo.jpg`
+- `/assets/img/favicon.ico`
+- `/assets/img/default-logo.png`
 - `/assets/img/welcome-images-server.gif`
 - `/assets/img/good-bye.gif`
 

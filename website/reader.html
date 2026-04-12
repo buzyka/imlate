@@ -95,6 +95,35 @@
             font-size: 0.9rem;
             margin-top: 8px;
         }
+        #logo-block {
+            min-height: 550px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+        }
+        #logo-image,
+        #welcome {
+            display: block;
+            max-width: 100%;
+            max-height: 550px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+        #welcome {
+            display: none;
+        }
+        @media (max-width: 991.98px) {
+            #logo-block {
+                min-height: 320px;
+                margin-bottom: 15px;
+            }
+            #logo-image,
+            #welcome {
+                max-height: 320px;
+            }
+        }
     </style>
 
 </head>
@@ -108,13 +137,13 @@
         padding-bottom: 15px; ">
         <div class="row">
             <!-- Left column   style="display: none;" -->
-            <div id="logo-block" class="col-6"
-                style=" background-image: url('{{ .LogoBackgroundURL }}'); background-size: cover; background-position: center; min-height: 550px; ">
-                <img id="welcome" src="{{ .WelcomeAnimationURL }}" alt="Welcome" style="display: none; width: 100%; height: 100%;">
+            <div id="logo-block" class="col-12 col-lg-6">
+                <img id="logo-image" src="{{ .LogoBackgroundURL }}" alt="Logo image">
+                <img id="welcome" src="{{ .WelcomeAnimationURL }}" alt="Welcome">
             </div>
 
             <!-- Right column -->
-            <div class="col-6">
+            <div class="col-12 col-lg-6">
                 <div class="row mb-1">
                     <div class="col-12 ">
                         <h2>Registration</h2>
@@ -461,12 +490,12 @@
 
                     var studentInfo = document.getElementById('student-info');
                     var successMessage = document.getElementById('success-message');
-                    var logoBlock = document.getElementById('logo-block');
+                    var logoImage = document.getElementById('logo-image');
                     var welcomeIcon = document.getElementById('welcome');
 
                     studentInfo.style.display = 'flex';
                     successMessage.style.display = 'block';
-                    logoBlock.style.backgroundImage = '';
+                    logoImage.style.display = 'none';
                     welcomeIcon.style.display = 'block';
                     if (studentData.track_type === 'sign-in') {
                         welcomeIcon.src = '{{ .WelcomeAnimationURL }}';
@@ -476,8 +505,8 @@
 
                     var displayDuration = studentData.track_type === 'sign-in' ? welcomeDurationMs : goodbyeDurationMs;
                     setTimeout(function() {
-                        logoBlock.style.backgroundImage = "url('{{ .LogoBackgroundURL }}')";
                         welcomeIcon.style.display = 'none';
+                        logoImage.style.display = 'block';
                         successMessage.style.display = 'none';
                         studentInfo.style.display = 'none';
                         readerInstructionImage.style.display = 'block';
