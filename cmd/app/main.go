@@ -86,8 +86,7 @@ func main() {
 		})
 	})
 
-	themeService := &themeview.Service{}
-	container.MustFill(container.Global, themeService)
+	themeService := resolveThemeService(container.Global)
 	r.GET("/", func(ctx *gin.Context) {
 		data, err := themeService.GetReaderPageData()
 		if err != nil {
@@ -140,6 +139,12 @@ func main() {
 	if err := r.Run("0.0.0.0:" + port); err != nil {
 		panic(err)
 	}
+}
+
+func resolveThemeService(c container.Container) *themeview.Service {
+	var themeService *themeview.Service
+	container.MustResolve(c, &themeService)
+	return themeService
 }
 
 func registerAdminRoutes(r *gin.Engine) {
