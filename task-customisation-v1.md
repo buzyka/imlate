@@ -58,7 +58,7 @@
 
 Правила форматов:
 - `favicon`: только PNG
-- `logo_background`: JPEG/PNG/WebP
+- `logo_background`: JPEG/PNG
 - `welcome_animation`: только GIF
 - `goodbye_animation`: только GIF
 
@@ -104,7 +104,7 @@ Fallback URLs:
 - поддержать MIME sniffing
 - валидировать размер файла
 - валидировать допустимые форматы
-- для JPEG/PNG/WebP уметь уменьшать изображение до web-friendly размера
+- для JPEG/PNG уметь уменьшать изображение до web-friendly размера
 - использовать безопасные имена файлов
 - использовать versioned filenames для cache busting
 
@@ -251,7 +251,7 @@ Backend должен раздавать admin SPA entrypoint для:
 - отдельный reusable helper для image processing
 - MIME sniffing
 - ограничения по типам и размеру
-- уменьшение JPEG/PNG/WebP
+- уменьшение JPEG/PNG
 - сохранение GIF без поломки анимации
 - генерация безопасных versioned filenames
 - возвращаемые metadata для manifest/API
@@ -304,7 +304,7 @@ Backend должен раздавать admin SPA entrypoint для:
 ### Backend
 - `GET /admin-api/theme` без manifest
 - upload валидного PNG в `favicon`
-- upload валидного JPEG/PNG/WebP в `logo_background`
+- upload валидного JPEG/PNG в `logo_background`
 - upload валидного GIF в `welcome_animation`
 - upload валидного GIF в `goodbye_animation`
 - upload в несуществующий slot

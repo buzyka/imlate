@@ -131,7 +131,7 @@ func (s *Service) UploadAsset(slot, filename string, data []byte) (*Response, er
 		return nil, err
 	}
 	if current.FileName != "" && current.FileName != fileName {
-		_ = os.Remove(filepath.Join(s.Config.ThemeDir, current.FileName))
+		s.removeThemeAssetFile(current.FileName)
 	}
 
 	return s.responseFromManifest(m), nil
@@ -156,7 +156,7 @@ func (s *Service) ResetAsset(slot string) (*Response, error) {
 		return nil, err
 	}
 	if current.FileName != "" {
-		_ = os.Remove(filepath.Join(s.Config.ThemeDir, current.FileName))
+		s.removeThemeAssetFile(current.FileName)
 	}
 
 	return s.responseFromManifest(m), nil
@@ -261,7 +261,7 @@ func (s *Service) responseFromManifest(m *manifest) *Response {
 		item, ok := m.Assets[slot]
 		currentURL := spec.DefaultURL
 		isCustom := false
-		if ok && item.FileName != "" {
+		if ok && isPlainThemeAssetFileName(item.FileName) {
 			currentURL = joinURLPath(s.Config.ThemeURLPrefix, item.FileName)
 			isCustom = true
 		}
@@ -308,6 +308,38 @@ func ptrTime(t time.Time) *time.Time {
 	return &t
 }
 
+func (s *Service) removeThemeAssetFile(fileName string) {
+	filePath, err := s.themeAssetPath(fileName)
+	if err != nil {
+		return
+	}
+	_ = os.Remove(filePath)
+}
+
+func (s *Service) themeAssetPath(fileName string) (string, error) {
+	if !isPlainThemeAssetFileName(fileName) {
+		return "", fmt.Errorf("invalid theme asset file name %q", fileName)
+	}
+
+	themeDir := filepath.Clean(s.Config.ThemeDir)
+	filePath := filepath.Join(themeDir, fileName)
+	relPath, err := filepath.Rel(themeDir, filePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve theme asset path: %w", err)
+	}
+	if relPath == ".." || strings.HasPrefix(relPath, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("theme asset path %q escapes theme directory", fileName)
+	}
+	return filePath, nil
+}
+
+func isPlainThemeAssetFileName(fileName string) bool {
+	if fileName == "" || fileName == "." || fileName == ".." {
+		return false
+	}
+	return fileName == filepath.Base(fileName) && !strings.ContainsAny(fileName, `/\`)
+}
+
 var slotSpecs = map[string]slotSpec{
 	"favicon": {
 		DefaultURL:  DefaultFaviconURL,
@@ -319,7 +351,7 @@ var slotSpecs = map[string]slotSpec{
 	},
 	"logo_background": {
 		DefaultURL:  DefaultLogoBackgroundURL,
-		AllowedMIME: []string{"image/jpeg", "image/png", "image/webp"},
+		AllowedMIME: []string{"image/jpeg", "image/png"},
 		MaxInput:    20 * 1024 * 1024,
 		MaxOutput:   2 * 1024 * 1024,
 		MaxWidth:    1920,

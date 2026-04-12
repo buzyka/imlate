@@ -95,6 +95,19 @@ func TestServiceUploadAsset_GIFPreserved(t *testing.T) {
 	assert.Equal(t, createGIFBytes(t), data)
 }
 
+func TestServiceUploadAsset_RejectsWebPLogoBackground(t *testing.T) {
+	service := newTestThemeService(t)
+
+	resp, err := service.UploadAsset("logo_background", "background.webp", fakeWebPBytes())
+
+	require.Error(t, err)
+	assert.Nil(t, resp)
+	var themeErr *Error
+	assert.ErrorAs(t, err, &themeErr)
+	assert.Equal(t, 400, themeErr.StatusCode)
+	assert.Contains(t, themeErr.Message, "unsupported image type")
+}
+
 func TestServiceUpdateSettings_Invalid(t *testing.T) {
 	service := newTestThemeService(t)
 
@@ -104,16 +117,112 @@ func TestServiceUpdateSettings_Invalid(t *testing.T) {
 	assert.Nil(t, resp)
 }
 
+func TestServiceGetTheme_IgnoresInvalidManifestFileName(t *testing.T) {
+	service, _ := newTestThemeServiceWithParentDir(t)
+	writeThemeManifest(t, service.Config.ThemeDir, `{
+  "assets": {
+    "favicon": {
+      "file_name": "../outside.png",
+      "content_type": "image/png",
+      "size_bytes": 123
+    }
+  }
+}`)
+
+	resp, err := service.GetTheme()
+
+	require.NoError(t, err)
+	assert.False(t, resp.Assets["favicon"].IsCustom)
+	assert.Equal(t, DefaultFaviconURL, resp.Assets["favicon"].CurrentURL)
+}
+
+func TestServiceResetAsset_DoesNotDeleteOutsideThemeDir(t *testing.T) {
+	service, rootDir := newTestThemeServiceWithParentDir(t)
+	victimPath := filepath.Join(rootDir, "victim.txt")
+	require.NoError(t, os.WriteFile(victimPath, []byte("keep"), 0o644))
+	writeThemeManifest(t, service.Config.ThemeDir, `{
+  "assets": {
+    "favicon": {
+      "file_name": "../victim.txt",
+      "content_type": "image/png",
+      "size_bytes": 4
+    }
+  }
+}`)
+
+	_, err := service.ResetAsset("favicon")
+
+	require.NoError(t, err)
+	_, statErr := os.Stat(victimPath)
+	require.NoError(t, statErr)
+}
+
+func TestServiceUploadAsset_DoesNotDeleteOutsideThemeDirOnReplace(t *testing.T) {
+	service, rootDir := newTestThemeServiceWithParentDir(t)
+	victimPath := filepath.Join(rootDir, "victim.txt")
+	require.NoError(t, os.WriteFile(victimPath, []byte("keep"), 0o644))
+	writeThemeManifest(t, service.Config.ThemeDir, `{
+  "assets": {
+    "favicon": {
+      "file_name": "../victim.txt",
+      "content_type": "image/png",
+      "size_bytes": 4
+    }
+  }
+}`)
+
+	resp, err := service.UploadAsset("favicon", "favicon.png", createPNGBytes(t, 64, 64))
+
+	require.NoError(t, err)
+	assert.True(t, resp.Assets["favicon"].IsCustom)
+	_, statErr := os.Stat(victimPath)
+	require.NoError(t, statErr)
+}
+
+func TestServiceUploadAsset_ReplacesPreviousThemeFile(t *testing.T) {
+	service := newTestThemeService(t)
+
+	firstResp, err := service.UploadAsset("favicon", "favicon.png", createPNGBytes(t, 64, 64))
+	require.NoError(t, err)
+	firstFileName := filepath.Base(firstResp.Assets["favicon"].CurrentURL)
+	firstPath := filepath.Join(service.Config.ThemeDir, firstFileName)
+	_, statErr := os.Stat(firstPath)
+	require.NoError(t, statErr)
+
+	service.now = func() time.Time {
+		return time.Date(2026, 3, 31, 12, 0, 1, 0, time.UTC)
+	}
+
+	secondResp, err := service.UploadAsset("favicon", "favicon.png", createPNGBytes(t, 32, 32))
+	require.NoError(t, err)
+	secondFileName := filepath.Base(secondResp.Assets["favicon"].CurrentURL)
+	secondPath := filepath.Join(service.Config.ThemeDir, secondFileName)
+
+	assert.NotEqual(t, firstFileName, secondFileName)
+	_, statErr = os.Stat(firstPath)
+	require.ErrorIs(t, statErr, os.ErrNotExist)
+	_, statErr = os.Stat(secondPath)
+	require.NoError(t, statErr)
+}
+
 func newTestThemeService(t *testing.T) *Service {
 	t.Helper()
+	service, _ := newTestThemeServiceWithParentDir(t)
+	return service
+}
+
+func newTestThemeServiceWithParentDir(t *testing.T) (*Service, string) {
+	t.Helper()
 	now := time.Date(2026, 3, 31, 12, 0, 0, 0, time.UTC)
+	rootDir := t.TempDir()
+	themeDir := filepath.Join(rootDir, "theme")
 	return &Service{
 		Config: &config.Config{
-			ThemeDir:       t.TempDir(),
+			ThemeDir:       themeDir,
 			ThemeURLPrefix: "/storage/theme",
 		},
 		now: func() time.Time { return now },
-	}
+	}, rootDir
 }
 
 func createPNGBytes(t *testing.T, width, height int) []byte {
@@ -140,4 +249,22 @@ func createGIFBytes(t *testing.T) []byte {
 		Delay: []int{10},
 	}))
 	return buf.Bytes()
+}
+
+func writeThemeManifest(t *testing.T, themeDir, contents string) {
+	t.Helper()
+	require.NoError(t, os.MkdirAll(themeDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(themeDir, "theme.json"), []byte(contents), 0o644))
+}
+
+func fakeWebPBytes() []byte {
+	return []byte{
+		'R', 'I', 'F', 'F',
+		0x1a, 0x00, 0x00, 0x00,
+		'W', 'E', 'B', 'P',
+		'V', 'P', '8', ' ',
+		0x0e, 0x00, 0x00, 0x00,
+		0x2f, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00,
+	}
 }

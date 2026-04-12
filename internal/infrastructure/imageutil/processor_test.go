@@ -73,3 +73,44 @@ func TestProcessUploadedImage_RejectsUnsupportedType(t *testing.T) {
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "unsupported image type")
 }
+
+func TestProcessUploadedImage_RejectsAllowedButUndecodablePNG(t *testing.T) {
+	result, err := ProcessUploadedImage("broken.png", brokenPNGBytes(), ProcessOptions{
+		AllowedMIMEs: []string{"image/png"},
+	})
+
+	require.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "failed to decode image")
+}
+
+func TestProcessUploadedImage_RejectsUndecodableWebP(t *testing.T) {
+	result, err := ProcessUploadedImage("broken.webp", fakeWebPBytes(), ProcessOptions{
+		AllowedMIMEs: []string{"image/webp"},
+	})
+
+	require.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "failed to decode image")
+}
+
+func brokenPNGBytes() []byte {
+	return []byte{
+		0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n',
+		0x00, 0x00, 0x00, 0x0d, 'I', 'H', 'D', 'R',
+		0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+		0x08, 0x02, 0x00, 0x00, 0x00,
+	}
+}
+
+func fakeWebPBytes() []byte {
+	return []byte{
+		'R', 'I', 'F', 'F',
+		0x1a, 0x00, 0x00, 0x00,
+		'W', 'E', 'B', 'P',
+		'V', 'P', '8', ' ',
+		0x0e, 0x00, 0x00, 0x00,
+		0x2f, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00,
+	}
+}

@@ -46,12 +46,12 @@ func ProcessUploadedImage(filename string, data []byte, opts ProcessOptions) (*P
 	}
 
 	extension := canonicalExtension(contentType, filename)
-	if contentType == "image/gif" || contentType == "image/webp" {
+	if contentType == "image/gif" {
 		if opts.MaxOutputBytes > 0 && int64(len(data)) > opts.MaxOutputBytes {
 			return nil, fmt.Errorf("%s image file is too large (max %d bytes)", strings.TrimPrefix(contentType, "image/"), opts.MaxOutputBytes)
 		}
 		cfg, _, err := image.DecodeConfig(bytes.NewReader(data))
-		if err != nil && contentType != "image/webp" {
+		if err != nil {
 			return nil, fmt.Errorf("failed to decode image config: %w", err)
 		}
 		return &ProcessedImage{
