@@ -1,0 +1,86 @@
+name: Build and Push to GHCR
+
+on:
+  workflow_call:
+    inputs:
+      image_name:
+        description: "Image name without registry prefix, e.g. buzyka/imlate"
+        type: string
+        required: true
+      dockerfile:
+        description: "Path to Dockerfile from repo root"
+        type: string
+        required: true
+      context:
+        description: "Docker build context"
+        type: string
+        required: false
+        default: "."
+      version_tag:
+        description: "Primary image tag, e.g. 1.2.3 or my-feature-dev"
+        type: string
+        required: true
+      additional_tags:
+        description: "Comma-separated extra tags, e.g. latest"
+        type: string
+        required: false
+        default: ""
+      build_args:
+        description: "Newline-separated build args, e.g. APP_VERSION=1.2.3"
+        type: string
+        required: false
+        default: ""
+      ref:
+        description: "Git ref (branch, tag, SHA) to check out. Defaults to the ref that triggered the workflow."
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    name: Build and push ${{ inputs.image_name }}:${{ inputs.version_tag }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build tag list
+        id: tags
+        run: |
+          TAGS="ghcr.io/${{ inputs.image_name }}:${{ inputs.version_tag }}"
+          if [ -n "${{ inputs.additional_tags }}" ]; then
+            IFS=',' read -ra EXTRA <<< "${{ inputs.additional_tags }}"
+            for tag in "${EXTRA[@]}"; do
+              tag="$(echo "$tag" | tr -d '[:space:]')"
+              TAGS="${TAGS},ghcr.io/${{ inputs.image_name }}:${tag}"
+            done
+          fi
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile }}
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          build-args: ${{ inputs.build_args }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
