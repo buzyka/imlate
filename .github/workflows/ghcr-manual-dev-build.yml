@@ -1,0 +1,41 @@
+name: Manual Dev Image Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to build from (leave empty to use the branch this workflow runs on)"
+        type: string
+        required: false
+        default: ""
+      image_tag:
+        description: "Image tag base name (the -dev suffix is added automatically, e.g. my-feature → my-feature-dev)"
+        type: string
+        required: true
+
+jobs:
+  compute-params:
+    name: Compute tag and branch
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.params.outputs.tag }}
+      ref: ${{ steps.params.outputs.ref }}
+    steps:
+      - name: Resolve tag and ref
+        id: params
+        run: |
+          echo "tag=${{ inputs.image_tag }}-dev" >> $GITHUB_OUTPUT
+          BRANCH="${{ inputs.branch }}"
+          echo "ref=${BRANCH:-${{ github.ref_name }}}" >> $GITHUB_OUTPUT
+
+  build:
+    name: Push dev image to GHCR
+    needs: compute-params
+    uses: ./.github/workflows/ghcr-build-and-push.yml
+    with:
+      image_name: buzyka/imlate
+      dockerfile: docker/Dockerfile
+      context: "."
+      ref: ${{ needs.compute-params.outputs.ref }}
+      version_tag: ${{ needs.compute-params.outputs.tag }}
+      build_args: APP_VERSION=${{ needs.compute-params.outputs.tag }}

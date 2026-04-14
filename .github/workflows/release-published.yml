@@ -1,0 +1,27 @@
+name: Publish Release Image
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  extract-version:
+    name: Extract version from tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Strip leading v from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+  publish:
+    name: Push to GHCR
+    needs: extract-version
+    uses: ./.github/workflows/ghcr-build-and-push.yml
+    with:
+      image_name: buzyka/imlate
+      dockerfile: docker/Dockerfile
+      version_tag: ${{ needs.extract-version.outputs.version }}
+      additional_tags: latest
+      build_args: APP_VERSION=${{ needs.extract-version.outputs.version }}

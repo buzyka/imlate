@@ -11,6 +11,16 @@ A visitor and student tracking system built with Go. Tracks sign-in/sign-out eve
 - **iSAMS integration** (optional) -- syncs students, photos, registration codes, and writes back attendance/absence data.
 - **REST API** -- fully documented with Swagger/OpenAPI.
 
+## Docker Image
+
+Pre-built images are published to GitHub Container Registry on every release:
+
+```bash
+docker pull ghcr.io/buzyka/imlate:latest
+```
+
+See [docs/getting-started/docker-image.md](docs/getting-started/docker-image.md) for environment variables, a `docker run` example, and a Docker Compose snippet.
+
 ## Quick Start
 
 ```bash

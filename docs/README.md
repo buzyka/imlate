@@ -5,6 +5,7 @@ Developer documentation for **imlate** -- a visitor and student tracking system.
 ## Sections
 
 - [Getting Started](getting-started/README.md) -- Prerequisites, setup, first run, and configuration reference.
+- [Docker Image](getting-started/docker-image.md) -- Pull and run the published image without building from source.
 - [Architecture](architecture/README.md) -- System design, layered architecture, request flow, and package map.
 - [API Reference](api/README.md) -- All endpoints, authentication schemes, Swagger, and error format.
 - [Contributing](contributing/README.md) -- Development workflow, code style, migrations, and PR guidelines.
