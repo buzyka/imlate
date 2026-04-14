@@ -13,6 +13,10 @@ on:
         type: string
         required: true
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   compute-params:
     name: Compute tag and branch
