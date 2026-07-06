@@ -52,3 +52,9 @@ type VisitorResponse = usecase.VisitorResponse
 
 // VisitorListResponse documents visitor list payloads.
 type VisitorListResponse = []usecase.VisitorResponse
+
+// PostReportsVisitsRequest is a Swagger-visible alias for the POST reports request body.
+type PostReportsVisitsRequest = usecase.PostReportsVisitsRequest
+
+// PostReportsVisitsResponse is a Swagger-visible alias for the POST reports response.
+type PostReportsVisitsResponse = usecase.PostReportsVisitsResponse

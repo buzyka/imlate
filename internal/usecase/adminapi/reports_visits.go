@@ -14,11 +14,11 @@ const DefaultReportsVisitsPageSize = 100
 type ReportsVisitsOption func(*reportsVisitsOptions)
 
 type reportsVisitsOptions struct {
-	isStudent *bool
-	yearGroup *int
-	signStatus *string
-	page int
-	pageSize int
+	isStudent    *bool
+	yearGroups   []int
+	signStatuses []string
+	page         int
+	pageSize     int
 }
 
 func WithIsStudent(isStudent bool) ReportsVisitsOption {
@@ -29,13 +29,13 @@ func WithIsStudent(isStudent bool) ReportsVisitsOption {
 
 func WithYearGroup(yearGroup int) ReportsVisitsOption {
 	return func(opts *reportsVisitsOptions) {
-		opts.yearGroup = &yearGroup
+		opts.yearGroups = []int{yearGroup}
 	}
 }
 
 func WithSignStatus(signStatus string) ReportsVisitsOption {
 	return func(opts *reportsVisitsOptions) {
-		opts.signStatus = &signStatus
+		opts.signStatuses = []string{signStatus}
 	}
 }
 
@@ -70,15 +70,14 @@ type ReportsVisitsResponseItem struct {
 }
 
 type ReportsVisitsResponse struct {
-	Page  int                        `json:"page"`
-	Limit int                        `json:"limit"`
-	Total int                        `json:"total"` // total matching records count for the given filters (without pagination)
-	TotalPages int                   `json:"total_pages"` // total pages count based on total records and page size
-	Data  []ReportsVisitsResponseItem `json:"data"`
+	Page       int                         `json:"page"`
+	Limit      int                         `json:"limit"`
+	Total      int                         `json:"total"`
+	TotalPages int                         `json:"total_pages"`
+	Data       []ReportsVisitsResponseItem `json:"data"`
 }
 
 func (a *AdminAPI) GetReportsVisits(from, to string, opt ...ReportsVisitsOption) (*ReportsVisitsResponse, error) {
-	// Validate and parse from and to dates
 	fromTime, err := time.Parse("2006-01-02", from)
 	if err != nil {
 		return nil, fmt.Errorf("%w: invalid 'from' date", ErrInvalidRequestFormat)
@@ -87,17 +86,15 @@ func (a *AdminAPI) GetReportsVisits(from, to string, opt ...ReportsVisitsOption)
 	if err != nil {
 		return nil, fmt.Errorf("%w: invalid 'to' date", ErrInvalidRequestFormat)
 	}
-	
-	// Prepare options with defaults
+
 	opts := &reportsVisitsOptions{
-		page: 1,
+		page:     1,
 		pageSize: DefaultReportsVisitsPageSize,
-	}	
+	}
 	for _, o := range opt {
 		o(opts)
 	}
 
-	// Validate search params
 	if err := a.validateReportsVisitsRequest(&fromTime, &toTime, opts); err != nil {
 		return nil, err
 	}
@@ -109,14 +106,14 @@ func (a *AdminAPI) GetReportsVisits(from, to string, opt ...ReportsVisitsOption)
 	toExclusive := toTime.AddDate(0, 0, 1)
 
 	filter := provider.VisitReportFilter{
-		IsStudent:  opts.isStudent,
-		YearGroup:  opts.yearGroup,
-		SignStatus: opts.signStatus,
-		Page:       opts.page,
-		PageSize:   opts.pageSize,
+		IsStudent:    opts.isStudent,
+		YearGroups:   opts.yearGroups,
+		SignStatuses: opts.signStatuses,
+		Page:         opts.page,
+		PageSize:     opts.pageSize,
 	}
 
-	report, err := a.VisitorTrackRepo.GetVisitReport(fromTime, toExclusive, filter)
+	report, err := a.VisitDailyReportRepo.GetVisitReport(fromTime, toExclusive, filter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get visit report: %w", err)
 	}
@@ -152,25 +149,28 @@ func (a *AdminAPI) GetReportsVisits(from, to string, opt ...ReportsVisitsOption)
 	}, nil
 }
 
+var validSignStatuses = map[string]bool{
+	"signed_in":  true,
+	"signed_out": true,
+	"not_signed": true,
+}
+
 func (a *AdminAPI) validateReportsVisitsRequest(from, to *time.Time, opts *reportsVisitsOptions) error {
-	signedStatusValues := map[string]bool{
-		"signed_in": true,
-		"signed_out": true,
-		"not_signed": true,
-	}
 	if from == nil || to == nil {
 		return fmt.Errorf("%w: 'from' and 'to' dates are required", ErrInvalidRequestFormat)
 	}
 
-	if opts.signStatus != nil && !signedStatusValues[*opts.signStatus] {
-		return fmt.Errorf("%w: invalid 'sign_status' value, must be one of 'signed_in', 'signed_out', 'not_signed'", ErrInvalidRequestFormat)
+	for _, s := range opts.signStatuses {
+		if !validSignStatuses[s] {
+			return fmt.Errorf("%w: invalid 'sign_status' value, must be one of 'signed_in', 'signed_out', 'not_signed'", ErrInvalidRequestFormat)
+		}
 	}
 
 	if opts.page <= 0 {
 		return fmt.Errorf("%w: 'page' must be a positive integer", ErrInvalidRequestFormat)
 	}
 
-	if opts.isStudent != nil && !*opts.isStudent && opts.yearGroup != nil {
+	if opts.isStudent != nil && !*opts.isStudent && len(opts.yearGroups) > 0 {
 		return fmt.Errorf("%w: 'year_group' filter can only be used when 'is_student' is true", ErrInvalidRequestFormat)
 	}
 

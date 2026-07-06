@@ -28,6 +28,7 @@ type ReportsVisitsResponse = usecase.ReportsVisitsResponse
 // @Failure      400  {object}  ErrorResponse
 // @Failure      500  {object}  ErrorResponse
 // @Security     ApiKeyAuth
+// @Deprecated   true
 // @Router       /admin-api/reports/visits [get]
 func (ac *AdminAPIController) VisitsReportsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -77,6 +78,39 @@ func (ac *AdminAPIController) VisitsReportsHandler() gin.HandlerFunc {
 		}
 
 		resp, err := ac.AdminAPI.GetReportsVisits(from, to, opts...)
+		if err != nil {
+			if errors.Is(err, usecase.ErrInvalidRequestFormat) {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, resp)
+	}
+}
+
+// VisitsReportsPostHandler godoc
+// @Summary      Search visitor attendance report
+// @Description  Returns a paginated, field-selectable visitor attendance report with multi-value filters and server-side sorting.
+// @Tags         admin-reports
+// @Accept       json
+// @Produce      json
+// @Param        body  body      PostReportsVisitsRequest  true  "Search criteria"
+// @Success      200   {object}  PostReportsVisitsResponse
+// @Failure      400   {object}  ErrorResponse
+// @Failure      500   {object}  ErrorResponse
+// @Security     ApiKeyAuth
+// @Router       /admin-api/reports/visits [post]
+func (ac *AdminAPIController) VisitsReportsPostHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req usecase.PostReportsVisitsRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body: " + err.Error()})
+			return
+		}
+
+		resp, err := ac.AdminAPI.GetPostReportsVisits(&req)
 		if err != nil {
 			if errors.Is(err, usecase.ErrInvalidRequestFormat) {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

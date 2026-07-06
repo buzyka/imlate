@@ -6,6 +6,7 @@ import (
 	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/provider"
 	usecase "github.com/buzyka/imlate/internal/usecase/adminapi"
+	"github.com/buzyka/imlate/internal/usecase/reportaggregator"
 	themeview "github.com/buzyka/imlate/internal/usecase/theme"
 	"github.com/buzyka/imlate/internal/usecase/tracking"
 	"github.com/gin-gonic/gin"
@@ -16,6 +17,7 @@ type AdminAPIController struct {
 	TrackRepo      provider.VisitorTrackRepository `container:"type"`
 	StudentTracker *tracking.StudentTracker        `container:"type"`
 	ThemeService   *themeview.Service              `container:"type"`
+	Aggregator     *reportaggregator.Aggregator    `container:"type"`
 }
 
 // CurrentUserHandler godoc

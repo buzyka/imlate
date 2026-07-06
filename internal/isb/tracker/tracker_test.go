@@ -11,13 +11,14 @@ import (
 
 	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/provider/providertest"
+	"github.com/buzyka/imlate/internal/usecase/reportaggregator"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-func intPtr(i int) *int   { return &i }
+func intPtr(i int) *int       { return &i }
 func strPtr(s string) *string { return &s }
 
 func TestTrackHandler_Success(t *testing.T) {
@@ -28,6 +29,7 @@ func TestTrackHandler_Success(t *testing.T) {
 	controller := &TrackerController{
 		VisitorRepository: mockVisitorRepo,
 		TrackRepository:   mockTrackRepo,
+		Aggregator:        &reportaggregator.Aggregator{},
 	}
 
 	visitor := &entity.Visitor{
@@ -93,6 +95,7 @@ func TestTrackHandler_InvalidJSON(t *testing.T) {
 	controller := &TrackerController{
 		VisitorRepository: mockVisitorRepo,
 		TrackRepository:   mockTrackRepo,
+		Aggregator:        &reportaggregator.Aggregator{},
 	}
 
 	// Create test request with invalid JSON
@@ -124,6 +127,7 @@ func TestTrackHandler_VisitorNotFound(t *testing.T) {
 	controller := &TrackerController{
 		VisitorRepository: mockVisitorRepo,
 		TrackRepository:   mockTrackRepo,
+		Aggregator:        &reportaggregator.Aggregator{},
 	}
 
 	requestData := Request{
@@ -166,6 +170,7 @@ func TestTrackHandler_StoreError(t *testing.T) {
 	controller := &TrackerController{
 		VisitorRepository: mockVisitorRepo,
 		TrackRepository:   mockTrackRepo,
+		Aggregator:        &reportaggregator.Aggregator{},
 	}
 
 	visitor := &entity.Visitor{
@@ -217,6 +222,7 @@ func TestTrackHandler_WithAdminID(t *testing.T) {
 	controller := &TrackerController{
 		VisitorRepository: mockVisitorRepo,
 		TrackRepository:   mockTrackRepo,
+		Aggregator:        &reportaggregator.Aggregator{},
 	}
 
 	visitor := &entity.Visitor{Id: 123, Name: "Jane", Surname: "Smith"}
@@ -265,6 +271,7 @@ func TestTrackHandler_WithInvalidAdminID(t *testing.T) {
 	controller := &TrackerController{
 		VisitorRepository: mockVisitorRepo,
 		TrackRepository:   mockTrackRepo,
+		Aggregator:        &reportaggregator.Aggregator{},
 	}
 
 	invalidID := "not-a-uuid"
@@ -299,6 +306,7 @@ func TestTrackHandler_WithNilAdminID(t *testing.T) {
 	controller := &TrackerController{
 		VisitorRepository: mockVisitorRepo,
 		TrackRepository:   mockTrackRepo,
+		Aggregator:        &reportaggregator.Aggregator{},
 	}
 
 	visitor := &entity.Visitor{Id: 123, Name: "Jane", Surname: "Smith"}
@@ -346,6 +354,7 @@ func TestFindAndTrackHandler_Success(t *testing.T) {
 	controller := &TrackerController{
 		VisitorRepository: mockVisitorRepo,
 		TrackRepository:   mockTrackRepo,
+		Aggregator:        &reportaggregator.Aggregator{},
 	}
 
 	visitor := &entity.Visitor{
@@ -414,6 +423,7 @@ func TestFindAndTrackHandler_SignOut(t *testing.T) {
 	controller := &TrackerController{
 		VisitorRepository: mockVisitorRepo,
 		TrackRepository:   mockTrackRepo,
+		Aggregator:        &reportaggregator.Aggregator{},
 	}
 
 	visitor := &entity.Visitor{
@@ -480,6 +490,7 @@ func TestFindAndTrackHandler_InvalidJSON(t *testing.T) {
 	controller := &TrackerController{
 		VisitorRepository: mockVisitorRepo,
 		TrackRepository:   mockTrackRepo,
+		Aggregator:        &reportaggregator.Aggregator{},
 	}
 
 	// Create test request with invalid JSON
@@ -506,6 +517,7 @@ func TestFindAndTrackHandler_VisitorNotFoundByKey(t *testing.T) {
 	controller := &TrackerController{
 		VisitorRepository: mockVisitorRepo,
 		TrackRepository:   mockTrackRepo,
+		Aggregator:        &reportaggregator.Aggregator{},
 	}
 
 	requestData := Request{
@@ -547,6 +559,7 @@ func TestFindAndTrackHandler_NilVisitor(t *testing.T) {
 	controller := &TrackerController{
 		VisitorRepository: mockVisitorRepo,
 		TrackRepository:   mockTrackRepo,
+		Aggregator:        &reportaggregator.Aggregator{},
 	}
 
 	visitDetails := &entity.VisitDetails{
@@ -588,6 +601,7 @@ func TestFindAndTrackHandler_StoreError(t *testing.T) {
 	controller := &TrackerController{
 		VisitorRepository: mockVisitorRepo,
 		TrackRepository:   mockTrackRepo,
+		Aggregator:        &reportaggregator.Aggregator{},
 	}
 
 	visitor := &entity.Visitor{
@@ -642,6 +656,7 @@ func TestFindAndTrackHandler_CountEventsError(t *testing.T) {
 	controller := &TrackerController{
 		VisitorRepository: mockVisitorRepo,
 		TrackRepository:   mockTrackRepo,
+		Aggregator:        &reportaggregator.Aggregator{},
 	}
 
 	visitor := &entity.Visitor{
@@ -706,6 +721,7 @@ func TestFindAndTrackHandler_CountFromStartOfDay(t *testing.T) {
 	controller := &TrackerController{
 		VisitorRepository: mockVisitorRepo,
 		TrackRepository:   mockTrackRepo,
+		Aggregator:        &reportaggregator.Aggregator{},
 	}
 
 	visitor := &entity.Visitor{Id: 456, Name: "Bob", Surname: "Johnson"}
@@ -757,6 +773,7 @@ func TestFindAndTrackHandler_WithAdminID(t *testing.T) {
 	controller := &TrackerController{
 		VisitorRepository: mockVisitorRepo,
 		TrackRepository:   mockTrackRepo,
+		Aggregator:        &reportaggregator.Aggregator{},
 	}
 
 	visitor := &entity.Visitor{Id: 456, Name: "Bob", Surname: "Johnson"}
@@ -811,6 +828,7 @@ func TestFindAndTrackHandler_WithInvalidAdminID(t *testing.T) {
 	controller := &TrackerController{
 		VisitorRepository: mockVisitorRepo,
 		TrackRepository:   mockTrackRepo,
+		Aggregator:        &reportaggregator.Aggregator{},
 	}
 
 	invalidID := "not-a-uuid"

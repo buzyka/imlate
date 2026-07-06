@@ -12,6 +12,7 @@ import (
 	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/provider/providertest"
 	usecase "github.com/buzyka/imlate/internal/usecase/adminapi"
+	"github.com/buzyka/imlate/internal/usecase/reportaggregator"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -23,8 +24,9 @@ func setupTrackTest() (*providertest.VisitorRepositoryMock, *providertest.Visito
 	mockTrackRepo := new(providertest.VisitorTrackRepositoryMock)
 	api := &usecase.AdminAPI{VisitorRepo: mockVisitorRepo}
 	controller := &AdminAPIController{
-		AdminAPI:  api,
-		TrackRepo: mockTrackRepo,
+		AdminAPI:   api,
+		TrackRepo:  mockTrackRepo,
+		Aggregator: &reportaggregator.Aggregator{},
 	}
 	gin.SetMode(gin.TestMode)
 	return mockVisitorRepo, mockTrackRepo, controller

@@ -69,6 +69,7 @@ func (ac *AdminAPIController) ManualTrackHandler() gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		ac.Aggregator.Enqueue(track.VisitorId, track.CreatedAt)
 
 		eType := "sign-in"
 		startDate := time.Date(track.CreatedAt.Year(), track.CreatedAt.Month(), track.CreatedAt.Day(), 0, 0, 0, 0, time.Local)

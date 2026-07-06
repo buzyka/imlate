@@ -16,6 +16,7 @@ import (
 	"github.com/buzyka/imlate/internal/infrastructure/util"
 	"github.com/buzyka/imlate/internal/isb/search"
 	"github.com/buzyka/imlate/internal/isb/tracker"
+	"github.com/buzyka/imlate/internal/usecase/reportaggregator"
 	themeview "github.com/buzyka/imlate/internal/usecase/theme"
 	"github.com/buzyka/imlate/internal/version"
 	"github.com/gin-gonic/gin"
@@ -64,6 +65,12 @@ func main() {
 	}
 
 	gocontainer.Build(&cfg)
+
+	// Start the background visit report aggregation worker
+	var aggregator *reportaggregator.Aggregator
+	container.MustResolve(container.Global, &aggregator)
+	aggregator.Start()
+	defer aggregator.Stop()
 
 	// Start cron jobs
 	stopCron, err := cron.RunCron(&cfg)
@@ -187,6 +194,7 @@ func registerAdminRoutes(r *gin.Engine) {
 	adminGroup.DELETE("/visitors/:id", adminController.DeleteVisitorHandler())
 
 	adminGroup.GET("/reports/visits", adminController.VisitsReportsHandler())
+	adminGroup.POST("/reports/visits", adminController.VisitsReportsPostHandler())
 	adminGroup.POST("/track/visit", adminController.ManualTrackHandler())
 }
 

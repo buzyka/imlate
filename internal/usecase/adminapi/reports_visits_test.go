@@ -37,7 +37,7 @@ func TestGetReportsVisits_ValidateRequestError(t *testing.T) {
 			from:     "2026-01-01",
 			to:       "2026-01-02",
 			opts:     []ReportsVisitsOption{WithSignStatus("invalid_status")},
-			exErrMsg: "invalid 'sign_status' value, must be one of 'signed_in', 'signed_out', 'not_signed'",
+			exErrMsg: "invalid 'sign_status' value",
 		},
 		{
 			name:     "invalid 'page' value",
@@ -71,7 +71,7 @@ func TestGetReportsVisits_Success(t *testing.T) {
 	yg := 10
 	dur := 387
 
-	mockRepo := new(providertest.VisitorTrackRepositoryMock)
+	mockRepo := new(providertest.VisitDailyReportRepositoryMock)
 	mockRepo.On("GetVisitReport", mock.Anything, mock.Anything, mock.Anything).
 		Return(&provider.VisitReportResult{
 			Total: 1,
@@ -92,7 +92,7 @@ func TestGetReportsVisits_Success(t *testing.T) {
 			},
 		}, nil)
 
-	api := &AdminAPI{VisitorTrackRepo: mockRepo}
+	api := &AdminAPI{VisitDailyReportRepo: mockRepo}
 	resp, err := api.GetReportsVisits("2026-03-01", "2026-03-14")
 
 	assert.NoError(t, err)
@@ -121,11 +121,11 @@ func TestGetReportsVisits_Success(t *testing.T) {
 }
 
 func TestGetReportsVisits_RepositoryError(t *testing.T) {
-	mockRepo := new(providertest.VisitorTrackRepositoryMock)
+	mockRepo := new(providertest.VisitDailyReportRepositoryMock)
 	mockRepo.On("GetVisitReport", mock.Anything, mock.Anything, mock.Anything).
 		Return(nil, errors.New("database connection lost"))
 
-	api := &AdminAPI{VisitorTrackRepo: mockRepo}
+	api := &AdminAPI{VisitDailyReportRepo: mockRepo}
 	resp, err := api.GetReportsVisits("2026-03-01", "2026-03-14")
 
 	assert.Error(t, err)
@@ -150,14 +150,14 @@ func TestGetReportsVisits_TotalPagesCalculation(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			mockRepo := new(providertest.VisitorTrackRepositoryMock)
+			mockRepo := new(providertest.VisitDailyReportRepositoryMock)
 			mockRepo.On("GetVisitReport", mock.Anything, mock.Anything, mock.Anything).
 				Return(&provider.VisitReportResult{
 					Total: tc.total,
 					Rows:  []provider.VisitReportRow{},
 				}, nil)
 
-			api := &AdminAPI{VisitorTrackRepo: mockRepo}
+			api := &AdminAPI{VisitDailyReportRepo: mockRepo}
 			opts := []ReportsVisitsOption{WithLimit(tc.pageSize)}
 			resp, err := api.GetReportsVisits("2026-03-01", "2026-03-14", opts...)
 
@@ -173,11 +173,11 @@ func TestGetReportsVisits_DateSwap(t *testing.T) {
 	expectedFrom := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
 	expectedToExclusive := time.Date(2026, 3, 15, 0, 0, 0, 0, time.UTC)
 
-	mockRepo := new(providertest.VisitorTrackRepositoryMock)
+	mockRepo := new(providertest.VisitDailyReportRepositoryMock)
 	mockRepo.On("GetVisitReport", expectedFrom, expectedToExclusive, mock.Anything).
 		Return(&provider.VisitReportResult{Total: 0, Rows: []provider.VisitReportRow{}}, nil)
 
-	api := &AdminAPI{VisitorTrackRepo: mockRepo}
+	api := &AdminAPI{VisitDailyReportRepo: mockRepo}
 	resp, err := api.GetReportsVisits("2026-03-14", "2026-03-01")
 
 	assert.NoError(t, err)
@@ -187,21 +187,19 @@ func TestGetReportsVisits_DateSwap(t *testing.T) {
 
 func TestGetReportsVisits_FiltersPassedToRepository(t *testing.T) {
 	isStudent := true
-	yearGroup := 10
-	signStatus := "signed_in"
 	expectedFilter := provider.VisitReportFilter{
-		IsStudent:  &isStudent,
-		YearGroup:  &yearGroup,
-		SignStatus: &signStatus,
-		Page:       2,
-		PageSize:   15,
+		IsStudent:    &isStudent,
+		YearGroups:   []int{10},
+		SignStatuses: []string{"signed_in"},
+		Page:         2,
+		PageSize:     15,
 	}
 
-	mockRepo := new(providertest.VisitorTrackRepositoryMock)
+	mockRepo := new(providertest.VisitDailyReportRepositoryMock)
 	mockRepo.On("GetVisitReport", mock.Anything, mock.Anything, expectedFilter).
 		Return(&provider.VisitReportResult{Total: 0, Rows: []provider.VisitReportRow{}}, nil)
 
-	api := &AdminAPI{VisitorTrackRepo: mockRepo}
+	api := &AdminAPI{VisitDailyReportRepo: mockRepo}
 	opts := []ReportsVisitsOption{
 		WithIsStudent(true),
 		WithYearGroup(10),
@@ -216,11 +214,11 @@ func TestGetReportsVisits_FiltersPassedToRepository(t *testing.T) {
 }
 
 func TestGetReportsVisits_EmptyData(t *testing.T) {
-	mockRepo := new(providertest.VisitorTrackRepositoryMock)
+	mockRepo := new(providertest.VisitDailyReportRepositoryMock)
 	mockRepo.On("GetVisitReport", mock.Anything, mock.Anything, mock.Anything).
 		Return(&provider.VisitReportResult{Total: 0, Rows: []provider.VisitReportRow{}}, nil)
 
-	api := &AdminAPI{VisitorTrackRepo: mockRepo}
+	api := &AdminAPI{VisitDailyReportRepo: mockRepo}
 	resp, err := api.GetReportsVisits("2026-03-01", "2026-03-14")
 
 	assert.NoError(t, err)
@@ -232,7 +230,7 @@ func TestGetReportsVisits_EmptyData(t *testing.T) {
 }
 
 func TestGetReportsVisits_NullableFieldsMapping(t *testing.T) {
-	mockRepo := new(providertest.VisitorTrackRepositoryMock)
+	mockRepo := new(providertest.VisitDailyReportRepositoryMock)
 	mockRepo.On("GetVisitReport", mock.Anything, mock.Anything, mock.Anything).
 		Return(&provider.VisitReportResult{
 			Total: 1,
@@ -253,7 +251,7 @@ func TestGetReportsVisits_NullableFieldsMapping(t *testing.T) {
 			},
 		}, nil)
 
-	api := &AdminAPI{VisitorTrackRepo: mockRepo}
+	api := &AdminAPI{VisitDailyReportRepo: mockRepo}
 	resp, err := api.GetReportsVisits("2026-03-01", "2026-03-14")
 
 	assert.NoError(t, err)
@@ -269,15 +267,17 @@ func TestGetReportsVisits_NullableFieldsMapping(t *testing.T) {
 
 func TestGetReportsVisits_DefaultPagination(t *testing.T) {
 	expectedFilter := provider.VisitReportFilter{
-		Page:     1,
-		PageSize: DefaultReportsVisitsPageSize,
+		Page:         1,
+		PageSize:     DefaultReportsVisitsPageSize,
+		YearGroups:   nil,
+		SignStatuses: nil,
 	}
 
-	mockRepo := new(providertest.VisitorTrackRepositoryMock)
+	mockRepo := new(providertest.VisitDailyReportRepositoryMock)
 	mockRepo.On("GetVisitReport", mock.Anything, mock.Anything, expectedFilter).
 		Return(&provider.VisitReportResult{Total: 0, Rows: []provider.VisitReportRow{}}, nil)
 
-	api := &AdminAPI{VisitorTrackRepo: mockRepo}
+	api := &AdminAPI{VisitDailyReportRepo: mockRepo}
 	resp, err := api.GetReportsVisits("2026-03-01", "2026-03-14")
 
 	assert.NoError(t, err)

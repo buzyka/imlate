@@ -7,11 +7,13 @@ import (
 )
 
 type VisitReportFilter struct {
-	IsStudent  *bool
-	YearGroup  *int
-	SignStatus *string
-	Page       int
-	PageSize   int
+	IsStudent      *bool
+	YearGroups     []int
+	SignStatuses   []string
+	OrderField     string
+	OrderDirection string
+	Page           int
+	PageSize       int
 }
 
 type VisitReportRow struct {
@@ -19,6 +21,8 @@ type VisitReportRow struct {
 	VisitorID       int32
 	Name            string
 	Surname         string
+	Email           string
+	Image           string
 	IsStudent       bool
 	YearGroup       *int
 	VisitsCount     int
@@ -26,6 +30,9 @@ type VisitReportRow struct {
 	SignedIn        *time.Time
 	SignedOut       *time.Time
 	DurationMinutes *int
+	// ClearMinutesInside is the net time spent inside for the day, excluding
+	// intervals when the visitor was signed out. NULL when there were no events.
+	ClearMinutesInside *int
 }
 
 type VisitReportResult struct {
@@ -37,5 +44,4 @@ type VisitorTrackRepository interface {
 	Store(vt *entity.VisitTrack) (*entity.VisitTrack, error)
 	GetById(id int64) (*entity.VisitTrack, error)
 	CountEventsByVisitorIdSince(visitorId int32, date time.Time) (int, error)
-	GetVisitReport(from, to time.Time, filter VisitReportFilter) (*VisitReportResult, error)
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/buzyka/imlate/internal/infrastructure/repository"
 	"github.com/buzyka/imlate/internal/infrastructure/util"
 	"github.com/buzyka/imlate/internal/usecase/adminapi"
+	"github.com/buzyka/imlate/internal/usecase/reportaggregator"
 	themeview "github.com/buzyka/imlate/internal/usecase/theme"
 	"github.com/buzyka/imlate/internal/usecase/tracking"
 	"github.com/golobby/container/v3"
@@ -62,6 +63,12 @@ func Build(cfg *config.Config) {
 		}
 	})
 
+	container.MustSingleton(container.Global, func() provider.VisitDailyReportRepository {
+		return &repository.VisitDailyReport{
+			Connection: connection,
+		}
+	})
+
 	container.MustSingleton(container.Global, func() erp.Factory {
 		f := &isams.ClientFactory{
 			BaseURL:      cfg.ISAMSBaseURL,
@@ -94,5 +101,11 @@ func Build(cfg *config.Config) {
 		a := &adminapi.AdminAPI{}
 		container.MustFill(container.Global, a)
 		return a
+	})
+
+	container.MustSingleton(container.Global, func() *reportaggregator.Aggregator {
+		agg := &reportaggregator.Aggregator{}
+		container.MustFill(container.Global, agg)
+		return agg
 	})
 }

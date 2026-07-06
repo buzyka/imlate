@@ -113,6 +113,38 @@ definitions:
       version:
         type: string
     type: object
+  github_com_buzyka_imlate_internal_usecase_adminapi.PostReportsVisitsFilters:
+    properties:
+      is_student:
+        type: boolean
+      sign_status:
+        description: 'SignStatus filters rows by sign status. Allowed values: signed_in,
+          signed_out, not_signed.'
+        items:
+          type: string
+        type: array
+      year_group:
+        items:
+          type: integer
+        type: array
+    type: object
+  github_com_buzyka_imlate_internal_usecase_adminapi.PostReportsVisitsOrder:
+    properties:
+      direction:
+        enum:
+        - asc
+        - desc
+        type: string
+      field:
+        enum:
+        - sign_status
+        - year_group
+        - name
+        - surname
+        - visit_date
+        - visits_count
+        type: string
+    type: object
   github_com_buzyka_imlate_internal_usecase_adminapi.ReportsVisitsResponseItem:
     properties:
       duration_minutes:
@@ -246,6 +278,48 @@ definitions:
       message:
         type: string
     type: object
+  internal_http_controller_adminapi.PostReportsVisitsRequest:
+    properties:
+      fields:
+        description: |-
+          Fields selects which optional fields to include in each row.
+          Computed fields (visit_date, sign_status, visits_count, signed_in, signed_out, duration_minutes)
+          are always present regardless of this list.
+          Allowed values: visitor_id, visit_date, name, surname, is_student, year_group,
+          visits_count, sign_status, signed_in, signed_out, duration_minutes, email, image.
+          Omit or leave empty to return all optional fields.
+        items:
+          type: string
+        type: array
+      filters:
+        $ref: '#/definitions/github_com_buzyka_imlate_internal_usecase_adminapi.PostReportsVisitsFilters'
+      from:
+        type: string
+      limit:
+        type: integer
+      order:
+        $ref: '#/definitions/github_com_buzyka_imlate_internal_usecase_adminapi.PostReportsVisitsOrder'
+      page:
+        type: integer
+      to:
+        type: string
+    type: object
+  internal_http_controller_adminapi.PostReportsVisitsResponse:
+    properties:
+      data:
+        items:
+          additionalProperties: true
+          type: object
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   internal_http_controller_adminapi.RegisterTerminalRequest:
     properties:
       admin_login:
@@ -279,10 +353,8 @@ definitions:
       page:
         type: integer
       total:
-        description: total matching records count for the given filters (without pagination)
         type: integer
       total_pages:
-        description: total pages count based on total records and page size
         type: integer
     type: object
   internal_http_controller_adminapi.UpdatePasswordRequest:
@@ -436,6 +508,7 @@ paths:
       - admin-dashboard
   /admin-api/reports/visits:
     get:
+      deprecated: true
       description: Returns paginated visitor attendance information aggregated per
         visitor per day for a given date range.
       parameters:
@@ -487,6 +560,38 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Get visitor attendance report
+      tags:
+      - admin-reports
+    post:
+      consumes:
+      - application/json
+      description: Returns a paginated, field-selectable visitor attendance report
+        with multi-value filters and server-side sorting.
+      parameters:
+      - description: Search criteria
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_http_controller_adminapi.PostReportsVisitsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.PostReportsVisitsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Search visitor attendance report
       tags:
       - admin-reports
   /admin-api/theme:
