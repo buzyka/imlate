@@ -14,6 +14,10 @@ import (
 	"go.uber.org/zap"
 )
 
+// defaultReconcileDays is the fallback look-back window for the finalization job
+// when CRON_RECONCILE_DAYS is unset or non-positive.
+const defaultReconcileDays = 7
+
 type JobFunction func()
 
 type StopCronFunc = func()
@@ -167,6 +171,8 @@ func FinalizeReportsFunc() JobFunction {
 		container.MustResolve(container.Global, &log)
 		var repo provider.VisitDailyReportRepository
 		container.MustResolve(container.Global, &repo)
+		var cfg *config.Config
+		container.MustResolve(container.Global, &cfg)
 
 		log.Infof("Starting visit report finalization... TIME: %s", time.Now().Format(time.RFC3339))
 
@@ -174,9 +180,15 @@ func FinalizeReportsFunc() JobFunction {
 		now := util.Now()
 		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
-		days, err := repo.UnfinalizedDaysBefore(today)
+		lookback := cfg.CronReconcileDays
+		if lookback <= 0 {
+			lookback = defaultReconcileDays
+		}
+		since := today.AddDate(0, 0, -lookback)
+
+		days, err := repo.PendingDaysBefore(since, today)
 		if err != nil {
-			log.Errorf("Error finding unfinalized report days: %v\n", err)
+			log.Errorf("Error finding pending report days: %v\n", err)
 			return
 		}
 

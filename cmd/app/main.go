@@ -1,10 +1,16 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
+	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
+	"time"
 
 	gjwt "github.com/appleboy/gin-jwt/v3"
 	_ "github.com/buzyka/imlate/docs"
@@ -66,18 +72,19 @@ func main() {
 
 	gocontainer.Build(&cfg)
 
-	// Start the background visit report aggregation worker
+	// Start the background visit report aggregation worker. Shutdown is handled
+	// explicitly at the end of main (see waitForShutdown) rather than with defer,
+	// because the worker must be drained only after the HTTP server has stopped
+	// accepting requests that enqueue new work.
 	var aggregator *reportaggregator.Aggregator
 	container.MustResolve(container.Global, &aggregator)
 	aggregator.Start()
-	defer aggregator.Stop()
 
 	// Start cron jobs
 	stopCron, err := cron.RunCron(&cfg)
 	if err != nil {
 		panic(fmt.Sprintf("Error starting cron jobs: %v\n", err))
 	}
-	defer stopCron()
 
 	// Start Gin server
 	r := gin.Default()
@@ -143,9 +150,35 @@ func main() {
 		port = "8080"
 	}
 	// Start the server on the configured port
-	if err := r.Run("0.0.0.0:" + port); err != nil {
-		panic(err)
+	srv := &http.Server{Addr: "0.0.0.0:" + port, Handler: r}
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			panic(err)
+		}
+	}()
+
+	waitForShutdown(srv, stopCron, aggregator)
+}
+
+// shutdownTimeout bounds how long in-flight HTTP requests get to finish.
+const shutdownTimeout = 10 * time.Second
+
+// waitForShutdown blocks until the process is asked to terminate, then stops
+// everything in dependency order. The order matters: the aggregator is drained
+// last, once the HTTP handlers and the cron jobs that feed it are gone, so no
+// queued recalculation is lost on deploy or restart.
+func waitForShutdown(srv *http.Server, stopCron cron.StopCronFunc, aggregator *reportaggregator.Aggregator) {
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		fmt.Printf("Error shutting down HTTP server: %v\n", err)
 	}
+	stopCron()
+	aggregator.Stop()
 }
 
 func resolveThemeService(c container.Container) *themeview.Service {

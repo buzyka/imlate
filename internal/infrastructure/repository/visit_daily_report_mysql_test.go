@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -318,49 +319,75 @@ func TestFinalizeDay_VisitorsRowsErr(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// --- UnfinalizedDaysBefore ---
+// --- PendingDaysBefore ---
 
-func TestUnfinalizedDaysBefore_Success(t *testing.T) {
+func TestPendingDaysBefore_Success(t *testing.T) {
 	repo, mock := newReportRepo(t)
 	d1 := time.Date(2026, 3, 8, 0, 0, 0, 0, time.UTC)
 	d2 := time.Date(2026, 3, 9, 0, 0, 0, 0, time.UTC)
-	mock.ExpectQuery(q("SELECT DISTINCT day FROM visit_daily_report WHERE finalized_at IS NULL AND day < ? ORDER BY day")).
-		WithArgs("2026-03-10").
+	mock.ExpectQuery(q("SELECT DISTINCT DATE(created_at) AS day")).
+		WithArgs("2026-03-03 00:00:00", "2026-03-10 00:00:00").
 		WillReturnRows(sqlmock.NewRows([]string{"day"}).AddRow(d1).AddRow(d2))
 
-	days, err := repo.UnfinalizedDaysBefore(time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC))
+	days, err := repo.PendingDaysBefore(
+		time.Date(2026, 3, 3, 0, 0, 0, 0, time.UTC),
+		time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC),
+	)
 	assert.NoError(t, err)
 	assert.Equal(t, []time.Time{d1, d2}, days)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestUnfinalizedDaysBefore_QueryError(t *testing.T) {
+// The candidate days come from track, not from visit_daily_report, so a day
+// whose report rows were never created at all is still reported as pending.
+func TestPendingDaysBefore_QueriesTrackNotReportTable(t *testing.T) {
 	repo, mock := newReportRepo(t)
-	mock.ExpectQuery(q("SELECT DISTINCT day FROM visit_daily_report")).
+	mock.ExpectQuery(q("FROM track WHERE created_at >= ? AND created_at < ?")).
+		WillReturnRows(sqlmock.NewRows([]string{"day"}))
+
+	_, err := repo.PendingDaysBefore(time.Now().AddDate(0, 0, -7), time.Now())
+	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPendingDaysBefore_SkipsFinalizedDays(t *testing.T) {
+	repo, mock := newReportRepo(t)
+	mock.ExpectQuery(q("WHERE r.day = d.day AND r.finalized_at IS NOT NULL")).
+		WillReturnRows(sqlmock.NewRows([]string{"day"}))
+
+	days, err := repo.PendingDaysBefore(time.Now().AddDate(0, 0, -7), time.Now())
+	assert.NoError(t, err)
+	assert.Empty(t, days)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestPendingDaysBefore_QueryError(t *testing.T) {
+	repo, mock := newReportRepo(t)
+	mock.ExpectQuery(q("SELECT DISTINCT DATE(created_at) AS day")).
 		WillReturnError(errors.New("boom"))
 
-	days, err := repo.UnfinalizedDaysBefore(time.Now())
+	days, err := repo.PendingDaysBefore(time.Now().AddDate(0, 0, -7), time.Now())
 	assert.Error(t, err)
 	assert.Nil(t, days)
 }
 
-func TestUnfinalizedDaysBefore_ScanError(t *testing.T) {
+func TestPendingDaysBefore_ScanError(t *testing.T) {
 	repo, mock := newReportRepo(t)
-	mock.ExpectQuery(q("SELECT DISTINCT day FROM visit_daily_report")).
+	mock.ExpectQuery(q("SELECT DISTINCT DATE(created_at) AS day")).
 		WillReturnRows(sqlmock.NewRows([]string{"day"}).AddRow("not-a-time"))
 
-	days, err := repo.UnfinalizedDaysBefore(time.Now())
+	days, err := repo.PendingDaysBefore(time.Now().AddDate(0, 0, -7), time.Now())
 	assert.Error(t, err)
 	assert.Nil(t, days)
 }
 
-func TestUnfinalizedDaysBefore_RowsErr(t *testing.T) {
+func TestPendingDaysBefore_RowsErr(t *testing.T) {
 	repo, mock := newReportRepo(t)
 	d1 := time.Date(2026, 3, 8, 0, 0, 0, 0, time.UTC)
-	mock.ExpectQuery(q("SELECT DISTINCT day FROM visit_daily_report")).
+	mock.ExpectQuery(q("SELECT DISTINCT DATE(created_at) AS day")).
 		WillReturnRows(sqlmock.NewRows([]string{"day"}).AddRow(d1).RowError(0, errors.New("row error")))
 
-	_, err := repo.UnfinalizedDaysBefore(time.Now())
+	_, err := repo.PendingDaysBefore(time.Now().AddDate(0, 0, -7), time.Now())
 	assert.Error(t, err)
 }
 
@@ -524,11 +551,28 @@ func TestBuildSignStatusWhere(t *testing.T) {
 }
 
 func TestBuildOrderClause(t *testing.T) {
-	assert.Equal(t, " ORDER BY r.day, v.surname", buildOrderClause(provider.VisitReportFilter{}))
-	assert.Equal(t, " ORDER BY r.day, v.surname", buildOrderClause(provider.VisitReportFilter{OrderField: "bogus"}))
-	assert.Equal(t, " ORDER BY v.year_group ASC", buildOrderClause(provider.VisitReportFilter{OrderField: "year_group", OrderDirection: "asc"}))
-	assert.Equal(t, " ORDER BY sign_status DESC", buildOrderClause(provider.VisitReportFilter{OrderField: "sign_status", OrderDirection: "desc"}))
-	assert.Equal(t, " ORDER BY r.visits_count ASC", buildOrderClause(provider.VisitReportFilter{OrderField: "visits_count"}))
+	assert.Equal(t, " ORDER BY r.day, v.surname, r.visitor_id", buildOrderClause(provider.VisitReportFilter{}))
+	assert.Equal(t, " ORDER BY r.day, v.surname, r.visitor_id", buildOrderClause(provider.VisitReportFilter{OrderField: "bogus"}))
+	assert.Equal(t, " ORDER BY v.year_group ASC, r.day ASC, r.visitor_id", buildOrderClause(provider.VisitReportFilter{OrderField: "year_group", OrderDirection: "asc"}))
+	assert.Equal(t, " ORDER BY sign_status DESC, r.day DESC, r.visitor_id", buildOrderClause(provider.VisitReportFilter{OrderField: "sign_status", OrderDirection: "desc"}))
+	assert.Equal(t, " ORDER BY r.visits_count ASC, r.day ASC, r.visitor_id", buildOrderClause(provider.VisitReportFilter{OrderField: "visits_count"}))
+}
+
+// Sorting by visit_date must not repeat r.day; it only needs the unique tie-breaker.
+func TestBuildOrderClause_VisitDateDoesNotRepeatDay(t *testing.T) {
+	assert.Equal(t, " ORDER BY r.day ASC, r.visitor_id", buildOrderClause(provider.VisitReportFilter{OrderField: "visit_date"}))
+	assert.Equal(t, " ORDER BY r.day DESC, r.visitor_id", buildOrderClause(provider.VisitReportFilter{OrderField: "visit_date", OrderDirection: "desc"}))
+}
+
+// Every clause must end in r.visitor_id so paging cannot repeat or skip rows.
+func TestBuildOrderClause_AlwaysHasUniqueTieBreaker(t *testing.T) {
+	for field := range reportSortSQL {
+		for _, dir := range []string{"asc", "desc"} {
+			clause := buildOrderClause(provider.VisitReportFilter{OrderField: field, OrderDirection: dir})
+			assert.True(t, strings.HasSuffix(clause, ", r.visitor_id"), "field %s dir %s: %s", field, dir, clause)
+		}
+	}
+	assert.True(t, strings.HasSuffix(buildOrderClause(provider.VisitReportFilter{}), ", r.visitor_id"))
 }
 
 // exercise the filter/sign-status/order args flowing through GetVisitReport

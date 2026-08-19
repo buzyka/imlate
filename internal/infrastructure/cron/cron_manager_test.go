@@ -362,38 +362,77 @@ func TestRunCron_WhenReportCronInvalid_ReturnsError(t *testing.T) {
 	assert.Nil(t, stopFunc)
 }
 
-func TestFinalizeReportsFunc_FinalizesUnfinalizedDays(t *testing.T) {
+// registerFinalizeDeps wires the container with everything FinalizeReportsFunc
+// resolves and returns the report repository mock.
+func registerFinalizeDeps(t *testing.T, cfg *config.Config) *providertest.VisitDailyReportRepositoryMock {
+	t.Helper()
 	testContainer := container.New()
 	oldGlobal := container.Global
 	container.Global = testContainer
 	t.Cleanup(func() { container.Global = oldGlobal })
 
 	repo := new(providertest.VisitDailyReportRepositoryMock)
-	d1 := time.Date(2026, 3, 8, 0, 0, 0, 0, time.UTC)
-	d2 := time.Date(2026, 3, 9, 0, 0, 0, 0, time.UTC)
-	repo.On("UnfinalizedDaysBefore", mock.Anything).Return([]time.Time{d1, d2}, nil)
-	repo.On("FinalizeDay", d1).Return(nil)
-	repo.On("FinalizeDay", d2).Return(errors.New("finalize failed")) // error is logged, not fatal
-
 	container.MustSingleton(container.Global, func() *zap.SugaredLogger { return zap.NewNop().Sugar() })
 	container.MustSingleton(container.Global, func() provider.VisitDailyReportRepository { return repo })
+	container.MustSingleton(container.Global, func() *config.Config { return cfg })
+	return repo
+}
+
+func TestFinalizeReportsFunc_FinalizesPendingDays(t *testing.T) {
+	repo := registerFinalizeDeps(t, &config.Config{CronReconcileDays: 7})
+
+	d1 := time.Date(2026, 3, 8, 0, 0, 0, 0, time.UTC)
+	d2 := time.Date(2026, 3, 9, 0, 0, 0, 0, time.UTC)
+	repo.On("PendingDaysBefore", mock.Anything, mock.Anything).Return([]time.Time{d1, d2}, nil)
+	repo.On("FinalizeDay", d1).Return(nil)
+	repo.On("FinalizeDay", d2).Return(errors.New("finalize failed")) // error is logged, not fatal
 
 	FinalizeReportsFunc()()
 
 	repo.AssertExpectations(t)
 }
 
-func TestFinalizeReportsFunc_UnfinalizedQueryError(t *testing.T) {
-	testContainer := container.New()
-	oldGlobal := container.Global
-	container.Global = testContainer
-	t.Cleanup(func() { container.Global = oldGlobal })
+// The look-back window comes from CRON_RECONCILE_DAYS and is applied as
+// [today-N, today).
+func TestFinalizeReportsFunc_UsesConfiguredLookbackWindow(t *testing.T) {
+	repo := registerFinalizeDeps(t, &config.Config{CronReconcileDays: 3})
 
-	repo := new(providertest.VisitDailyReportRepositoryMock)
-	repo.On("UnfinalizedDaysBefore", mock.Anything).Return(nil, errors.New("boom"))
+	var since, before time.Time
+	repo.On("PendingDaysBefore", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			since = args.Get(0).(time.Time)
+			before = args.Get(1).(time.Time)
+		}).
+		Return([]time.Time{}, nil)
 
-	container.MustSingleton(container.Global, func() *zap.SugaredLogger { return zap.NewNop().Sugar() })
-	container.MustSingleton(container.Global, func() provider.VisitDailyReportRepository { return repo })
+	FinalizeReportsFunc()()
+
+	assert.Equal(t, 3, int(before.Sub(since).Hours()/24))
+	repo.AssertExpectations(t)
+}
+
+// A zero or negative CRON_RECONCILE_DAYS must not collapse the window to
+// nothing; it falls back to the default.
+func TestFinalizeReportsFunc_NonPositiveLookbackFallsBackToDefault(t *testing.T) {
+	repo := registerFinalizeDeps(t, &config.Config{CronReconcileDays: 0})
+
+	var since, before time.Time
+	repo.On("PendingDaysBefore", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			since = args.Get(0).(time.Time)
+			before = args.Get(1).(time.Time)
+		}).
+		Return([]time.Time{}, nil)
+
+	FinalizeReportsFunc()()
+
+	assert.Equal(t, defaultReconcileDays, int(before.Sub(since).Hours()/24))
+	repo.AssertExpectations(t)
+}
+
+func TestFinalizeReportsFunc_PendingQueryError(t *testing.T) {
+	repo := registerFinalizeDeps(t, &config.Config{CronReconcileDays: 7})
+	repo.On("PendingDaysBefore", mock.Anything, mock.Anything).Return(nil, errors.New("boom"))
 
 	FinalizeReportsFunc()()
 

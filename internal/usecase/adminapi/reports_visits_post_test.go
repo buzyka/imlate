@@ -224,6 +224,33 @@ func TestGetPostReportsVisits_InvalidSortField(t *testing.T) {
 	assert.Contains(t, err.Error(), "unknown_field")
 }
 
+func TestGetPostReportsVisits_LimitAboveMaximum(t *testing.T) {
+	api := &AdminAPI{}
+	_, err := api.GetPostReportsVisits(&PostReportsVisitsRequest{
+		From:  "2026-04-01",
+		To:    "2026-04-30",
+		Limit: MaxReportsVisitsPageSize + 1,
+	})
+	assert.ErrorIs(t, err, ErrInvalidRequestFormat)
+	assert.Contains(t, err.Error(), "'limit' must not exceed")
+}
+
+// The maximum itself is accepted; only values beyond it are rejected.
+func TestGetPostReportsVisits_LimitAtMaximumIsAccepted(t *testing.T) {
+	mockRepo := new(providertest.VisitDailyReportRepositoryMock)
+	mockRepo.On("GetVisitReport", mock.Anything, mock.Anything, mock.Anything).
+		Return(&provider.VisitReportResult{}, nil)
+	api := &AdminAPI{VisitDailyReportRepo: mockRepo}
+
+	resp, err := api.GetPostReportsVisits(&PostReportsVisitsRequest{
+		From:  "2026-04-01",
+		To:    "2026-04-30",
+		Limit: MaxReportsVisitsPageSize,
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, MaxReportsVisitsPageSize, resp.Limit)
+}
+
 func TestGetPostReportsVisits_InvalidSortDirection(t *testing.T) {
 	api := &AdminAPI{}
 	_, err := api.GetPostReportsVisits(&PostReportsVisitsRequest{

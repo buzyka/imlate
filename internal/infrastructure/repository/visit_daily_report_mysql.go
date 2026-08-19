@@ -199,17 +199,34 @@ func (r *VisitDailyReport) FinalizeDay(day time.Time) error {
 	return nil
 }
 
-// UnfinalizedDaysBefore returns past days (strictly before the given day) that
-// still have at least one unfinalized row, ordered ascending.
-func (r *VisitDailyReport) UnfinalizedDaysBefore(before time.Time) ([]time.Time, error) {
-	beforeStr := before.Format(dayLayout)
+// PendingDaysBefore returns days in [since, before) that have track events but
+// no finalized report rows yet, ordered ascending.
+//
+// The list of candidate days comes from the raw track table, not from
+// visit_daily_report: a day whose rows were never created (the app was down,
+// EnsureDayRows failed, the first event of the day was dropped) has no rows to
+// look at and would otherwise never be reconciled. The derived table holds at
+// most one row per day in the window, so the NOT EXISTS probe runs a handful of
+// times against the primary key.
+func (r *VisitDailyReport) PendingDaysBefore(since, before time.Time) ([]time.Time, error) {
+	start, _ := dayBounds(since)
+	end, _ := dayBounds(before)
 
 	rows, err := r.Connection.Query(
-		"SELECT DISTINCT day FROM visit_daily_report WHERE finalized_at IS NULL AND day < ? ORDER BY day",
-		beforeStr,
+		`SELECT d.day FROM (
+			SELECT DISTINCT DATE(created_at) AS day
+			FROM track WHERE created_at >= ? AND created_at < ?
+		) d
+		WHERE NOT EXISTS (
+			SELECT 1 FROM visit_daily_report r
+			WHERE r.day = d.day AND r.finalized_at IS NOT NULL
+		)
+		ORDER BY d.day`,
+		start,
+		end,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unfinalized days query failed: %w", err)
+		return nil, fmt.Errorf("pending days query failed: %w", err)
 	}
 	defer func() { _ = rows.Close() }()
 
@@ -217,12 +234,12 @@ func (r *VisitDailyReport) UnfinalizedDaysBefore(before time.Time) ([]time.Time,
 	for rows.Next() {
 		var d time.Time
 		if err := rows.Scan(&d); err != nil {
-			return nil, fmt.Errorf("unfinalized days scan failed: %w", err)
+			return nil, fmt.Errorf("pending days scan failed: %w", err)
 		}
 		days = append(days, d)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("unfinalized days iteration failed: %w", err)
+		return nil, fmt.Errorf("pending days iteration failed: %w", err)
 	}
 	return days, nil
 }
@@ -401,17 +418,27 @@ var reportSortSQL = map[string]string{
 	"visits_count": "r.visits_count",
 }
 
+// defaultOrderClause orders by day then surname. r.visitor_id makes the order
+// total, which every ORDER BY here needs: without a unique tie-breaker MySQL is
+// free to return equal rows in a different order per query, so paging through
+// the result set would silently repeat and skip rows.
+const defaultOrderClause = " ORDER BY r.day, v.surname, r.visitor_id"
+
 func buildOrderClause(filter provider.VisitReportFilter) string {
 	if filter.OrderField == "" {
-		return " ORDER BY r.day, v.surname"
+		return defaultOrderClause
 	}
 	sqlExpr, ok := reportSortSQL[filter.OrderField]
 	if !ok {
-		return " ORDER BY r.day, v.surname"
+		return defaultOrderClause
 	}
 	dir := "ASC"
 	if strings.EqualFold(filter.OrderDirection, "desc") {
 		dir = "DESC"
 	}
-	return " ORDER BY " + sqlExpr + " " + dir
+	// Sorting by visit_date already orders by r.day, so don't repeat it.
+	if sqlExpr == "r.day" {
+		return " ORDER BY r.day " + dir + ", r.visitor_id"
+	}
+	return " ORDER BY " + sqlExpr + " " + dir + ", r.day " + dir + ", r.visitor_id"
 }

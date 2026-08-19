@@ -9,7 +9,10 @@ import (
 	"github.com/buzyka/imlate/internal/domain/provider"
 )
 
-const DefaultReportsVisitsPageSize = 100
+const (
+	DefaultReportsVisitsPageSize = 100
+	MaxReportsVisitsPageSize     = 1000
+)
 
 type ReportsVisitsOption func(*reportsVisitsOptions)
 
@@ -168,6 +171,10 @@ func (a *AdminAPI) validateReportsVisitsRequest(from, to *time.Time, opts *repor
 
 	if opts.page <= 0 {
 		return fmt.Errorf("%w: 'page' must be a positive integer", ErrInvalidRequestFormat)
+	}
+
+	if opts.pageSize > MaxReportsVisitsPageSize {
+		return fmt.Errorf("%w: 'limit' must not exceed %d", ErrInvalidRequestFormat, MaxReportsVisitsPageSize)
 	}
 
 	if opts.isStudent != nil && !*opts.isStudent && len(opts.yearGroups) > 0 {

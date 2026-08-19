@@ -15,9 +15,9 @@ type VisitDailyReportRepository interface {
 	RecalculateVisitorDay(visitorID int32, day time.Time) error
 	// FinalizeDay recomputes all rows for the day and marks them finalized.
 	FinalizeDay(day time.Time) error
-	// UnfinalizedDaysBefore returns past days (strictly before the given day)
-	// that still have at least one unfinalized row, ordered ascending.
-	UnfinalizedDaysBefore(before time.Time) ([]time.Time, error)
+	// PendingDaysBefore returns days in [since, before) that have track events
+	// but no finalized report rows yet, ordered ascending.
+	PendingDaysBefore(since, before time.Time) ([]time.Time, error)
 	// GetVisitReport reads the paginated report from the aggregated table.
 	GetVisitReport(from, to time.Time, filter VisitReportFilter) (*VisitReportResult, error)
 }

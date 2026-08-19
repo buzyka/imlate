@@ -26,8 +26,8 @@ func (m *VisitDailyReportRepositoryMock) FinalizeDay(day time.Time) error {
 	return args.Error(0)
 }
 
-func (m *VisitDailyReportRepositoryMock) UnfinalizedDaysBefore(before time.Time) ([]time.Time, error) {
-	args := m.Called(before)
+func (m *VisitDailyReportRepositoryMock) PendingDaysBefore(since, before time.Time) ([]time.Time, error) {
+	args := m.Called(since, before)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}

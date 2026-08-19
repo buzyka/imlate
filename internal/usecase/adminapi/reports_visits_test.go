@@ -53,6 +53,13 @@ func TestGetReportsVisits_ValidateRequestError(t *testing.T) {
 			opts:     []ReportsVisitsOption{WithIsStudent(false), WithYearGroup(10)},
 			exErrMsg: "'year_group' filter can only be used when 'is_student' is true",
 		},
+		{
+			name:     "limit above the maximum page size",
+			from:     "2026-01-01",
+			to:       "2026-01-02",
+			opts:     []ReportsVisitsOption{WithLimit(MaxReportsVisitsPageSize + 1)},
+			exErrMsg: "'limit' must not exceed",
+		},
 	}
 
 	for _, tc := range testCase {

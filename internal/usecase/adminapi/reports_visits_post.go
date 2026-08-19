@@ -55,10 +55,11 @@ var allowedSortDirections = map[string]bool{
 }
 
 type PostReportsVisitsRequest struct {
-	From  string `json:"from"`
-	To    string `json:"to"`
-	Page  int    `json:"page"`
-	Limit int    `json:"limit"`
+	From string `json:"from"`
+	To   string `json:"to"`
+	Page int    `json:"page"`
+	// Limit is the page size. Defaults to 100 when omitted; must not exceed 1000.
+	Limit int `json:"limit" maximum:"1000"`
 	// Fields selects which optional fields to include in each row.
 	// Computed fields (visit_date, sign_status, visits_count, signed_in, signed_out, duration_minutes)
 	// are always present regardless of this list.
@@ -112,6 +113,9 @@ func (a *AdminAPI) GetPostReportsVisits(req *PostReportsVisitsRequest) (*PostRep
 	pageSize := req.Limit
 	if pageSize <= 0 {
 		pageSize = DefaultReportsVisitsPageSize
+	}
+	if pageSize > MaxReportsVisitsPageSize {
+		return nil, fmt.Errorf("%w: 'limit' must not exceed %d", ErrInvalidRequestFormat, MaxReportsVisitsPageSize)
 	}
 
 	filter := provider.VisitReportFilter{

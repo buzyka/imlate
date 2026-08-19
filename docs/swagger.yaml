@@ -296,6 +296,9 @@ definitions:
       from:
         type: string
       limit:
+        description: Limit is the page size. Defaults to 100 when omitted; must not
+          exceed 1000.
+        maximum: 1000
         type: integer
       order:
         $ref: '#/definitions/github_com_buzyka_imlate_internal_usecase_adminapi.PostReportsVisitsOrder'
@@ -538,7 +541,7 @@ paths:
         in: query
         name: page
         type: integer
-      - description: Records per page (default 100)
+      - description: Records per page (default 100, max 1000)
         in: query
         name: limit
         type: integer
