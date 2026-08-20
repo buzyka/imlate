@@ -10,6 +10,7 @@ import (
 	"github.com/buzyka/imlate/internal/domain/provider"
 	httpauth "github.com/buzyka/imlate/internal/infrastructure/http/auth"
 	"github.com/buzyka/imlate/internal/infrastructure/util"
+	"github.com/buzyka/imlate/internal/usecase/reportaggregator"
 	"github.com/buzyka/imlate/internal/usecase/tracking"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -30,6 +31,7 @@ type TrackerController struct {
 	VisitorRepository provider.VisitorRepository      `container:"type"`
 	TrackRepository   provider.VisitorTrackRepository `container:"type"`
 	StudentTracker    *tracking.StudentTracker        `container:"type"`
+	Aggregator        *reportaggregator.Aggregator    `container:"type"`
 }
 
 type TrackResponse struct {
@@ -82,6 +84,7 @@ func (tc *TrackerController) TrackHandler() gin.HandlerFunc {
 			})
 			return
 		}
+		tc.Aggregator.Enqueue(track.VisitorId, track.CreatedAt)
 		ctx.JSON(http.StatusOK, gin.H{
 			"message": "tracked",
 			"id":      Request.VisitorID,
@@ -137,6 +140,7 @@ func (tc *TrackerController) FindAndTrackHandler() gin.HandlerFunc {
 			})
 			return
 		}
+		tc.Aggregator.Enqueue(track.VisitorId, track.CreatedAt)
 
 		eType := "sign-in"
 		startDate := time.Date(track.CreatedAt.Year(), track.CreatedAt.Month(), track.CreatedAt.Day(), 0, 0, 0, 0, time.Local)

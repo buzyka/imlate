@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/buzyka/imlate/internal/config"
+	"github.com/buzyka/imlate/internal/domain/provider"
+	"github.com/buzyka/imlate/internal/infrastructure/util"
 	"github.com/buzyka/imlate/internal/usecase/synchroniser"
 	"github.com/buzyka/imlate/internal/usecase/tracking"
 	"github.com/go-co-op/gocron/v2"
@@ -12,23 +14,30 @@ import (
 	"go.uber.org/zap"
 )
 
+// defaultReconcileDays is the fallback look-back window for the finalization job
+// when CRON_RECONCILE_DAYS is unset or non-positive.
+const defaultReconcileDays = 7
+
 type JobFunction func()
 
 type StopCronFunc = func()
 
 func RunCron(cfg *config.Config) (StopCronFunc, error) {
-	if !cfg.IsERPIntegrated() {
-		return func() {}, nil
-	}
-
 	s, err := gocron.NewScheduler()
 	if err != nil {
 		return nil, err
 	}
 
-	err = registerJobs(s, cfg)
-	if err != nil {
+	// Core jobs run regardless of ERP integration.
+	if err := registerJobs(s, cfg); err != nil {
 		return nil, err
+	}
+
+	// ERP-specific jobs run only when the ERP integration is enabled.
+	if cfg.IsERPIntegrated() {
+		if err := registerERPJobs(s, cfg); err != nil {
+			return nil, err
+		}
 	}
 
 	go s.Start()
@@ -38,7 +47,21 @@ func RunCron(cfg *config.Config) (StopCronFunc, error) {
 	}, nil
 }
 
+// registerJobs registers core jobs that run regardless of ERP integration.
+// Add future non-ERP jobs here.
 func registerJobs(s gocron.Scheduler, cfg *config.Config) error {
+	// Visit report finalization job
+	_, err := s.NewJob(
+		gocron.CronJob(
+			cfg.CronFinalizeReports, // default: at 00:30 every day
+			false,
+		),
+		gocron.NewTask(FinalizeReportsFunc()),
+	)
+	return err
+}
+
+func registerERPJobs(s gocron.Scheduler, cfg *config.Config) error {
 	// Student data sync job
 	_, err := s.NewJob(
 		gocron.CronJob(
@@ -139,6 +162,42 @@ func StudentPhotosSyncFunc() JobFunction {
 		if err := sync.SyncStudentPhotos(); err != nil {
 			log.Errorf("Error during student photos data sync: %v\n", err)
 		}
+	}
+}
+
+func FinalizeReportsFunc() JobFunction {
+	return func() {
+		var log *zap.SugaredLogger
+		container.MustResolve(container.Global, &log)
+		var repo provider.VisitDailyReportRepository
+		container.MustResolve(container.Global, &repo)
+		var cfg *config.Config
+		container.MustResolve(container.Global, &cfg)
+
+		log.Infof("Starting visit report finalization... TIME: %s", time.Now().Format(time.RFC3339))
+
+		// util.Now() already carries the configured app-local timezone.
+		now := util.Now()
+		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+		lookback := cfg.CronReconcileDays
+		if lookback <= 0 {
+			lookback = defaultReconcileDays
+		}
+		since := today.AddDate(0, 0, -lookback)
+
+		days, err := repo.PendingDaysBefore(since, today)
+		if err != nil {
+			log.Errorf("Error finding pending report days: %v\n", err)
+			return
+		}
+
+		for _, day := range days {
+			if err := repo.FinalizeDay(day); err != nil {
+				log.Errorf("Error finalizing report for day %s: %v\n", day.Format("2006-01-02"), err)
+			}
+		}
+		log.Infof("Finish visit report finalization... finalized %d day(s)", len(days))
 	}
 }
 

@@ -45,6 +45,8 @@ type Config struct {
 	CronPhotoSync             string `env:"CRON_PHOTO_SYNC" envDefault:"0 5 * * 1-5"`
 	CronRegistrationCodesSync string `env:"CRON_REGISTRATION_CODES_SYNC" envDefault:"0 7-17/1 * * 1-5"`
 	CronMarkAbsent            string `env:"CRON_MARK_ABSENT" envDefault:"10 8-12/1 * * 1-5"`
+	CronFinalizeReports       string `env:"CRON_FINALIZE_REPORTS" envDefault:"30 0 * * *"`
+	CronReconcileDays         int `env:"CRON_RECONCILE_DAYS" envDefault:"7"`
 
 	AuthTokenSecret string `env:"AUTH_TOKEN_SECRET"`
 

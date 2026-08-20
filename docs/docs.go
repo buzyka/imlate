@@ -109,6 +109,7 @@ const docTemplate = `{
                     "admin-reports"
                 ],
                 "summary": "Get visitor attendance report",
+                "deprecated": true,
                 "parameters": [
                     {
                         "type": "string",
@@ -150,7 +151,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "description": "Records per page (default 100)",
+                        "description": "Records per page (default 100, max 1000)",
                         "name": "limit",
                         "in": "query"
                     }
@@ -160,6 +161,55 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/internal_http_controller_adminapi.ReportsVisitsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns a paginated, field-selectable visitor attendance report with multi-value filters and server-side sorting.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-reports"
+                ],
+                "summary": "Search visitor attendance report",
+                "parameters": [
+                    {
+                        "description": "Search criteria",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.PostReportsVisitsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.PostReportsVisitsResponse"
                         }
                     },
                     "400": {
@@ -1424,6 +1474,50 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_buzyka_imlate_internal_usecase_adminapi.PostReportsVisitsFilters": {
+            "type": "object",
+            "properties": {
+                "is_student": {
+                    "type": "boolean"
+                },
+                "sign_status": {
+                    "description": "SignStatus filters rows by sign status. Allowed values: signed_in, signed_out, not_signed.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "year_group": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "github_com_buzyka_imlate_internal_usecase_adminapi.PostReportsVisitsOrder": {
+            "type": "object",
+            "properties": {
+                "direction": {
+                    "type": "string",
+                    "enum": [
+                        "asc",
+                        "desc"
+                    ]
+                },
+                "field": {
+                    "type": "string",
+                    "enum": [
+                        "sign_status",
+                        "year_group",
+                        "name",
+                        "surname",
+                        "visit_date",
+                        "visits_count"
+                    ]
+                }
+            }
+        },
         "github_com_buzyka_imlate_internal_usecase_adminapi.ReportsVisitsResponseItem": {
             "type": "object",
             "properties": {
@@ -1627,6 +1721,62 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_http_controller_adminapi.PostReportsVisitsRequest": {
+            "type": "object",
+            "properties": {
+                "fields": {
+                    "description": "Fields selects which optional fields to include in each row.\nComputed fields (visit_date, sign_status, visits_count, signed_in, signed_out, duration_minutes)\nare always present regardless of this list.\nAllowed values: visitor_id, visit_date, name, surname, is_student, year_group,\nvisits_count, sign_status, signed_in, signed_out, duration_minutes, email, image.\nOmit or leave empty to return all optional fields.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "filters": {
+                    "$ref": "#/definitions/github_com_buzyka_imlate_internal_usecase_adminapi.PostReportsVisitsFilters"
+                },
+                "from": {
+                    "type": "string"
+                },
+                "limit": {
+                    "description": "Limit is the page size. Defaults to 100 when omitted; must not exceed 1000.",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "order": {
+                    "$ref": "#/definitions/github_com_buzyka_imlate_internal_usecase_adminapi.PostReportsVisitsOrder"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "to": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_http_controller_adminapi.PostReportsVisitsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "internal_http_controller_adminapi.RegisterTerminalRequest": {
             "type": "object",
             "required": [
@@ -1676,11 +1826,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "total": {
-                    "description": "total matching records count for the given filters (without pagination)",
                     "type": "integer"
                 },
                 "total_pages": {
-                    "description": "total pages count based on total records and page size",
                     "type": "integer"
                 }
             }

@@ -2,16 +2,20 @@ package cron
 
 import (
 	"context"
+	"errors"
 	"testing"
+	"time"
 
 	"github.com/buzyka/imlate/internal/config"
 	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/erp"
 	"github.com/buzyka/imlate/internal/domain/provider"
+	"github.com/buzyka/imlate/internal/domain/provider/providertest"
 	"github.com/buzyka/imlate/internal/infrastructure/integration/isams"
 	"github.com/go-co-op/gocron/v2"
 	"github.com/golobby/container/v3"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
 )
 
@@ -177,6 +181,7 @@ func TestRunCron_WhenERPNotIntegrated_ReturnsNoopAndNoError(t *testing.T) {
 		ISAMSBaseURL:          "",
 		ISAMSAPIClientID:      "",
 		ISAMSAPIClientSecret:  "",
+		CronFinalizeReports:   "30 0 * * *",
 	}
 
 	stopFunc, err := RunCron(cfg)
@@ -213,6 +218,7 @@ func TestRunCron_WhenERPIntegrated_ReturnsStopFuncAndNoError(t *testing.T) {
 		CronPhotoSync:             "0 5 * * 1-5",
 		CronRegistrationCodesSync: "0 7-17/1 * * 1-5",
 		CronMarkAbsent:            "10 8-12/1 * * 1-5",
+		CronFinalizeReports:       "30 0 * * *",
 	}
 
 	stopFunc, err := RunCron(cfg)
@@ -247,6 +253,7 @@ func TestRunCron_WithCustomCronSchedules(t *testing.T) {
 		CronPhotoSync:             "0 3 * * *",
 		CronRegistrationCodesSync: "*/30 * * * 1-5",
 		CronMarkAbsent:            "15 9 * * 1-5",
+		CronFinalizeReports:       "30 0 * * *",
 	}
 
 	stopFunc, err := RunCron(cfg)
@@ -282,7 +289,7 @@ func TestRegisterJobs_WithDefaultSchedules(t *testing.T) {
 		CronMarkAbsent:            "10 8-12/1 * * 1-5",
 	}
 
-	err = registerJobs(s, cfg)
+	err = registerERPJobs(s, cfg)
 	assert.NoError(t, err)
 }
 
@@ -309,6 +316,126 @@ func TestRegisterJobs_WithInvalidCronExpression(t *testing.T) {
 		CronStudentSync: "invalid cron expression",
 	}
 
-	err = registerJobs(s, cfg)
+	err = registerERPJobs(s, cfg)
 	assert.Error(t, err)
+}
+
+func TestRegisterReportJobs_RegistersFinalizationJob(t *testing.T) {
+	s, err := gocron.NewScheduler()
+	assert.NoError(t, err)
+	defer func() { _ = s.Shutdown() }()
+
+	err = registerJobs(s, &config.Config{CronFinalizeReports: "30 0 * * *"})
+	assert.NoError(t, err)
+	assert.Len(t, s.Jobs(), 1)
+}
+
+func TestRegisterReportJobs_InvalidCronExpression(t *testing.T) {
+	s, err := gocron.NewScheduler()
+	assert.NoError(t, err)
+	defer func() { _ = s.Shutdown() }()
+
+	err = registerJobs(s, &config.Config{CronFinalizeReports: "not a cron"})
+	assert.Error(t, err)
+}
+
+func TestRunCron_WhenERPNotIntegrated_StillRegistersReportJob(t *testing.T) {
+	cfg := &config.Config{
+		ERPIntegrationEnabled: false,
+		CronFinalizeReports:   "30 0 * * *",
+	}
+
+	stopFunc, err := RunCron(cfg)
+	assert.NoError(t, err)
+	assert.NotNil(t, stopFunc)
+	stopFunc()
+}
+
+func TestRunCron_WhenReportCronInvalid_ReturnsError(t *testing.T) {
+	cfg := &config.Config{
+		ERPIntegrationEnabled: false,
+		CronFinalizeReports:   "totally invalid",
+	}
+
+	stopFunc, err := RunCron(cfg)
+	assert.Error(t, err)
+	assert.Nil(t, stopFunc)
+}
+
+// registerFinalizeDeps wires the container with everything FinalizeReportsFunc
+// resolves and returns the report repository mock.
+func registerFinalizeDeps(t *testing.T, cfg *config.Config) *providertest.VisitDailyReportRepositoryMock {
+	t.Helper()
+	testContainer := container.New()
+	oldGlobal := container.Global
+	container.Global = testContainer
+	t.Cleanup(func() { container.Global = oldGlobal })
+
+	repo := new(providertest.VisitDailyReportRepositoryMock)
+	container.MustSingleton(container.Global, func() *zap.SugaredLogger { return zap.NewNop().Sugar() })
+	container.MustSingleton(container.Global, func() provider.VisitDailyReportRepository { return repo })
+	container.MustSingleton(container.Global, func() *config.Config { return cfg })
+	return repo
+}
+
+func TestFinalizeReportsFunc_FinalizesPendingDays(t *testing.T) {
+	repo := registerFinalizeDeps(t, &config.Config{CronReconcileDays: 7})
+
+	d1 := time.Date(2026, 3, 8, 0, 0, 0, 0, time.UTC)
+	d2 := time.Date(2026, 3, 9, 0, 0, 0, 0, time.UTC)
+	repo.On("PendingDaysBefore", mock.Anything, mock.Anything).Return([]time.Time{d1, d2}, nil)
+	repo.On("FinalizeDay", d1).Return(nil)
+	repo.On("FinalizeDay", d2).Return(errors.New("finalize failed")) // error is logged, not fatal
+
+	FinalizeReportsFunc()()
+
+	repo.AssertExpectations(t)
+}
+
+// The look-back window comes from CRON_RECONCILE_DAYS and is applied as
+// [today-N, today).
+func TestFinalizeReportsFunc_UsesConfiguredLookbackWindow(t *testing.T) {
+	repo := registerFinalizeDeps(t, &config.Config{CronReconcileDays: 3})
+
+	var since, before time.Time
+	repo.On("PendingDaysBefore", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			since = args.Get(0).(time.Time)
+			before = args.Get(1).(time.Time)
+		}).
+		Return([]time.Time{}, nil)
+
+	FinalizeReportsFunc()()
+
+	assert.Equal(t, 3, int(before.Sub(since).Hours()/24))
+	repo.AssertExpectations(t)
+}
+
+// A zero or negative CRON_RECONCILE_DAYS must not collapse the window to
+// nothing; it falls back to the default.
+func TestFinalizeReportsFunc_NonPositiveLookbackFallsBackToDefault(t *testing.T) {
+	repo := registerFinalizeDeps(t, &config.Config{CronReconcileDays: 0})
+
+	var since, before time.Time
+	repo.On("PendingDaysBefore", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			since = args.Get(0).(time.Time)
+			before = args.Get(1).(time.Time)
+		}).
+		Return([]time.Time{}, nil)
+
+	FinalizeReportsFunc()()
+
+	assert.Equal(t, defaultReconcileDays, int(before.Sub(since).Hours()/24))
+	repo.AssertExpectations(t)
+}
+
+func TestFinalizeReportsFunc_PendingQueryError(t *testing.T) {
+	repo := registerFinalizeDeps(t, &config.Config{CronReconcileDays: 7})
+	repo.On("PendingDaysBefore", mock.Anything, mock.Anything).Return(nil, errors.New("boom"))
+
+	FinalizeReportsFunc()()
+
+	repo.AssertExpectations(t)
+	repo.AssertNotCalled(t, "FinalizeDay", mock.Anything)
 }
