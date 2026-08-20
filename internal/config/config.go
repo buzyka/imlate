@@ -35,6 +35,7 @@ type Config struct {
 	VisitorImageURLPrefix string `env:"VISITOR_IMAGE_URL_PREFIX" envDefault:"/storage/img/visitors"`
 	ThemeDir              string `env:"THEME_DIR" envDefault:"storage/theme"`
 	ThemeURLPrefix        string `env:"THEME_URL_PREFIX" envDefault:"/storage/theme"`
+	ReaderThemePollSeconds int `env:"READER_THEME_POLL_SECONDS" envDefault:"300"`
 
 	AutoRegistrationYearGroups []int32 `env:"AUTO_REGISTRATION_YEAR_GROUPS" envSeparator:","`
 

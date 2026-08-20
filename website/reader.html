@@ -276,8 +276,14 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-        var welcomeDurationMs = {{ .WelcomeDurationMs }};
-        var goodbyeDurationMs = {{ .GoodbyeDurationMs }};
+        // ---- Theme state ----
+        var welcomeDurationMs   = {{ .WelcomeDurationMs }};
+        var goodbyeDurationMs   = {{ .GoodbyeDurationMs }};
+        var welcomeAnimationUrl = '{{ .WelcomeAnimationURL }}';
+        var goodbyeAnimationUrl = '{{ .GoodbyeAnimationURL }}';
+        var themeRevision       = '{{ .Revision }}';
+        var appVersion          = '{{ .AppVersion }}';
+        var themePollMs         = {{ .PollSeconds }} * 1000;
 
         // ---- Terminal Registration ----
         var terminalCredentials = {
@@ -402,6 +408,7 @@
         var readerInstructionImage = document.getElementById('readerInstructionImage');
 
         var regModalOpen = false;
+        var animationInProgress = false;
 
         $('#terminalRegModal').on('shown.bs.modal', function() {
             regModalOpen = true;
@@ -409,6 +416,7 @@
         $('#terminalRegModal').on('hidden.bs.modal', function() {
             regModalOpen = false;
             rfidInput.focus();
+            applyPendingThemeState();
         });
 
         // ---- On page load: check registration ----
@@ -497,10 +505,11 @@
                     successMessage.style.display = 'block';
                     logoImage.style.display = 'none';
                     welcomeIcon.style.display = 'block';
+                    animationInProgress = true;
                     if (studentData.track_type === 'sign-in') {
-                        welcomeIcon.src = '{{ .WelcomeAnimationURL }}';
+                        welcomeIcon.src = welcomeAnimationUrl;
                     } else {
-                        welcomeIcon.src = '{{ .GoodbyeAnimationURL }}';
+                        welcomeIcon.src = goodbyeAnimationUrl;
                     }
 
                     var displayDuration = studentData.track_type === 'sign-in' ? welcomeDurationMs : goodbyeDurationMs;
@@ -510,6 +519,8 @@
                         successMessage.style.display = 'none';
                         studentInfo.style.display = 'none';
                         readerInstructionImage.style.display = 'block';
+                        animationInProgress = false;
+                        applyPendingThemeState();
                     }, displayDuration);
                 };
                 xhr.send(JSON.stringify(payload));
@@ -527,6 +538,113 @@
                 rfidInput.focus();
             }
         }, 1000);
+
+        // ---- Theme auto-refresh ----
+        // This page is a kiosk: it stays open for weeks and never reloads itself, so
+        // without this poll an admin's theme change would never show up here.
+        
+        var pendingThemeState = null;
+
+        function canApplyThemeInPlace() {
+            return !animationInProgress;
+        }
+        
+        function canReloadPage() {
+            return !regModalOpen && !animationInProgress;
+        }
+        
+        function preloadImage(url, onDone) {
+            if (!url) {
+                onDone(false);
+                return;
+            }
+            var img = new Image();
+            img.onload = function() { onDone(true); };
+            img.onerror = function() { onDone(false); };
+            img.src = url;
+        }
+
+        // The favicon is replaced element-and-all: mutating href on the existing
+        // <link> is ignored by some browsers.
+        function applyFavicon(url) {
+            if (!url) return;
+            var existing = document.querySelector('link[rel="icon"]');
+            var link = document.createElement('link');
+            link.rel = 'icon';
+            link.type = 'image/png';
+            link.setAttribute('sizes', '16x16');
+            link.href = url;
+            if (existing && existing.parentNode) {
+                existing.parentNode.removeChild(existing);
+            }
+            document.head.appendChild(link);
+        }
+
+        function applyThemeState(state) {
+            welcomeDurationMs = state.welcome_duration_ms;
+            goodbyeDurationMs = state.goodbye_duration_ms;
+            applyFavicon(state.favicon_url);
+
+            // Warm the animation images so the next scan does not wait on a download.
+            preloadImage(state.welcome_animation_url, function(ok) {
+                if (ok) welcomeAnimationUrl = state.welcome_animation_url;
+            });
+            preloadImage(state.goodbye_animation_url, function(ok) {
+                if (ok) goodbyeAnimationUrl = state.goodbye_animation_url;
+            });
+
+            var logoImage = document.getElementById('logo-image');
+            preloadImage(state.logo_background_url, function(ok) {
+                if (ok && logoImage) logoImage.src = state.logo_background_url;
+            });
+
+            // Recorded only after the state was applied, so a revision is never
+            // marked as seen without having taken effect.
+            themeRevision = state.revision;
+        }
+        
+        function applyPendingThemeState() {
+            if (!pendingThemeState) return;
+
+            if (pendingThemeState.app_version !== appVersion) {
+                if (!canReloadPage()) return;
+                location.reload();
+                return;
+            }
+
+            if (!canApplyThemeInPlace()) return;
+            var state = pendingThemeState;
+            pendingThemeState = null;
+            applyThemeState(state);
+        }
+
+        function handleThemeState(state) {
+            if (!state || !state.revision) return;
+            if (state.app_version === appVersion && state.revision === themeRevision) {
+                return; // nothing changed
+            }
+            pendingThemeState = state;
+            applyPendingThemeState();
+        }
+
+        function pollThemeState() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/theme-state', true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState !== 4) return;
+                // Any failure is ignored on purpose: a server hiccup must never
+                // change what the terminal is showing.
+                if (xhr.status !== 200) return;
+                try {
+                    handleThemeState(JSON.parse(xhr.responseText));
+                } catch (e) {
+                    // Malformed payload: leave the current theme alone.
+                }
+            };
+            xhr.send();
+        }
+
+        setInterval(pollThemeState, themePollMs);
     </script>
 </body>
 

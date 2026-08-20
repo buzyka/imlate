@@ -186,14 +186,15 @@ func (s *Service) GetReaderPageData() (ReaderPageData, error) {
 	if err != nil {
 		return ReaderPageData{}, err
 	}
-	return ReaderPageData{
+	data := ReaderPageData{
 		FaviconURL:          resp.Assets["favicon"].CurrentURL,
 		LogoBackgroundURL:   resp.Assets["logo_background"].CurrentURL,
 		WelcomeAnimationURL: resp.Assets["welcome_animation"].CurrentURL,
 		GoodbyeAnimationURL: resp.Assets["goodbye_animation"].CurrentURL,
 		WelcomeDurationMs:   resp.Settings.WelcomeDurationMs,
 		GoodbyeDurationMs:   resp.Settings.GoodbyeDurationMs,
-	}, nil
+	}
+	return finalizeReaderPageData(data, s.Config.ReaderThemePollSeconds), nil
 }
 
 func validateSettings(settings Settings) error {

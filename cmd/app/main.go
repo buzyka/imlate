@@ -16,6 +16,7 @@ import (
 	_ "github.com/buzyka/imlate/docs"
 	"github.com/buzyka/imlate/internal/config"
 	"github.com/buzyka/imlate/internal/http/controller/adminapi"
+	"github.com/buzyka/imlate/internal/http/controller/reader"
 	"github.com/buzyka/imlate/internal/infrastructure/cron"
 	"github.com/buzyka/imlate/internal/infrastructure/gocontainer"
 	httpauth "github.com/buzyka/imlate/internal/infrastructure/http/auth"
@@ -23,7 +24,6 @@ import (
 	"github.com/buzyka/imlate/internal/isb/search"
 	"github.com/buzyka/imlate/internal/isb/tracker"
 	"github.com/buzyka/imlate/internal/usecase/reportaggregator"
-	themeview "github.com/buzyka/imlate/internal/usecase/theme"
 	"github.com/buzyka/imlate/internal/version"
 	"github.com/gin-gonic/gin"
 	"github.com/golobby/container/v3"
@@ -100,15 +100,12 @@ func main() {
 		})
 	})
 
-	themeService := resolveThemeService(container.Global)
-	r.GET("/", func(ctx *gin.Context) {
-		data, err := themeService.GetReaderPageData()
-		if err != nil {
-			ctx.HTML(http.StatusOK, "reader.html", themeview.DefaultReaderPageData())
-			return
-		}
-		ctx.HTML(http.StatusOK, "reader.html", data)
-	})
+	readerController := &reader.ReaderController{}
+	container.MustFill(container.Global, readerController)
+	r.GET("/", readerController.ReaderPageHandler())
+	// Polled by the tracking page so theme changes reach terminals that stay open
+	// for weeks without anyone reloading them.
+	r.GET("/theme-state", readerController.ThemeStateHandler())
 
 	// Add Routes for swagger documentation
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
@@ -179,12 +176,6 @@ func waitForShutdown(srv *http.Server, stopCron cron.StopCronFunc, aggregator *r
 	}
 	stopCron()
 	aggregator.Stop()
-}
-
-func resolveThemeService(c container.Container) *themeview.Service {
-	var themeService *themeview.Service
-	container.MustResolve(c, &themeService)
-	return themeService
 }
 
 func registerAdminRoutes(r *gin.Engine) {
