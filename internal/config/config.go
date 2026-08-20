@@ -31,10 +31,11 @@ type Config struct {
 	StudentsImagePhotoDir       string `env:"STUDENTS_IMAGE_PHOTO_DIR" envDefault:"storage/img/students"`
 	StudentsImagePhotoURLPrefix string `env:"STUDENTS_IMAGE_PHOTO_URL_PREFIX" envDefault:"/storage/img/students"`
 
-	VisitorImageDir       string `env:"VISITOR_IMAGE_DIR" envDefault:"storage/img/visitors"`
-	VisitorImageURLPrefix string `env:"VISITOR_IMAGE_URL_PREFIX" envDefault:"/storage/img/visitors"`
-	ThemeDir              string `env:"THEME_DIR" envDefault:"storage/theme"`
-	ThemeURLPrefix        string `env:"THEME_URL_PREFIX" envDefault:"/storage/theme"`
+	VisitorImageDir        string `env:"VISITOR_IMAGE_DIR" envDefault:"storage/img/visitors"`
+	VisitorImageURLPrefix  string `env:"VISITOR_IMAGE_URL_PREFIX" envDefault:"/storage/img/visitors"`
+	ThemeDir               string `env:"THEME_DIR" envDefault:"storage/theme"`
+	ThemeURLPrefix         string `env:"THEME_URL_PREFIX" envDefault:"/storage/theme"`
+	ReaderThemePollSeconds int    `env:"READER_THEME_POLL_SECONDS" envDefault:"300"`
 
 	AutoRegistrationYearGroups []int32 `env:"AUTO_REGISTRATION_YEAR_GROUPS" envSeparator:","`
 
@@ -46,7 +47,7 @@ type Config struct {
 	CronRegistrationCodesSync string `env:"CRON_REGISTRATION_CODES_SYNC" envDefault:"0 7-17/1 * * 1-5"`
 	CronMarkAbsent            string `env:"CRON_MARK_ABSENT" envDefault:"10 8-12/1 * * 1-5"`
 	CronFinalizeReports       string `env:"CRON_FINALIZE_REPORTS" envDefault:"30 0 * * *"`
-	CronReconcileDays         int `env:"CRON_RECONCILE_DAYS" envDefault:"7"`
+	CronReconcileDays         int    `env:"CRON_RECONCILE_DAYS" envDefault:"7"`
 
 	AuthTokenSecret string `env:"AUTH_TOKEN_SECRET"`
 

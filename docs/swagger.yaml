@@ -187,6 +187,37 @@ definitions:
       updated_at:
         type: string
     type: object
+  github_com_buzyka_imlate_internal_usecase_theme.ReaderPageData:
+    properties:
+      app_version:
+        description: |-
+          AppVersion lets the page tell a theme change from a deploy: on a new
+          version the template itself may have changed, which an in-place theme
+          update cannot pick up, so the page reloads instead.
+        type: string
+      favicon_url:
+        type: string
+      goodbye_animation_url:
+        type: string
+      goodbye_duration_ms:
+        type: integer
+      logo_background_url:
+        type: string
+      poll_seconds:
+        description: PollSeconds is how often the page should poll for changes.
+        type: integer
+      revision:
+        description: |-
+          Revision fingerprints the six fields above, so it changes if and only if
+          something the page actually renders changed. The page compares the value
+          baked into it at render time against the one the endpoint reports and only
+          refreshes its theme when they differ.
+        type: string
+      welcome_animation_url:
+        type: string
+      welcome_duration_ms:
+        type: integer
+    type: object
   github_com_buzyka_imlate_internal_usecase_theme.Response:
     properties:
       assets:
@@ -449,6 +480,11 @@ definitions:
       surname:
         type: string
       updated_at:
+        type: string
+    type: object
+  internal_http_controller_reader.ErrorResponse:
+    properties:
+      error:
         type: string
     type: object
 info:
@@ -1289,6 +1325,29 @@ paths:
       summary: Register a terminal
       tags:
       - terminal
+  /theme-state:
+    get:
+      description: |-
+        Returns the current tracking page theme together with a revision fingerprint.
+        The tracking page polls this endpoint and refreshes its appearance only when the
+        revision differs from the one it was rendered with, so an admin's theme change
+        reaches long-running terminals without anyone reloading them by hand.
+        Public by design: the payload is exactly what the public tracking page already
+        renders, and terminals must be able to poll it before they are registered.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_usecase_theme.ReaderPageData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_http_controller_reader.ErrorResponse'
+      summary: Get tracking page theme state
+      tags:
+      - reader
 securityDefinitions:
   ApiKeyAuth:
     description: |-
