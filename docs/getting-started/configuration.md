@@ -62,6 +62,13 @@ These variables control the optional iSAMS integration. When disabled, cron jobs
 
 ## Cron Schedules
 
+These jobs run regardless of ERP integration (registered in `registerJobs`).
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CRON_FINALIZE_REPORTS` | Aggregates and finalizes the daily visit report | `30 0 * * *` |
+| `CRON_RECONCILE_DAYS` | How many past days the finalization job looks back over when searching for days that still need aggregating | `7` |
+
 These cron expressions are only used when ERP integration is enabled.
 
 | Variable | Description | Default |
@@ -79,5 +86,23 @@ These cron expressions are only used when ERP integration is enabled.
 | `STUDENTS_IMAGE_PHOTO_URL_PREFIX` | URL prefix for student photo serving | `/storage/img/students` |
 | `VISITOR_IMAGE_DIR` | Filesystem path for visitor images | `storage/img/visitors` |
 | `VISITOR_IMAGE_URL_PREFIX` | URL prefix for visitor image serving | `/storage/img/visitors` |
+| `THEME_DIR` | Filesystem path for uploaded tracking page theme assets | `storage/theme` |
+| `THEME_URL_PREFIX` | URL prefix for theme asset serving | `/storage/theme` |
+
+## Tracking Page
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `READER_THEME_POLL_SECONDS` | How often the tracking page checks `GET /theme-state` for theme changes | `300` |
+
+The tracking page is a kiosk that stays open for weeks and never reloads itself, so
+this poll is the only way an admin's theme change reaches a running terminal. When
+the theme changed, the page swaps the new assets in place; it only performs a full
+reload if the application version changed, because the template itself may then differ.
+
+Values below `10` are raised to `10`, and `0` or negative values fall back to the
+default — see `normalizePollSeconds` in `internal/usecase/theme/reader_page.go`.
+Lower the value to see theme edits on terminals sooner, at the cost of one small
+request per terminal per interval.
 
 Back to [Getting Started](README.md) | [Docs Index](../README.md)

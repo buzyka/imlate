@@ -542,17 +542,18 @@
         // ---- Theme auto-refresh ----
         // This page is a kiosk: it stays open for weeks and never reloads itself, so
         // without this poll an admin's theme change would never show up here.
-        
+
         var pendingThemeState = null;
+        var themeApplyInFlight = false;
 
         function canApplyThemeInPlace() {
             return !animationInProgress;
         }
-        
+
         function canReloadPage() {
             return !regModalOpen && !animationInProgress;
         }
-        
+
         function preloadImage(url, onDone) {
             if (!url) {
                 onDone(false);
@@ -580,31 +581,64 @@
             document.head.appendChild(link);
         }
 
-        function applyThemeState(state) {
+        // applyThemeState swaps in a new theme and reports through onDone whether
+        // every image it needed actually loaded. Each image is applied as soon as it
+        // decodes, so a partial failure still moves the terminal as far towards the
+        // new theme as it can — but the caller is told, so the rest can be retried.
+        function applyThemeState(state, onDone) {
+            // Durations need no download, so they apply unconditionally.
             welcomeDurationMs = state.welcome_duration_ms;
             goodbyeDurationMs = state.goodbye_duration_ms;
-            applyFavicon(state.favicon_url);
-
-            // Warm the animation images so the next scan does not wait on a download.
-            preloadImage(state.welcome_animation_url, function(ok) {
-                if (ok) welcomeAnimationUrl = state.welcome_animation_url;
-            });
-            preloadImage(state.goodbye_animation_url, function(ok) {
-                if (ok) goodbyeAnimationUrl = state.goodbye_animation_url;
-            });
 
             var logoImage = document.getElementById('logo-image');
-            preloadImage(state.logo_background_url, function(ok) {
-                if (ok && logoImage) logoImage.src = state.logo_background_url;
-            });
+            // Every image is fetched before it is used: the animations so the next
+            // scan does not wait on a download, the logo so the kiosk never shows a
+            // blank gap while the file arrives.
+            var targets = [
+                { url: state.favicon_url, apply: function() {
+                    applyFavicon(state.favicon_url);
+                } },
+                { url: state.logo_background_url, apply: function() {
+                    if (logoImage) logoImage.src = state.logo_background_url;
+                } },
+                { url: state.welcome_animation_url, apply: function() {
+                    welcomeAnimationUrl = state.welcome_animation_url;
+                } },
+                { url: state.goodbye_animation_url, apply: function() {
+                    goodbyeAnimationUrl = state.goodbye_animation_url;
+                } }
+            ];
 
-            // Recorded only after the state was applied, so a revision is never
-            // marked as seen without having taken effect.
-            themeRevision = state.revision;
+            var loadable = [];
+            for (var i = 0; i < targets.length; i++) {
+                if (targets[i].url) loadable.push(targets[i]);
+            }
+            if (loadable.length === 0) {
+                onDone(true);
+                return;
+            }
+
+            var remaining = loadable.length;
+            var everythingLoaded = true;
+            for (var j = 0; j < loadable.length; j++) {
+                (function(target) {
+                    preloadImage(target.url, function(ok) {
+                        if (ok) {
+                            target.apply();
+                        } else {
+                            everythingLoaded = false;
+                        }
+                        remaining -= 1;
+                        if (remaining === 0) onDone(everythingLoaded);
+                    });
+                })(loadable[j]);
+            }
         }
-        
+
         function applyPendingThemeState() {
-            if (!pendingThemeState) return;
+            // themeApplyInFlight stops a retry from racing an apply that is still
+            // waiting on its images.
+            if (!pendingThemeState || themeApplyInFlight) return;
 
             if (pendingThemeState.app_version !== appVersion) {
                 if (!canReloadPage()) return;
@@ -613,9 +647,25 @@
             }
 
             if (!canApplyThemeInPlace()) return;
+
             var state = pendingThemeState;
-            pendingThemeState = null;
-            applyThemeState(state);
+            themeApplyInFlight = true;
+            applyThemeState(state, function(everythingLoaded) {
+                themeApplyInFlight = false;
+                if (!everythingLoaded) {
+                    // An image failed to download. Leave the state pending and the
+                    // revision untouched so the next poll tries again: recording the
+                    // revision here would mark the change as handled and strand the
+                    // terminal on stale artwork until the next theme edit or reload.
+                    return;
+                }
+                // A newer state may have arrived while the images were loading; only
+                // clear the one that was actually applied.
+                if (pendingThemeState === state) {
+                    pendingThemeState = null;
+                }
+                themeRevision = state.revision;
+            });
         }
 
         function handleThemeState(state) {

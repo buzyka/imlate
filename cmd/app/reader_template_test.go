@@ -69,6 +69,35 @@ func TestReaderTemplate_DefersThemeUpdatesUntilIdle(t *testing.T) {
 	assert.Regexp(t, `rfidInput\.focus\(\);\s*applyPendingThemeState\(\);`, template)
 }
 
+// Images load asynchronously, so the revision must be recorded only after they all
+// arrived. Recording it up front would mark the change as handled while a failed
+// download left the terminal on stale artwork, and no later poll would retry it
+// because the revision would already match.
+func TestReaderTemplate_RevisionIsRecordedOnlyAfterEverythingLoaded(t *testing.T) {
+	template := readReaderTemplate(t)
+
+	assert.Equal(t, 1, strings.Count(template, `themeRevision = state.revision;`))
+
+	// The single assignment must sit after the failure guard bails out.
+	guardIdx := strings.Index(template, `if (!everythingLoaded) {`)
+	commitIdx := strings.Index(template, `themeRevision = state.revision;`)
+	require.NotEqual(t, -1, guardIdx, "the failure guard is missing")
+	assert.Less(t, guardIdx, commitIdx, "the revision must be recorded behind the failure guard")
+
+	// It must live in applyPendingThemeState's completion callback, not in
+	// applyThemeState, which returns before its images have loaded.
+	applyStateIdx := strings.Index(template, `function applyThemeState(state, onDone) {`)
+	callbackIdx := strings.Index(template, `applyThemeState(state, function(everythingLoaded) {`)
+	require.NotEqual(t, -1, applyStateIdx)
+	require.NotEqual(t, -1, callbackIdx)
+	assert.Less(t, callbackIdx, commitIdx)
+
+	// A retry must not race an apply that is still waiting on its images.
+	assert.Contains(t, template, `if (!pendingThemeState || themeApplyInFlight) return;`)
+	// The applied state is cleared only if a newer one has not replaced it.
+	assert.Contains(t, template, `if (pendingThemeState === state) {`)
+}
+
 // A full reload is reserved for a version change: the page loads jQuery, Popper and
 // Bootstrap from external CDNs, so reloading while offline would break it for good.
 func TestReaderTemplate_ReloadsOnlyOnAppVersionChange(t *testing.T) {

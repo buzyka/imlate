@@ -41,7 +41,7 @@ type ReaderPageData struct {
 	WelcomeDurationMs   int    `json:"welcome_duration_ms"`
 	GoodbyeDurationMs   int    `json:"goodbye_duration_ms"`
 
-	Revision string `json:"revision"`
+	Revision   string `json:"revision"`
 	AppVersion string `json:"app_version"`
 	// PollSeconds is how often the page should poll for changes.
 	PollSeconds int `json:"poll_seconds"`

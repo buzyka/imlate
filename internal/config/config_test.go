@@ -392,6 +392,9 @@ func TestNewFromEnv_CronScheduleDefaults(t *testing.T) {
 	assert.Equal(t, "0 5 * * 1-5", cfg.CronPhotoSync)
 	assert.Equal(t, "0 7-17/1 * * 1-5", cfg.CronRegistrationCodesSync)
 	assert.Equal(t, "10 8-12/1 * * 1-5", cfg.CronMarkAbsent)
+	// Report finalization runs regardless of ERP integration.
+	assert.Equal(t, "30 0 * * *", cfg.CronFinalizeReports)
+	assert.Equal(t, 7, cfg.CronReconcileDays)
 }
 
 func TestNewFromEnv_CronScheduleCustomValues(t *testing.T) {
@@ -400,6 +403,8 @@ func TestNewFromEnv_CronScheduleCustomValues(t *testing.T) {
 		"CRON_PHOTO_SYNC":              "0 3 * * *",
 		"CRON_REGISTRATION_CODES_SYNC": "*/30 * * * 1-5",
 		"CRON_MARK_ABSENT":             "15 9 * * 1-5",
+		"CRON_FINALIZE_REPORTS":        "45 2 * * *",
+		"CRON_RECONCILE_DAYS":          "14",
 	})
 
 	cfg, err := NewFromEnv()
@@ -408,6 +413,42 @@ func TestNewFromEnv_CronScheduleCustomValues(t *testing.T) {
 	assert.Equal(t, "0 3 * * *", cfg.CronPhotoSync)
 	assert.Equal(t, "*/30 * * * 1-5", cfg.CronRegistrationCodesSync)
 	assert.Equal(t, "15 9 * * 1-5", cfg.CronMarkAbsent)
+	assert.Equal(t, "45 2 * * *", cfg.CronFinalizeReports)
+	assert.Equal(t, 14, cfg.CronReconcileDays)
+}
+
+func TestNewFromEnv_ReaderThemePollSecondsDefault(t *testing.T) {
+	loadTestEnvVariables(t, map[string]string{})
+
+	cfg, err := NewFromEnv()
+	assert.NoError(t, err)
+	assert.Equal(t, 300, cfg.ReaderThemePollSeconds)
+}
+
+func TestNewFromEnv_ReaderThemePollSecondsCustomValue(t *testing.T) {
+	loadTestEnvVariables(t, map[string]string{"READER_THEME_POLL_SECONDS": "60"})
+
+	cfg, err := NewFromEnv()
+	assert.NoError(t, err)
+	assert.Equal(t, 60, cfg.ReaderThemePollSeconds)
+}
+
+// The clamping of out-of-range values lives in the theme package, not here: the
+// config layer must pass through whatever the operator set, including values the
+// reader will later raise to its floor.
+func TestNewFromEnv_ReaderThemePollSecondsPassesThroughOutOfRangeValues(t *testing.T) {
+	loadTestEnvVariables(t, map[string]string{"READER_THEME_POLL_SECONDS": "0"})
+
+	cfg, err := NewFromEnv()
+	assert.NoError(t, err)
+	assert.Equal(t, 0, cfg.ReaderThemePollSeconds)
+}
+
+func TestNewFromEnv_ReaderThemePollSecondsInvalidValue(t *testing.T) {
+	loadTestEnvVariables(t, map[string]string{"READER_THEME_POLL_SECONDS": "not-a-number"})
+
+	_, err := NewFromEnv()
+	assert.Error(t, err)
 }
 
 func loadTestEnvVariables(t *testing.T, env map[string]string) {
@@ -440,6 +481,7 @@ func resetConfigEnv(t *testing.T) {
 		"VISITOR_IMAGE_URL_PREFIX",
 		"THEME_DIR",
 		"THEME_URL_PREFIX",
+		"READER_THEME_POLL_SECONDS",
 		"AUTO_REGISTRATION_YEAR_GROUPS",
 		"FORCE_ERP_SYNC_ON_START",
 		"ERP_INTEGRATION_ENABLED",
@@ -448,6 +490,8 @@ func resetConfigEnv(t *testing.T) {
 		"CRON_PHOTO_SYNC",
 		"CRON_REGISTRATION_CODES_SYNC",
 		"CRON_MARK_ABSENT",
+		"CRON_FINALIZE_REPORTS",
+		"CRON_RECONCILE_DAYS",
 		"DATABASE_HOST",
 		"DATABASE_PORT",
 		"DATABASE_USERNAME",
