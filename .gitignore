@@ -25,13 +25,6 @@ website/assets/isb/
 # Go workspace file
 go.work
 go.work.sum
-# Devenv
-.devenv*
-devenv.local.nix
-
-# direnv
-.direnv
-
 # pre-commit
 .pre-commit-config.yaml
 .env

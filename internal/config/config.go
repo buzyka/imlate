@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/caarlos0/env/v6"
+	"github.com/caarlos0/env/v11"
 )
 
 const minAuthTokenSecretLength = 32

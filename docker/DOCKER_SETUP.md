@@ -77,15 +77,14 @@ make rebuild            # Rebuild from scratch
 
 ## Features
 
-### Mirrors devenv.nix Functionality
-All commands from devenv.nix are available:
-- ✅ install-mod → `make install`
-- ✅ build-app → `make build`
-- ✅ gol → `make lint`
-- ✅ golf → `make lint-fix`
-- ✅ got → `make test`
-- ✅ gotc → `make test-coverage`
-- ✅ start-app → `make run`
+### Available Commands
+- ✅ Install Go modules → `make install-mod`
+- ✅ Build application → `make build-app`
+- ✅ Run linter → `make gol`
+- ✅ Run linter with auto-fix → `make golf`
+- ✅ Run tests → `make got`
+- ✅ Run tests with coverage → `make gotc`
+- ✅ Run application → `make start-app`
 - ✅ MySQL service → `mysql` container
 
 ### Additional Benefits
@@ -98,7 +97,7 @@ All commands from devenv.nix are available:
 
 ### Services Included
 1. **App Container**
-   - Go 1.22.1
+   - Go 1.26
    - All development tools
    - Live code mounting
    - Auto-migration on startup
@@ -112,7 +111,7 @@ All commands from devenv.nix are available:
 
 ## Environment Configuration
 
-Default settings (from devenv.nix):
+Default settings:
 ```bash
 ENVIRONMENT=development
 DATABASE_HOST=mysql

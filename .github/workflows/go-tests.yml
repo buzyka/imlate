@@ -8,7 +8,7 @@ on:
       - develop
 
 env:
-  GO_VERSION: 1.25.7
+  GO_VERSION: 1.26.7
   DATABASE_HOST: 127.0.0.1
   DATABASE_PORT: 3306
   DATABASE_USERNAME: imlate
@@ -40,10 +40,10 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -55,7 +55,7 @@ jobs:
         run: go mod verify
         
       - name: Install dependencies for tests
-        run: go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+        run: go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1
 
       - name: Run Migrations
         run: ./scripts/migrate-test-db.sh
@@ -64,9 +64,9 @@ jobs:
         run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
-          file: ./coverage.out
+          files: ./coverage.out
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false
@@ -75,7 +75,7 @@ jobs:
         run: go tool cover -html=coverage.out -o coverage.html
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage-report
           path: coverage.html

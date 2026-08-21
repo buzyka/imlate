@@ -10,7 +10,7 @@ The development environment uses Docker Compose with two services:
 
 ```mermaid
 graph LR
-  App["imlate-app<br/>Go 1.25<br/>:8080"]
+  App["imlate-app<br/>Go 1.26<br/>:8080"]
   MySQL["imlate-mysql<br/>MySQL 8.0<br/>:3307 -> :3306"]
 
   App -->|"tcp(mysql:3306)"| MySQL
@@ -44,14 +44,14 @@ On first start, MySQL creates:
 
 Multi-stage build:
 
-1. **Builder stage** (`golang:1.25-bookworm`) -- downloads dependencies, compiles binary `tracker` with version injection via `-ldflags`.
+1. **Builder stage** (`golang:1.26-bookworm`) -- downloads dependencies, compiles binary `tracker` with version injection via `-ldflags`.
 2. **Runtime stage** (`debian:bookworm-slim`) -- minimal image with the binary, migrations, website assets, and storage directories. Installs `swag` and `migrate` tools. Runs `./tracker`.
 
 Build argument `APP_VERSION` defaults to `2.0.x-dev` and can be overridden at build time.
 
 ### Development (`docker/Dockerfile.dev`)
 
-Single-stage image based on `golang:1.25-bookworm` with full development tooling:
+Single-stage image based on `golang:1.26-bookworm` with full development tooling:
 
 - `swag` -- Swagger generation
 - `migrate` -- database migrations
@@ -101,7 +101,7 @@ GitHub Actions workflow: [`.github/workflows/go-tests.yml`](../../.github/workfl
 ### Pipeline Steps
 
 1. **Checkout** code.
-2. **Set up Go** 1.25.7 with module caching.
+2. **Set up Go** 1.26.7 with module caching.
 3. **Download and verify** dependencies.
 4. **Install** `migrate` CLI with MySQL tag.
 5. **Run migrations** against `tracker_test` database via `scripts/migrate-test-db.sh`.

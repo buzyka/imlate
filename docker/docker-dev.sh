@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Docker Development Environment Management Script
-# This script provides commands similar to devenv.nix for Docker environment
+# This script provides the commands for the Docker-based development environment
 
 set -e
 

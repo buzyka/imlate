@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/caarlos0/env/v6"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -137,7 +136,9 @@ func TestGetTimeLocationFromEnvVariableWillSetCorrectLocation(t *testing.T) {
 				"APP_LOCAL_TIMEZONE": "",
 			},
 			expectedERPLoc: time.Now().Location().String(),
-			expectedAPPLoc: time.Now().Location().String(),
+			// env/v11 applies envDefault when the variable is set but empty,
+			// so APP_LOCAL_TIMEZONE="" resolves to the declared default UTC.
+			expectedAPPLoc: "UTC",
 		},
 	}
 	for _, tc := range tests {
@@ -252,7 +253,7 @@ func TestNewFromEnv_ForceERPSyncOnStart(t *testing.T) {
 
 func TestNewFromEnv_ParseError(t *testing.T) {
 	oldParse := parseEnv
-	parseEnv = func(_ interface{}, _ ...env.Options) error {
+	parseEnv = func(_ interface{}) error {
 		return errors.New("parse error")
 	}
 	t.Cleanup(func() {
@@ -265,7 +266,7 @@ func TestNewFromEnv_ParseError(t *testing.T) {
 
 func TestGetDatabaseURLForSqliteFromEnv_ParseError(t *testing.T) {
 	oldParse := parseEnv
-	parseEnv = func(_ interface{}, _ ...env.Options) error {
+	parseEnv = func(_ interface{}) error {
 		return errors.New("parse error")
 	}
 	t.Cleanup(func() {
@@ -278,7 +279,7 @@ func TestGetDatabaseURLForSqliteFromEnv_ParseError(t *testing.T) {
 
 func TestGetDatabaseURLForMysqlFromEnv_ParseError(t *testing.T) {
 	oldParse := parseEnv
-	parseEnv = func(_ interface{}, _ ...env.Options) error {
+	parseEnv = func(_ interface{}) error {
 		return errors.New("parse error")
 	}
 	t.Cleanup(func() {

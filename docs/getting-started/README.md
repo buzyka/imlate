@@ -8,7 +8,7 @@ This guide covers setting up the imlate development environment, running the app
 
 | Tool | Version | Notes |
 |------|---------|-------|
-| Go | 1.25+ | Required for local builds; Docker setup includes Go |
+| Go | 1.26+ | Required for local builds; Docker setup includes Go |
 | Docker | 20.10+ | With Docker Compose v2 |
 | Make | any | Thin wrapper around `docker/docker-dev.sh` |
 | MySQL client | optional | For direct DB access via `make mysql-shell` |

@@ -1,6 +1,6 @@
 # Docker Environment for imlate Project
 
-This project includes a complete Docker development environment that mirrors the functionality from `devenv.nix`.
+This project includes a complete Docker development environment.
 
 ## Quick Start
 
@@ -135,7 +135,7 @@ You can override these by creating a `.env` file in the project root.
 ## Installed Tools
 
 The development container includes:
-- Go 1.22.1
+- Go 1.26
 - golangci-lint (latest)
 - migrate (golang-migrate/migrate with MySQL support)
 - swag (Swagger documentation generator)
@@ -175,20 +175,6 @@ ports:
 ./docker-dev.sh rebuild
 ./docker-dev.sh start
 ```
-
-## Comparison with devenv.nix
-
-| devenv.nix Command | Docker Equivalent | Description |
-|--------------------|-------------------|-------------|
-| `devenv up` | `./docker-dev.sh start` | Start environment |
-| `install-mod` | `./docker-dev.sh install-mod` | Install Go modules |
-| `build-app` | `./docker-dev.sh build-app` | Build application |
-| `gol` | `./docker-dev.sh gol` | Run linter |
-| `golf` | `./docker-dev.sh golf` | Run linter with fix |
-| `got` | `./docker-dev.sh got` | Run tests |
-| `gotc` | `./docker-dev.sh gotc` | Tests with coverage |
-| `start-app` | `./docker-dev.sh run-app` | Run application |
-| MySQL service | `mysql` container | Database service |
 
 ## Production Build
 
