@@ -1,0 +1,36 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    commit-message:
+      prefix: "chore(deps): "
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "github-actions"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    commit-message:
+      prefix: "chore(deps): "
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "go"
+    groups:
+      minor-dependencies:
+        update-types:
+          - "minor"
+      patch-dependencies:
+        update-types:
+          - "patch"
