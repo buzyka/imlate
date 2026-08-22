@@ -60,7 +60,7 @@ func (v *Visitor) calcSyncHash() uint64 {
 	_ = binary.Write(h, binary.BigEndian, v.ErpID)
 
 	// Write FullName (string)
-	h.Write([]byte(fmt.Sprintf("%s %s", v.Name, v.Surname)))
+	_, _ = fmt.Fprintf(h, "%s %s", v.Name, v.Surname)
 
 	// Separator to avoid ambiguity when concatenating bytes
 	h.Write([]byte{0x00})

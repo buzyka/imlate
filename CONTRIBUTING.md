@@ -4,7 +4,7 @@ This guide covers everything you need to set up imlate locally for development a
 
 ## Requirements
 
-- **Go** 1.25+ (included in the Docker dev setup)
+- **Go** 1.26+ (included in the Docker dev setup)
 - **Docker** 20.10+ with Docker Compose v2
 - **Make** (any version)
 

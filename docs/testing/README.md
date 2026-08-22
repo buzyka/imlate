@@ -169,7 +169,7 @@ c.Set("id", adminUser)  // Simulates JWT middleware identity
 The GitHub Actions workflow (`.github/workflows/go-tests.yml`) runs on every push to `main`/`develop` and on all PRs:
 
 1. Starts a MySQL 8 service container.
-2. Sets up Go 1.25.7 with module caching.
+2. Sets up Go 1.26.7 with module caching.
 3. Runs database migrations via `scripts/migrate-test-db.sh` against `tracker_test`.
 4. Executes `go test -v -race -coverprofile=coverage.out -covermode=atomic ./...`.
 5. Uploads coverage to Codecov.

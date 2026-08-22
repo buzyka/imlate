@@ -26,7 +26,7 @@ logs-app:
 logs-mysql:
 	@./docker/docker-dev.sh logs mysql
 
-# Development (same names as devenv.nix)
+# Development
 install-mod:
 	@./docker/docker-dev.sh install-mod
 
@@ -39,7 +39,7 @@ dist:
 start-app:
 	@./docker/docker-dev.sh run-app
 
-# Testing & Linting (same names as devenv.nix)
+# Testing & Linting
 got:
 	@./docker/docker-dev.sh got
 

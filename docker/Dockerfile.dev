@@ -1,5 +1,5 @@
 # Development Dockerfile based on Debian 12
-FROM golang:1.25-bookworm
+FROM golang:1.26-bookworm
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
@@ -19,10 +19,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Go development tools with pinned versions compatible with Go 1.23
-RUN go install github.com/swaggo/swag/cmd/swag@latest && \
-    go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1 && \
-    go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest && \
+# Install Go development tools with pinned versions compatible with Go 1.26
+RUN go install github.com/swaggo/swag/cmd/swag@v1.16.6 && \
+    go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1 && \
+    go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.1 && \
     go install github.com/air-verse/air@latest
 
 # Add Go binaries to PATH

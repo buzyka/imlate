@@ -1,8 +1,8 @@
 # Command Reference
 
-All Docker commands use the same names as devenv.nix for consistency.
+All commands are available via `make <target>` and `./docker/docker-dev.sh <command>`.
 
-## Development Commands (Identical to devenv.nix)
+## Development Commands
 
 | Command | Description |
 |---------|-------------|

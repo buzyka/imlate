@@ -3,7 +3,7 @@ Guide for agentic coding tools working in this repository.
 
 ## Project Snapshot
 - Module: `github.com/buzyka/imlate`
-- Go `1.25.7`
+- Go `1.26.7`
 - Entry point: `cmd/app/main.go`
 - Main stacks: Gin, JWT auth, Swagger, MySQL/SQLite, golang-migrate, zap, testify
 - Core layout: `cmd/`, `internal/{config,domain,usecase,http,infrastructure,isb}`, `migrations/`, `website/`
@@ -302,4 +302,3 @@ func (m *MyRepoMock) NewMethod(arg Type) (ReturnType, error) {
 
 ## Command Sources of Truth
 - Prefer: `Makefile`, `docker/docker-dev.sh`, `.github/workflows/go-tests.yml`, `CONTRIBUTING.md`.
-- `devenv.nix` is partly stale; prefer Make/Docker/CI docs.

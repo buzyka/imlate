@@ -69,7 +69,7 @@ func (s *StudentSync) SyncAllStudents() error {
 			return err
 		}
 
-		var updatedStudentsCnt int = 0
+		updatedStudentsCnt := 0
 
 		for _, student := range resp.Students {
 			if updated, err := s.SaveStudent(student); err != nil {
