@@ -78,7 +78,7 @@ func normalizePollSeconds(pollSeconds int) int {
 
 func readerRevision(data ReaderPageData) string {
 	h := sha256.New()
-	fmt.Fprintf(h, "%s\n%s\n%s\n%s\n%d\n%d",
+	_, _ = fmt.Fprintf(h, "%s\n%s\n%s\n%s\n%d\n%d",
 		data.FaviconURL,
 		data.LogoBackgroundURL,
 		data.WelcomeAnimationURL,
