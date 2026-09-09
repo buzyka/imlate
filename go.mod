@@ -6,15 +6,15 @@ toolchain go1.26.7
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
-	github.com/appleboy/gin-jwt/v3 v3.5.1
+	github.com/appleboy/gin-jwt/v3 v3.5.2
 	github.com/caarlos0/env/v11 v11.4.1
 	github.com/gin-gonic/gin v1.12.0
-	github.com/go-sql-driver/mysql v1.10.0
+	github.com/go-sql-driver/mysql v1.10.1
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/golobby/container/v3 v3.3.2
 	github.com/google/uuid v1.6.0
-	github.com/mattn/go-sqlite3 v1.14.50
+	github.com/mattn/go-sqlite3 v1.14.52
 	github.com/stretchr/testify v1.12.1
 	github.com/subosito/gotenv v1.6.0
 	github.com/swaggo/files v1.0.1
