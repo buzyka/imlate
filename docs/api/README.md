@@ -18,6 +18,7 @@ No authentication required.
 | `GET` | `/admin` | Admin SPA |
 | `GET` | `/admin/settings` | Admin SPA settings route |
 | `GET` | `/search/:id` | Look up a visitor by key |
+| `GET` | `/firelist/:grade` | Evacuation roster for one class (HTML); `:grade` is a year group number or `staff` |
 | `POST` | `/login` | Admin JWT authentication |
 | `POST` | `/refresh` | Refresh JWT token |
 | `POST` | `/change-time` | Override current time (development only) |

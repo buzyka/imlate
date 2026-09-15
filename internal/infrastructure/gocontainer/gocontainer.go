@@ -13,6 +13,7 @@ import (
 	"github.com/buzyka/imlate/internal/infrastructure/repository"
 	"github.com/buzyka/imlate/internal/infrastructure/util"
 	"github.com/buzyka/imlate/internal/usecase/adminapi"
+	firelistview "github.com/buzyka/imlate/internal/usecase/firelist"
 	"github.com/buzyka/imlate/internal/usecase/reportaggregator"
 	themeview "github.com/buzyka/imlate/internal/usecase/theme"
 	"github.com/buzyka/imlate/internal/usecase/tracking"
@@ -101,6 +102,12 @@ func Build(cfg *config.Config) {
 		a := &adminapi.AdminAPI{}
 		container.MustFill(container.Global, a)
 		return a
+	})
+
+	container.MustSingleton(container.Global, func() *firelistview.Service {
+		svc := &firelistview.Service{}
+		container.MustFill(container.Global, svc)
+		return svc
 	})
 
 	container.MustSingleton(container.Global, func() *reportaggregator.Aggregator {
