@@ -1,0 +1,435 @@
+/* Evacuation roll-call list.
+ *
+ * This page is opened on a teacher's phone while a fire alarm is going off, on
+ * whatever is left of the mobile network. Every rule below is chosen for one of
+ * three reasons: it makes the first paint cheaper, it makes a thumb-sized tap
+ * land where it should, or it makes a status readable at arm's length in bad
+ * light. There are no web fonts, no images, no icon fonts and no gradients —
+ * the whole page is three requests and nothing here adds a fourth.
+ *
+ * Mobile-first: the base rules target a 320px phone, and the single
+ * min-width:640px block only relaxes spacing and type for a tablet. Nothing in
+ * that block restructures the layout, so there is no width at which the page
+ * suddenly looks like a different page.
+ */
+
+/* ---- Tokens ---- */
+/* Kept as custom properties purely so the dark-mode block at the bottom can
+   re-point them in one place instead of restating every rule. */
+:root {
+    --fl-bg: #fff;
+    --fl-fg: #14181c;
+    --fl-muted: #5a6470;
+    --fl-line: #d6dbe1;
+    --fl-head-bg: #f4f6f8;
+    --fl-btn-bg: #fff;
+
+    /* Status palette. "not_signed" — we have not seen this child today — is the
+       single most important signal on the page, so it gets the strongest
+       (red) treatment and is never softened. */
+    --fl-in-bg: #d5f0dc;
+    --fl-in-fg: #10431f;
+    --fl-out-bg: #fbe6bd;
+    --fl-out-fg: #6a3e02;
+    --fl-non-bg: #fbd6d6;
+    --fl-non-fg: #7e0f0f;
+
+    --fl-done-bg: #ddf3de;
+    --fl-done-bar: #2e7d32;
+    --fl-error-bg: #fbd6d6;
+    --fl-error-fg: #7e0f0f;
+}
+
+/* ---- Shell ---- */
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    /* System stack only. A web font is an extra request that blocks text on the
+       exact network condition this page is designed for. */
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.3;
+    color: var(--fl-fg);
+    background: var(--fl-bg);
+    /* iOS inflates text in landscape unless told not to, which would push the
+       table past the viewport and create the horizontal scroll this layout
+       must never have. */
+    -webkit-text-size-adjust: 100%;
+    /* Kills the ~300ms double-tap-to-zoom wait. The teacher taps 24 rows in a
+       row; a third of a second of dead time per tap is eight lost seconds. */
+    touch-action: manipulation;
+
+    /* The page is a viewport-tall column: fixed header, scrolling list. This is
+       what keeps the running count and the two buttons on screen without
+       needing to know the header's height — a sticky <thead> would otherwise
+       have to be offset by it, and that height changes as soon as the Russian
+       copy wraps on a narrow phone. */
+    height: 100vh;   /* fallback for browsers without dvh */
+    height: 100dvh;  /* honours the collapsing mobile browser chrome */
+    display: flex;
+    flex-direction: column;
+    /* The list scrolls, the page does not: no rubber-banding the whole document
+       away from the controls mid-count. */
+    overflow: hidden;
+}
+
+/* ---- Header ---- */
+
+.fl-head {
+    flex: 0 0 auto;
+    /* A no-op inside the flex shell above, kept so the header still pins itself
+       if this page is ever embedded somewhere the document scrolls. */
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--fl-head-bg);
+    border-bottom: 1px solid var(--fl-line);
+    padding: 8px 10px;
+    /* The one shadow on the page, and it is not decoration: it separates the
+       header from rows scrolling underneath it, which at a glance is the
+       difference between reading the count and reading a name. */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.fl-head__top {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+}
+
+.fl-title {
+    font-size: 1.15rem;
+    margin: 0;
+}
+
+.fl-meta {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--fl-muted);
+}
+
+/* The number the teacher is actually here for. Deliberately the largest thing
+   on the page after the names themselves. */
+.fl-summary {
+    margin: 6px 0 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.fl-breakdown {
+    margin: 2px 0 0;
+    font-size: 0.8rem;
+    color: var(--fl-muted);
+}
+
+/* Colour keys for the three counts. Squares rather than an icon font, so they
+   cost nothing to load and cannot fail to render. */
+.fl-dot {
+    display: inline-block;
+    width: 0.7em;
+    height: 0.7em;
+    border-radius: 2px;
+    margin: 0 3px 0 10px;
+    vertical-align: baseline;
+}
+
+.fl-breakdown .fl-dot:first-child {
+    margin-left: 0;
+}
+
+.fl-dot--signed_in {
+    background: var(--fl-in-bg);
+    border: 1px solid var(--fl-in-fg);
+}
+
+.fl-dot--signed_out {
+    background: var(--fl-out-bg);
+    border: 1px solid var(--fl-out-fg);
+}
+
+.fl-dot--not_signed {
+    background: var(--fl-non-bg);
+    border: 1px solid var(--fl-non-fg);
+}
+
+.fl-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.fl-btn {
+    flex: 1 1 0;
+    /* 44px is the smallest target a stressed thumb hits reliably; these two
+       buttons sit next to each other, so undersizing them risks a "Reset"
+       that was meant to be "Refresh". */
+    min-height: 44px;
+    font: inherit;
+    font-weight: 600;
+    color: var(--fl-fg);
+    background: var(--fl-btn-bg);
+    border: 1px solid var(--fl-line);
+    border-radius: 6px;
+    padding: 8px 10px;
+}
+
+/* ---- List ---- */
+
+.fl-main {
+    flex: 1 1 auto;
+    /* min-height:0 is load-bearing: without it the table's intrinsic height
+       wins over the flex sizing and the list pushes the header off-screen
+       instead of scrolling inside it. */
+    min-height: 0;
+    overflow-y: auto;
+    /* Momentum scrolling ends inside this box, never on the document. */
+    -webkit-overflow-scrolling: touch;
+}
+
+.fl-table {
+    width: 100%;
+    border-collapse: collapse;
+    /* Fixed layout means the column widths below are honoured instead of being
+       derived from the longest surname, which is what keeps the table inside
+       320px without a horizontal scrollbar. */
+    table-layout: fixed;
+    /* Rapid tapping on a table otherwise starts a text selection, which on iOS
+       pops the copy/paste bubble over the next row. */
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Column widths: names get the room, the status badge gets enough for its
+   longest label, the tick column gets a full thumb. */
+.fl-table th:nth-child(1),
+.fl-table td:nth-child(1) {
+    width: 30%;
+}
+
+.fl-table th:nth-child(2),
+.fl-table td:nth-child(2) {
+    width: 24%;
+}
+
+.fl-table th:nth-child(3),
+.fl-table td:nth-child(3) {
+    width: 28%;
+}
+
+.fl-table th:nth-child(4),
+.fl-table td:nth-child(4) {
+    width: 18%;
+}
+
+.fl-table thead th {
+    /* Sticky against .fl-main, whose top edge sits immediately under the
+       header — so top:0 needs no magic offset. */
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--fl-head-bg);
+    border-bottom: 2px solid var(--fl-line);
+    text-align: left;
+    font-size: 0.8rem;
+    color: var(--fl-muted);
+    padding: 10px 6px;
+}
+
+.fl-table th[data-sort] {
+    cursor: pointer;
+}
+
+/* The sort marker is generated content rather than a glyph in the markup, so
+   firelist.js only has to set aria-sort and the visual follows. */
+.fl-table th[aria-sort="ascending"]::after {
+    content: " \25B2";
+}
+
+.fl-table th[aria-sort="descending"]::after {
+    content: " \25BC";
+}
+
+.fl-table tbody td {
+    border-bottom: 1px solid var(--fl-line);
+    /* 14px top and bottom on a 1.3 line-height puts every row over the 48px
+       minimum tap target even for a single short line. */
+    padding: 14px 6px;
+    /* A long unbroken surname would otherwise overflow its fixed-width column
+       and reintroduce horizontal scroll. */
+    overflow-wrap: anywhere;
+}
+
+/* The whole row is the tap target. */
+.fl-table tbody tr {
+    cursor: pointer;
+}
+
+/* The green bar lives on the first cell, not on the <tr>: under table-layout
+   fixed the column widths already add up to 100%, and 6px of row border on top
+   of that is 6px of horizontal scroll on a 320px phone. Inside a cell the
+   border eats into the column instead of widening the table. It is reserved
+   transparent on every row so ticking one cannot shift the text sideways. */
+.fl-table tbody td:first-child {
+    border-left: 6px solid transparent;
+}
+
+/* A ticked row. Solid fill plus a heavy left bar reads as "done" from the top
+   of the list at a glance. The text is deliberately NOT struck through: during
+   an evacuation a name still has to be legible after it has been counted, for
+   the handover to whoever takes the list next. */
+.fl-table tbody tr.is-checked {
+    background: var(--fl-done-bg);
+}
+
+.fl-table tbody tr.is-checked td:first-child {
+    border-left-color: var(--fl-done-bar);
+}
+
+/* ---- Status badges ---- */
+
+/* Each badge carries its own solid background, so it stays readable on both the
+   plain and the light-green ticked row without a second set of rules. */
+.fl-badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.2;
+    padding: 3px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.fl-badge--signed_in {
+    background: var(--fl-in-bg);
+    color: var(--fl-in-fg);
+    border: 1px solid var(--fl-in-fg);
+}
+
+.fl-badge--signed_out {
+    background: var(--fl-out-bg);
+    color: var(--fl-out-fg);
+    border: 1px solid var(--fl-out-fg);
+}
+
+.fl-badge--not_signed {
+    background: var(--fl-non-bg);
+    color: var(--fl-non-fg);
+    border: 1px solid var(--fl-non-fg);
+}
+
+/* ---- Checkbox ---- */
+
+.fl-td-check,
+.fl-th-check {
+    text-align: center;
+}
+
+.fl-check {
+    /* The default 13px control is far too small for a thumb. Scaling the native
+       control keeps the platform's own tick, its focus ring and its
+       accessibility behaviour, which a hand-drawn replacement would lose. */
+    width: 20px;
+    height: 20px;
+    transform: scale(1.4); /* → 28px rendered */
+    accent-color: var(--fl-done-bar);
+    /* Deliberately still interactive: pointer-events:none would hide it from a
+       keyboard user's tab order in effect, since a space press would then never
+       reach the delegated handler. firelist.js instead detects a tap that
+       landed on the control itself and skips its own toggle. */
+}
+
+/* ---- Banners ---- */
+
+.fl-error,
+.fl-empty {
+    margin: 16px 10px;
+    padding: 12px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+.fl-error {
+    background: var(--fl-error-bg);
+    color: var(--fl-error-fg);
+    border: 1px solid var(--fl-error-fg);
+}
+
+.fl-empty {
+    background: var(--fl-head-bg);
+    color: var(--fl-muted);
+    border: 1px solid var(--fl-line);
+}
+
+/* ---- Tablet ---- */
+/* Spacing and type only. The layout is identical to the phone's on purpose:
+   a teacher who practised the drill on a phone must not meet a different page
+   on the school's iPad. */
+@media (min-width: 640px) {
+    body {
+        font-size: 18px;
+    }
+
+    .fl-head {
+        padding: 12px 16px;
+    }
+
+    .fl-title {
+        font-size: 1.4rem;
+    }
+
+    .fl-summary {
+        font-size: 1.15rem;
+    }
+
+    .fl-table thead th {
+        font-size: 0.9rem;
+        padding: 12px 12px;
+    }
+
+    .fl-table tbody td {
+        padding: 16px 12px;
+    }
+
+    .fl-badge {
+        font-size: 0.8rem;
+    }
+}
+
+/* ---- Dark ---- */
+/* Drills and real alarms happen after dark too, and a full-white page at night
+   destroys the reader's night vision for the minute it takes to get outside.
+   Only the tokens are re-pointed; no rule below restates a layout. */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --fl-bg: #14181c;
+        --fl-fg: #e7eaee;
+        --fl-muted: #9aa4b0;
+        --fl-line: #333c46;
+        --fl-head-bg: #1d232a;
+        --fl-btn-bg: #262e37;
+
+        --fl-in-bg: #17421f;
+        --fl-in-fg: #b7efc2;
+        --fl-out-bg: #4a3405;
+        --fl-out-fg: #f8d68a;
+        --fl-non-bg: #571212;
+        --fl-non-fg: #ffb8b8;
+
+        --fl-done-bg: #1c3a20;
+        --fl-done-bar: #4caf50;
+        --fl-error-bg: #571212;
+        --fl-error-fg: #ffb8b8;
+    }
+
+    /* Tells the browser to paint dark form controls and scrollbars, which the
+       token swap alone cannot do. */
+    :root {
+        color-scheme: dark;
+    }
+}

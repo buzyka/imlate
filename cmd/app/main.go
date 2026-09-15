@@ -16,6 +16,7 @@ import (
 	_ "github.com/buzyka/imlate/docs"
 	"github.com/buzyka/imlate/internal/config"
 	"github.com/buzyka/imlate/internal/http/controller/adminapi"
+	"github.com/buzyka/imlate/internal/http/controller/firelist"
 	"github.com/buzyka/imlate/internal/http/controller/reader"
 	"github.com/buzyka/imlate/internal/infrastructure/cron"
 	"github.com/buzyka/imlate/internal/infrastructure/gocontainer"
@@ -88,7 +89,10 @@ func main() {
 
 	// Start Gin server
 	r := gin.Default()
-	r.SetHTMLTemplate(template.Must(template.ParseFiles(filepath.Join(rootPath, "website", "reader.html"))))
+	r.SetHTMLTemplate(template.Must(template.ParseFiles(
+		filepath.Join(rootPath, "website", "reader.html"),
+		filepath.Join(rootPath, "website", "firelist.html"),
+	)))
 
 	r.Static("/assets", filepath.Join(rootPath, "website", "assets"))
 	r.Static("/storage", filepath.Join(rootPath, "storage"))
@@ -126,6 +130,11 @@ func main() {
 	searchController := &search.SearchController{}
 	container.MustFill(container.Global, searchController)
 	r.GET("/search/:id", searchController.SearchHandler())
+
+	fireListController := &firelist.FireListController{}
+	container.MustFill(container.Global, fireListController)
+	// Public by necessity: requiring a login during an evacuation is not an option.
+	r.GET("/firelist/:grade", fireListController.FireListPageHandler())
 
 	var terminalAuth httpauth.TerminalAuthMiddleware
 	container.MustFill(container.Global, &terminalAuth)

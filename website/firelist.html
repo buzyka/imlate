@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <!-- Without this the phone renders at 980px and shrinks the whole table to
+         unreadable, which is fatal for a page used one-handed during an alarm. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{{ .GradeLabel }} — Evacuation</title>
+
+    <!-- An empty data: icon answers the browser's automatic /favicon.ico probe
+         without a network round trip. The page budget is three requests total
+         (document + CSS + JS) and a fourth one on a saturated mobile link is
+         exactly the kind of delay this page cannot afford. -->
+    <link rel="icon" href="data:,">
+
+    <!-- Everything is served from this binary's own /assets tree: the school LAN
+         may have no route to the internet, and during an evacuation a CDN that
+         does not answer would leave the page unstyled and unusable. The version
+         query busts the browser cache on a deploy — a teacher's phone may have
+         had this page cached since the previous drill. -->
+    <link rel="stylesheet" href="/assets/css/firelist.css?v={{ .AppVersion }}">
+</head>
+
+<body>
+    <!-- Sticky so the running count and the two buttons stay reachable with one
+         thumb no matter how far down the list the teacher has scrolled. -->
+    <header class="fl-head">
+        <div class="fl-head__top">
+            <h1 class="fl-title">{{ .GradeLabel }}</h1>
+            <p class="fl-meta">{{ .Day }} · as of {{ .GeneratedAt }}</p>
+        </div>
+
+        {{ if not .Error }}
+        <p class="fl-summary" id="flSummary" role="status" aria-live="polite">
+            Accounted for <span id="flDone">0</span> of <span id="flTotal">{{ .Counts.Total }}</span>
+            · <span id="flLeft">{{ .Counts.Total }}</span> left
+        </p>
+
+        <p class="fl-breakdown">
+            <span class="fl-dot fl-dot--signed_in"></span>{{ .Counts.SignedIn }}
+            <span class="fl-dot fl-dot--signed_out"></span>{{ .Counts.SignedOut }}
+            <span class="fl-dot fl-dot--not_signed"></span>{{ .Counts.NoStatus }}
+        </p>
+
+        <div class="fl-actions">
+            <button type="button" class="fl-btn" id="flReset">Reset</button>
+            <button type="button" class="fl-btn" id="flReload">Refresh</button>
+        </div>
+        {{ end }}
+    </header>
+
+    <main class="fl-main">
+        {{ if .Error }}
+        <p class="fl-error" role="alert">{{ .Error }}</p>
+        {{ else if not .Rows }}
+        <p class="fl-empty">No one is listed for this class. Check the class or refresh the page.</p>
+        {{ else }}
+        <table class="fl-table">
+            <thead>
+                <tr>
+                    <th scope="col" data-sort="surname" role="button" tabindex="0" aria-sort="none">Surname</th>
+                    <th scope="col" data-sort="name" role="button" tabindex="0" aria-sort="none">Name</th>
+                    <th scope="col" data-sort="status" role="button" tabindex="0" aria-sort="none">Status</th>
+                    <!-- Deliberately not sortable: reordering rows under the
+                         teacher's finger halfway through a count loses their
+                         place, and a lost place means a recount. -->
+                    <th scope="col" class="fl-th-check">✓</th>
+                </tr>
+            </thead>
+            <tbody id="flBody">
+                {{ range .Rows }}
+                <tr data-id="{{ .VisitorID }}" data-surname="{{ .Surname }}" data-name="{{ .Name }}" data-rank="{{ .StatusRank }}">
+                    <td>{{ .Surname }}</td>
+                    <td>{{ .Name }}</td>
+                    <td><span class="fl-badge fl-badge--{{ .Status }}">{{ .StatusLabel }}</span></td>
+                    <td class="fl-td-check">
+                        <input type="checkbox" class="fl-check" aria-label="{{ .Surname }} {{ .Name }}">
+                    </td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+        {{ end }}
+    </main>
+
+    <script>
+        // ---- Server-rendered identity of this list ----
+        // firelist.js builds its localStorage key from these. They are the only
+        // thing that has to be inline; all behaviour lives in firelist.js, where
+        // the browser can cache it across reloads during an alarm.
+        var fireListDay = '{{ .Day }}';
+        var fireListGrade = '{{ .GradeParam }}';
+    </script>
+    <script src="/assets/js/firelist.js?v={{ .AppVersion }}" defer></script>
+</body>
+
+</html>
