@@ -7,229 +7,66 @@
     <title>Student Info</title>
     <link rel="icon" type="image/png" sizes="16x16" href="{{ .FaviconURL }}">
 
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-
-    <style>
-        body {
-            background-color: white;
-        }
-        #rfidInput {
-            position: absolute;
-            left: -9999px;
-        }
-        .registration-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 1040;
-            display: none;
-        }
-        #terminalRegModal .modal-dialog {
-            max-width: 420px;
-            margin-top: 8vh;
-        }
-        #terminalRegModal .modal-content {
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-            padding: 30px 35px 25px;
-        }
-        #terminalRegModal .reg-icon {
-            text-align: center;
-            margin-bottom: 10px;
-        }
-        #terminalRegModal .reg-icon svg {
-            width: 56px;
-            height: 56px;
-        }
-        #terminalRegModal .reg-title {
-            text-align: center;
-            font-family: Georgia, 'Times New Roman', serif;
-            font-style: italic;
-            font-size: 1.35rem;
-            color: #333;
-            margin-bottom: 22px;
-        }
-        #terminalRegModal .form-group label {
-            font-size: 0.92rem;
-            color: #555;
-            margin-bottom: 4px;
-        }
-        #terminalRegModal .form-group label .req {
-            color: #e44;
-            margin-right: 3px;
-        }
-        #terminalRegModal .form-control {
-            border: 1px solid #c8d6e5;
-            background-color: #f0f6ff;
-            border-radius: 3px;
-            padding: 8px 12px;
-            font-size: 0.95rem;
-        }
-        #terminalRegModal .form-control:focus {
-            border-color: #a0bfe0;
-            box-shadow: 0 0 0 2px rgba(160,191,224,0.25);
-            background-color: #fff;
-        }
-        #terminalRegModal .btn-register {
-            width: 100%;
-            background-color: #d6e9f8;
-            color: #2e8b57;
-            border: 1px solid #bdd8ed;
-            font-weight: 600;
-            padding: 9px;
-            font-size: 1rem;
-            border-radius: 3px;
-            margin-top: 8px;
-        }
-        #terminalRegModal .btn-register:hover {
-            background-color: #c4ddf2;
-        }
-        #terminalRegModal .btn-register:disabled {
-            opacity: 0.6;
-        }
-        #regSpinner {
-            display: none;
-            text-align: center;
-            color: #888;
-            font-size: 0.9rem;
-            margin-top: 8px;
-        }
-        #logo-block {
-            min-height: 550px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: white;
-        }
-        #logo-image,
-        #welcome {
-            display: block;
-            max-width: 100%;
-            max-height: 550px;
-            width: auto;
-            height: auto;
-            object-fit: contain;
-        }
-        #welcome {
-            display: none;
-        }
-        @media (max-width: 991.98px) {
-            #logo-block {
-                min-height: 320px;
-                margin-bottom: 15px;
-            }
-            #logo-image,
-            #welcome {
-                max-height: 320px;
-            }
-        }
-    </style>
-
+    <!-- Bootstrap is vendored under /assets: the kiosk panels run on a LAN that
+         may have no route to the internet, so a CDN outage must never be able to
+         leave this page unstyled. The version query busts the browser cache on a
+         deploy — a terminal can stay open for weeks without reloading. -->
+    <link rel="stylesheet" href="/assets/vendor/bootstrap/bootstrap.min.css?v={{ .AppVersion }}">
+    <link rel="stylesheet" href="/assets/css/reader.css?v={{ .AppVersion }}">
 </head>
 
 <body>
+    <!-- The RFID reader is a keyboard wedge; reader.js keeps this field focused. -->
     <input type="text" id="rfidInput" autofocus>
     <div class="registration-overlay" id="registrationOverlay"></div>
 
-    <div class="container" style="
-        padding-top: 15px;
-        padding-bottom: 15px; ">
-        <div class="row">
-            <!-- Left column   style="display: none;" -->
-            <div id="logo-block" class="col-12 col-lg-6">
-                <img id="logo-image" src="{{ .LogoBackgroundURL }}" alt="Logo image">
-                <img id="welcome" src="{{ .WelcomeAnimationURL }}" alt="Welcome">
-            </div>
+    <!-- The two panes are a plain flex row rather than a Bootstrap grid: grid
+         columns stack below 992px, which would hide half the page on the
+         800x480 Raspberry Pi panels this kiosk runs on. -->
+    <main id="kiosk">
+        <!-- Left pane: logo, replaced by the welcome/goodbye animation on a scan -->
+        <section class="kiosk-pane" id="logo-block">
+            <img id="logo-image" src="{{ .LogoBackgroundURL }}" alt="Logo image">
+            <img id="welcome" src="{{ .WelcomeAnimationURL }}" alt="Welcome">
+        </section>
 
-            <!-- Right column -->
-            <div class="col-12 col-lg-6">
-                <div class="row mb-1">
-                    <div class="col-12 ">
-                        <h2>Registration</h2>
-                    </div>
-                </div>
+        <!-- Right pane: prompt, reader instruction image, scan result -->
+        <section class="kiosk-pane" id="info-pane">
+            <header class="pane-header">
+                <h2 class="pane-title">Registration</h2>
+                <p id="cardIdDisplay">Please place the transponder on the reader.</p>
+            </header>
 
-                <div class="row mb-1">
-                    <div class="col-12">
-                        <div id="cardIdDisplay">Please place the transponder on the reader.</div>
-                        <img id="readerInstructionImage" src="/assets/img/reader.png" alt="RFID Reader" width="100%">
-                    </div>
-                </div>                 
+            <!-- One slot shared by the instruction image, the alerts and the
+                 visitor card, so swapping them cannot shift the layout. -->
+            <div class="pane-stage" id="info-stage">
+                <img id="readerInstructionImage" src="/assets/img/reader.png" alt="RFID Reader">
 
-                <!-- Sv  Registration successful!-->
-                <div id="success-message" class="alert alert-success" role="alert"
-                    style="display: none; margin-top: 15px;">
+                <div id="success-message" class="alert alert-success" role="alert">
                     Registration successful!
                 </div>
 
-                <!-- Sv  Registration failed!-->
-                <div id="error-message" class="alert alert-danger" role="alert"
-                    style="display: none; margin-top: 15px;">
-                    Registration successful!
-                </div>
+                <div id="error-message" class="alert alert-danger" role="alert"></div>
 
-                <!-- Visitor Details -->
-
-                <div id="student-info" class="row" style="display: none; padding: 10px;">
-                    <div class="col-6 ">
-                        <img src="" id="student-image" class="card-img-top" alt="Student Image" width="290">
+                <div id="student-info">
+                    <div class="visitor-photo">
+                        <img src="" id="student-image" alt="Visitor photo">
                     </div>
 
-                    <div class="col-6 ">
+                    <div class="visitor-fields">
                         <h3>Visitor Details</h3>
-                        <p class="card-text"><strong>Surname:</strong> <span id="student-surname"></span></p>
-                        <p class="card-text"><strong>Name:</strong> <span id="student-name"></span></p>
+                        <p><strong>Surname:</strong> <span id="student-surname"></span></p>
+                        <p><strong>Name:</strong> <span id="student-name"></span></p>
                     </div>
                 </div>
-
             </div>
-        </div>
-    </div>
-    <div class="modal fade" id="noStudentModal" tabindex="-1" role="dialog" aria-labelledby="noStudentModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="noStudentModalLabel">No Student Found</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    No student data found for the given ID. Please check the ID and try again.
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal -->
-    <div class="modal" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="errorModalLabel">Error</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body" id="errorModalBody">
-                    <!-- Error message will be populated here -->
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
+        </section>
+    </main>
 
     <!-- Terminal Registration Modal -->
-    <div class="modal fade" id="terminalRegModal" tabindex="-1" role="dialog"
-         aria-labelledby="terminalRegModalLabel" data-backdrop="static" data-keyboard="false">
-        <div class="modal-dialog" role="document">
+    <div class="modal fade" id="terminalRegModal" tabindex="-1"
+         aria-labelledby="terminalRegModalLabel" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="reg-icon">
                     <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -242,7 +79,7 @@
                         <path d="M30 25.5l1.5 2 3-3.5" stroke="#5a8fb8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </div>
-                <div class="reg-title">Terminal Registration</div>
+                <div class="reg-title" id="terminalRegModalLabel">Terminal Registration</div>
                 <div id="regError" class="alert alert-danger" style="display:none;"></div>
                 <div id="regConflict" class="alert alert-warning" style="display:none;">
                     Terminal with this name already exists. Click Continue to regenerate the access token. All other terminals using this name will be disconnected.
@@ -250,16 +87,16 @@
                     <button type="button" class="btn btn-warning btn-sm" id="regForceBtn">Continue</button>
                 </div>
                 <form id="terminalRegForm">
-                    <div class="form-group">
-                        <label for="regAdminLogin"><span class="req">*</span>Username</label>
+                    <div class="reg-field">
+                        <label for="regAdminLogin" class="form-label"><span class="req">*</span>Username</label>
                         <input type="text" class="form-control" id="regAdminLogin" required autocomplete="username">
                     </div>
-                    <div class="form-group">
-                        <label for="regAdminPassword"><span class="req">*</span>Password</label>
+                    <div class="reg-field">
+                        <label for="regAdminPassword" class="form-label"><span class="req">*</span>Password</label>
                         <input type="password" class="form-control" id="regAdminPassword" required autocomplete="current-password">
                     </div>
-                    <div class="form-group">
-                        <label for="regTerminalName"><span class="req">*</span>Terminal Name</label>
+                    <div class="reg-field">
+                        <label for="regTerminalName" class="form-label"><span class="req">*</span>Terminal Name</label>
                         <input type="text" class="form-control" id="regTerminalName" required>
                     </div>
                     <button type="submit" class="btn btn-register" id="regSubmitBtn">Register</button>
@@ -272,11 +109,11 @@
         </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js?v={{ .AppVersion }}"></script>
     <script>
         // ---- Theme state ----
+        // Rendered by the server. reader.js reads these and the theme poller
+        // reassigns them in place, so they must stay plain globals.
         var welcomeDurationMs   = {{ .WelcomeDurationMs }};
         var goodbyeDurationMs   = {{ .GoodbyeDurationMs }};
         var welcomeAnimationUrl = '{{ .WelcomeAnimationURL }}';
@@ -284,418 +121,8 @@
         var themeRevision       = '{{ .Revision }}';
         var appVersion          = '{{ .AppVersion }}';
         var themePollMs         = {{ .PollSeconds }} * 1000;
-
-        // ---- Terminal Registration ----
-        var terminalCredentials = {
-            authToken: localStorage.getItem('auth_token'),
-            terminalName: localStorage.getItem('terminal_name')
-        };
-
-        function isTerminalRegistered() {
-            return terminalCredentials.authToken && terminalCredentials.terminalName;
-        }
-
-        function saveTerminalCredentials(authToken, terminalName) {
-            localStorage.setItem('auth_token', authToken);
-            localStorage.setItem('terminal_name', terminalName);
-            terminalCredentials.authToken = authToken;
-            terminalCredentials.terminalName = terminalName;
-        }
-
-        function clearTerminalCredentials() {
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('terminal_name');
-            terminalCredentials.authToken = null;
-            terminalCredentials.terminalName = null;
-        }
-
-        function showRegistrationModal() {
-            regModalOpen = true;
-            document.getElementById('registrationOverlay').style.display = 'block';
-            document.getElementById('regError').style.display = 'none';
-            document.getElementById('regConflict').style.display = 'none';
-            $('#terminalRegModal').modal('show');
-        }
-
-        function hideRegistrationModal() {
-            regModalOpen = false;
-            $('#terminalRegModal').modal('hide');
-            document.getElementById('registrationOverlay').style.display = 'none';
-        }
-
-        function setRegLoading(loading) {
-            var btn = document.getElementById('regSubmitBtn');
-            var spinner = document.getElementById('regSpinner');
-            var forceBtn = document.getElementById('regForceBtn');
-            btn.disabled = loading;
-            forceBtn.disabled = loading;
-            spinner.style.display = loading ? 'inline' : 'none';
-        }
-
-        function registerTerminal(forceUpdate) {
-            var adminLogin = document.getElementById('regAdminLogin').value.trim();
-            var adminPassword = document.getElementById('regAdminPassword').value;
-            var terminalName = document.getElementById('regTerminalName').value.trim();
-
-            if (!adminLogin || !adminPassword || !terminalName) {
-                document.getElementById('regError').textContent = 'All fields are required.';
-                document.getElementById('regError').style.display = 'block';
-                return;
-            }
-
-            setRegLoading(true);
-            document.getElementById('regError').style.display = 'none';
-            document.getElementById('regConflict').style.display = 'none';
-
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', '/register-terminal', true);
-            xhr.setRequestHeader('Content-Type', 'application/json');
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState !== 4) return;
-                setRegLoading(false);
-
-                if (xhr.status === 200) {
-                    try {
-                        var data = JSON.parse(xhr.responseText);
-                        saveTerminalCredentials(data.auth_token, data.terminal_name);
-                        hideRegistrationModal();
-                        rfidInput.focus();
-                    } catch(e) {
-                        document.getElementById('regError').textContent = 'Invalid server response.';
-                        document.getElementById('regError').style.display = 'block';
-                    }
-                    return;
-                }
-
-                if (xhr.status === 409 && !forceUpdate) {
-                    document.getElementById('regConflict').style.display = 'block';
-                    return;
-                }
-
-                try {
-                    var errData = JSON.parse(xhr.responseText);
-                    document.getElementById('regError').textContent = errData.error || 'Registration failed.';
-                } catch(e) {
-                    document.getElementById('regError').textContent = 'Registration failed.';
-                }
-                document.getElementById('regError').style.display = 'block';
-            };
-            xhr.send(JSON.stringify({
-                admin_login: adminLogin,
-                admin_password: adminPassword,
-                terminal_name: terminalName,
-                force_update: !!forceUpdate
-            }));
-        }
-
-        document.getElementById('terminalRegForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            registerTerminal(false);
-        });
-
-        document.getElementById('regForceBtn').addEventListener('click', function() {
-            registerTerminal(true);
-        });
-
-        function handleUnauthorized() {
-            clearTerminalCredentials();
-            showRegistrationModal();
-        }
-
-        // ---- RFID & focus setup (must be before registration check) ----
-        var rfidInput = document.getElementById('rfidInput');
-        var cardIdDisplay = document.getElementById('cardIdDisplay');
-        var readerInstructionImage = document.getElementById('readerInstructionImage');
-
-        var regModalOpen = false;
-        var animationInProgress = false;
-
-        $('#terminalRegModal').on('shown.bs.modal', function() {
-            regModalOpen = true;
-        });
-        $('#terminalRegModal').on('hidden.bs.modal', function() {
-            regModalOpen = false;
-            rfidInput.focus();
-            applyPendingThemeState();
-        });
-
-        // ---- On page load: check registration ----
-        if (!isTerminalRegistered()) {
-            showRegistrationModal();
-        }
-
-        var rfidData = '';
-
-        rfidInput.addEventListener('keydown', function(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-
-                rfidData = rfidInput.value.trim();
-                if (!rfidData) {
-                    rfidInput.value = '';
-                    return;
-                }
-
-                if (!isTerminalRegistered()) {
-                    rfidInput.value = '';
-                    rfidData = '';
-                    showRegistrationModal();
-                    return;
-                }
-
-                var payload = {
-                    visit_key: rfidData,
-                    signed_in: true
-                };
-
-                rfidInput.value = '';
-                rfidData = '';
-
-                var xhr = new XMLHttpRequest();
-                xhr.open('POST', '/find-and-track', true);
-                xhr.setRequestHeader('Content-Type', 'application/json');
-                xhr.setRequestHeader('Terminal-Name', terminalCredentials.terminalName);
-                xhr.setRequestHeader('Authorization', 'Bearer ' + terminalCredentials.authToken);
-                xhr.onreadystatechange = function() {
-                    if (xhr.readyState !== 4) return;
-
-                    if (xhr.status === 401) {
-                        handleUnauthorized();
-                        return;
-                    }
-
-                    if (xhr.status === 404) {
-                        var alertEl = document.getElementById('error-message');
-                        alertEl.textContent = 'No visitor data found for the given ID. Please try again or contact the administrator.';
-                        readerInstructionImage.style.display = 'none';
-                        alertEl.style.display = 'block';
-                        setTimeout(function() {
-                            alertEl.style.display = 'none';
-                            readerInstructionImage.style.display = 'block';
-                        }, 1500);
-                        return;
-                    }
-
-                    if (xhr.status !== 200) {
-                        document.getElementById('student-info').style.display = 'none';
-                        alert('Error fetching student data');
-                        return;
-                    }
-
-                    try {
-                        var data = JSON.parse(xhr.responseText);
-                    } catch(e) {
-                        alert('Error parsing server response');
-                        return;
-                    }
-
-                    readerInstructionImage.style.display = 'none';
-
-                    var studentData = data;
-                    document.getElementById('student-image').src = studentData.visitor.image;
-                    document.getElementById('student-surname').textContent = studentData.visitor.surname;
-                    document.getElementById('student-name').textContent = studentData.visitor.name;
-
-                    var studentInfo = document.getElementById('student-info');
-                    var successMessage = document.getElementById('success-message');
-                    var logoImage = document.getElementById('logo-image');
-                    var welcomeIcon = document.getElementById('welcome');
-
-                    studentInfo.style.display = 'flex';
-                    successMessage.style.display = 'block';
-                    logoImage.style.display = 'none';
-                    welcomeIcon.style.display = 'block';
-                    animationInProgress = true;
-                    if (studentData.track_type === 'sign-in') {
-                        welcomeIcon.src = welcomeAnimationUrl;
-                    } else {
-                        welcomeIcon.src = goodbyeAnimationUrl;
-                    }
-
-                    var displayDuration = studentData.track_type === 'sign-in' ? welcomeDurationMs : goodbyeDurationMs;
-                    setTimeout(function() {
-                        welcomeIcon.style.display = 'none';
-                        logoImage.style.display = 'block';
-                        successMessage.style.display = 'none';
-                        studentInfo.style.display = 'none';
-                        readerInstructionImage.style.display = 'block';
-                        animationInProgress = false;
-                        applyPendingThemeState();
-                    }, displayDuration);
-                };
-                xhr.send(JSON.stringify(payload));
-            }
-        });
-
-        window.addEventListener('focus', function() {
-            if (!regModalOpen) rfidInput.focus();
-        });
-
-        if (!regModalOpen) rfidInput.focus();
-
-        setInterval(function() {
-            if (!regModalOpen && document.activeElement !== rfidInput) {
-                rfidInput.focus();
-            }
-        }, 1000);
-
-        // ---- Theme auto-refresh ----
-        // This page is a kiosk: it stays open for weeks and never reloads itself, so
-        // without this poll an admin's theme change would never show up here.
-
-        var pendingThemeState = null;
-        var themeApplyInFlight = false;
-
-        function canApplyThemeInPlace() {
-            return !animationInProgress;
-        }
-
-        function canReloadPage() {
-            return !regModalOpen && !animationInProgress;
-        }
-
-        function preloadImage(url, onDone) {
-            if (!url) {
-                onDone(false);
-                return;
-            }
-            var img = new Image();
-            img.onload = function() { onDone(true); };
-            img.onerror = function() { onDone(false); };
-            img.src = url;
-        }
-
-        // The favicon is replaced element-and-all: mutating href on the existing
-        // <link> is ignored by some browsers.
-        function applyFavicon(url) {
-            if (!url) return;
-            var existing = document.querySelector('link[rel="icon"]');
-            var link = document.createElement('link');
-            link.rel = 'icon';
-            link.type = 'image/png';
-            link.setAttribute('sizes', '16x16');
-            link.href = url;
-            if (existing && existing.parentNode) {
-                existing.parentNode.removeChild(existing);
-            }
-            document.head.appendChild(link);
-        }
-
-        // applyThemeState swaps in a new theme and reports through onDone whether
-        // every image it needed actually loaded. Each image is applied as soon as it
-        // decodes, so a partial failure still moves the terminal as far towards the
-        // new theme as it can — but the caller is told, so the rest can be retried.
-        function applyThemeState(state, onDone) {
-            // Durations need no download, so they apply unconditionally.
-            welcomeDurationMs = state.welcome_duration_ms;
-            goodbyeDurationMs = state.goodbye_duration_ms;
-
-            var logoImage = document.getElementById('logo-image');
-            // Every image is fetched before it is used: the animations so the next
-            // scan does not wait on a download, the logo so the kiosk never shows a
-            // blank gap while the file arrives.
-            var targets = [
-                { url: state.favicon_url, apply: function() {
-                    applyFavicon(state.favicon_url);
-                } },
-                { url: state.logo_background_url, apply: function() {
-                    if (logoImage) logoImage.src = state.logo_background_url;
-                } },
-                { url: state.welcome_animation_url, apply: function() {
-                    welcomeAnimationUrl = state.welcome_animation_url;
-                } },
-                { url: state.goodbye_animation_url, apply: function() {
-                    goodbyeAnimationUrl = state.goodbye_animation_url;
-                } }
-            ];
-
-            var loadable = [];
-            for (var i = 0; i < targets.length; i++) {
-                if (targets[i].url) loadable.push(targets[i]);
-            }
-            if (loadable.length === 0) {
-                onDone(true);
-                return;
-            }
-
-            var remaining = loadable.length;
-            var everythingLoaded = true;
-            for (var j = 0; j < loadable.length; j++) {
-                (function(target) {
-                    preloadImage(target.url, function(ok) {
-                        if (ok) {
-                            target.apply();
-                        } else {
-                            everythingLoaded = false;
-                        }
-                        remaining -= 1;
-                        if (remaining === 0) onDone(everythingLoaded);
-                    });
-                })(loadable[j]);
-            }
-        }
-
-        function applyPendingThemeState() {
-            // themeApplyInFlight stops a retry from racing an apply that is still
-            // waiting on its images.
-            if (!pendingThemeState || themeApplyInFlight) return;
-
-            if (pendingThemeState.app_version !== appVersion) {
-                if (!canReloadPage()) return;
-                location.reload();
-                return;
-            }
-
-            if (!canApplyThemeInPlace()) return;
-
-            var state = pendingThemeState;
-            themeApplyInFlight = true;
-            applyThemeState(state, function(everythingLoaded) {
-                themeApplyInFlight = false;
-                if (!everythingLoaded) {
-                    // An image failed to download. Leave the state pending and the
-                    // revision untouched so the next poll tries again: recording the
-                    // revision here would mark the change as handled and strand the
-                    // terminal on stale artwork until the next theme edit or reload.
-                    return;
-                }
-                // A newer state may have arrived while the images were loading; only
-                // clear the one that was actually applied.
-                if (pendingThemeState === state) {
-                    pendingThemeState = null;
-                }
-                themeRevision = state.revision;
-            });
-        }
-
-        function handleThemeState(state) {
-            if (!state || !state.revision) return;
-            if (state.app_version === appVersion && state.revision === themeRevision) {
-                return; // nothing changed
-            }
-            pendingThemeState = state;
-            applyPendingThemeState();
-        }
-
-        function pollThemeState() {
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', '/theme-state', true);
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState !== 4) return;
-                // Any failure is ignored on purpose: a server hiccup must never
-                // change what the terminal is showing.
-                if (xhr.status !== 200) return;
-                try {
-                    handleThemeState(JSON.parse(xhr.responseText));
-                } catch (e) {
-                    // Malformed payload: leave the current theme alone.
-                }
-            };
-            xhr.send();
-        }
-
-        setInterval(pollThemeState, themePollMs);
     </script>
+    <script src="/assets/js/reader.js?v={{ .AppVersion }}"></script>
 </body>
 
 </html>

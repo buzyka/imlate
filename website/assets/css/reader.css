@@ -1,0 +1,384 @@
+/* Kiosk layout for the tracking page.
+ *
+ * The page runs full-screen in a browser kiosk on Raspberry Pi panels as small
+ * as 800x480 and on 1920x1080 displays. It must fill the viewport exactly:
+ * never scroll, never stack the two panes, and never crop artwork. Everything
+ * below is sized from the viewport rather than from the content, so the same
+ * rules cover both screens without a breakpoint that rearranges the layout.
+ */
+
+/* ---- Page shell ---- */
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+    /* A kiosk has no pointer to scroll with, and a stray scrollbar steals ~15px
+       from an 800px-wide panel and reflows both panes. The layout below is
+       built to fit, so an overflow here is a bug rather than something the user
+       is expected to scroll away. */
+    overflow: hidden;
+}
+
+body {
+    background-color: #fff;
+    /* Bootstrap Reboot sets 1rem, which is too big for the right-hand pane on a
+       480px-tall panel. vmin tracks the smaller viewport axis — the height on
+       both 800x480 and 1920x1080 — so type shrinks on the Pi and grows on a
+       large display without a breakpoint doing it by hand. */
+    font-size: clamp(0.75rem, 1.8vmin, 1.15rem);
+}
+
+/* The off-screen RFID capture field. The reader is a keyboard wedge that types
+   into it, so it must stay focusable: neither display:none nor
+   visibility:hidden may be used. Unlike left:-9999px, a 1px fixed box cannot
+   interact with the overflow rules above. */
+#rfidInput {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+}
+
+/* ---- Two-pane shell ---- */
+
+#kiosk {
+    height: 100vh;   /* fallback for older Chromium builds on Pi images */
+    height: 100dvh;  /* honours browser chrome where dvh is supported */
+    display: flex;
+    flex-direction: row;
+    /* The hard requirement: the panes stay side by side at every width. Nothing
+       in this file may ever wrap them onto a second line. */
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: clamp(6px, 1.5vmin, 24px);
+    padding: clamp(6px, 1.5vmin, 20px);
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.kiosk-pane {
+    flex: 1 1 50%;
+    /* The most important rule on this page. A flex item defaults to
+       min-width:auto, i.e. it refuses to shrink below its content's min-content
+       width. A 657px-wide instruction image or a long surname would therefore
+       force its pane wider than half the row and push the layout past 800px,
+       producing exactly the horizontal scrollbar this design must not have. */
+    min-width: 0;
+    /* The same rule on the block axis: without it a tall child sets the pane's
+       min-height and the pane grows past the viewport instead of letting the
+       child shrink. */
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ---- Left pane: logo / welcome-goodbye animation ---- */
+
+#logo-block {
+    align-items: center;
+    justify-content: center;
+}
+
+/* ---- Right pane: registration prompt, reader image, visitor card ---- */
+
+#info-pane {
+    justify-content: flex-start;
+    gap: clamp(4px, 1vmin, 12px);
+}
+
+.pane-header {
+    flex: 0 0 auto; /* fixed chrome: the stage below absorbs all leftover space */
+}
+
+.pane-title {
+    font-size: clamp(1.05rem, 3.2vmin, 2.2rem);
+    line-height: 1.2;
+    margin: 0 0 0.2em;
+}
+
+#cardIdDisplay {
+    font-size: clamp(0.8rem, 2.2vmin, 1.5rem);
+    margin: 0;
+    color: #444;
+}
+
+/* The stage is the single slot that the reader image, the alerts and the
+   visitor card share. Putting all of them in one flex box is what stops the
+   page from jumping when reader.js swaps one for another. */
+.pane-stage {
+    flex: 1 1 auto;
+    /* Without min-height:0 the stage's content sets its height and it pushes
+       the header off-screen; with it, the stage is exactly "whatever is left",
+       which is what finally makes max-height:100% on its children mean
+       something. */
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(4px, 1vmin, 10px);
+    overflow: hidden;
+}
+
+/* ---- Artwork ---- */
+
+#logo-image,
+#welcome,
+#readerInstructionImage,
+#student-image {
+    display: block;
+    /* max-* combined with width/height:auto caps every image at its pane but
+       never upscales a 564x306 logo to fill a 1080p display, which would look
+       soft. The percentages resolve because every ancestor up to #kiosk has a
+       definite height. */
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    /* On #student-image this is load-bearing: the photo comes from the database
+       at an unknown aspect ratio and contain letterboxes it instead of letting
+       the flex cross-axis stretch distort it. On the rest it is a guard, so
+       that a future fixed-size rule can never crop the artwork. */
+    object-fit: contain;
+    /* Flex items default to flex-basis:auto; being explicit stops the intrinsic
+       size from winning over max-height. */
+    flex: 0 1 auto;
+    min-width: 0;
+    min-height: 0;
+}
+
+/* These three start hidden and are revealed by reader.js. The rules must sit
+   after the shared artwork block above, which gives every image display:block
+   at the same specificity — declared earlier, they would lose the cascade and
+   the welcome animation would show on page load. */
+#welcome,
+#student-info,
+.pane-stage .alert {
+    display: none;
+}
+
+/* ---- Alerts ---- */
+
+.pane-stage .alert {
+    flex: 0 0 auto;
+    width: 100%;
+    margin: 0; /* the stage's gap owns the spacing */
+    padding: clamp(4px, 1.2vmin, 12px) clamp(8px, 1.6vmin, 16px);
+    font-size: clamp(0.75rem, 1.9vmin, 1.1rem);
+    text-align: center;
+}
+
+/* ---- Visitor card ---- */
+
+/* reader.js reveals this as flex on a successful scan. */
+#student-info {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
+    align-items: center;
+    gap: clamp(6px, 2vmin, 20px);
+}
+
+.visitor-photo {
+    /* It may shrink but never grows past 42% of the pane, so the name column
+       always keeps room even for a very wide portrait. */
+    flex: 0 1 42%;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#student-image {
+    align-self: center;
+    border-radius: 6px;
+}
+
+.visitor-fields {
+    flex: 1 1 58%;
+    min-width: 0;
+}
+
+.visitor-fields h3 {
+    font-size: clamp(0.95rem, 2.6vmin, 1.75rem);
+    margin: 0 0 0.3em;
+}
+
+.visitor-fields p {
+    margin: 0 0 0.25rem;
+    /* A long unbroken surname would otherwise set the pane's min-content width
+       and, together with min-width:0 above, silently clip. */
+    overflow-wrap: anywhere;
+}
+
+/* ---- Terminal registration modal ---- */
+
+.registration-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    /* Bootstrap 5 stacks the backdrop at 1050 and the modal at 1055. 1040 keeps
+       this dim layer underneath both. */
+    z-index: 1040;
+    display: none;
+}
+
+#terminalRegModal .modal-dialog {
+    max-width: 420px;
+    /* Vertical placement comes from .modal-dialog-centered in the markup. A
+       fixed top margin overflowed a 480px-tall panel. */
+}
+
+#terminalRegModal .modal-content {
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    padding: 30px 35px 25px;
+}
+
+#terminalRegModal .reg-icon {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+#terminalRegModal .reg-icon svg {
+    width: 56px;
+    height: 56px;
+}
+
+#terminalRegModal .reg-title {
+    text-align: center;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 1.35rem;
+    color: #333;
+    margin-bottom: 22px;
+}
+
+/* Bootstrap 5 dropped .form-group, so the markup uses .reg-field and this page
+   no longer depends on a Bootstrap class that may be renamed again. */
+#terminalRegModal .reg-field {
+    margin-bottom: 1rem;
+}
+
+#terminalRegModal .reg-field label {
+    font-size: 0.92rem;
+    color: #555;
+    margin-bottom: 4px;
+}
+
+#terminalRegModal .reg-field label .req {
+    color: #e44;
+    margin-right: 3px;
+}
+
+#terminalRegModal .form-control {
+    border: 1px solid #c8d6e5;
+    background-color: #f0f6ff;
+    border-radius: 3px;
+    padding: 8px 12px;
+    font-size: 0.95rem;
+}
+
+#terminalRegModal .form-control:focus {
+    border-color: #a0bfe0;
+    /* Overrides Bootstrap 5's own focus ring, which is larger. */
+    box-shadow: 0 0 0 2px rgba(160, 191, 224, 0.25);
+    background-color: #fff;
+}
+
+#terminalRegModal .btn-register {
+    width: 100%;
+    background-color: #d6e9f8;
+    color: #2e8b57;
+    border: 1px solid #bdd8ed;
+    font-weight: 600;
+    padding: 9px;
+    font-size: 1rem;
+    border-radius: 3px;
+    margin-top: 8px;
+}
+
+#terminalRegModal .btn-register:hover {
+    background-color: #c4ddf2;
+}
+
+#terminalRegModal .btn-register:disabled {
+    opacity: 0.6;
+}
+
+#regSpinner {
+    display: none;
+    text-align: center;
+    color: #888;
+    font-size: 0.9rem;
+    margin-top: 8px;
+}
+
+/* ---- Short panels (800x480, 1024x600) ---- */
+/* Keyed on height rather than width: the constraint on a Pi panel is vertical.
+   There is deliberately no rule here that changes flex-direction — the two
+   panes must stay side by side at every size. */
+@media (max-height: 560px) {
+    #kiosk {
+        padding: 6px;
+        gap: 6px;
+    }
+
+    .pane-title {
+        margin-bottom: 0.1em;
+    }
+
+    .visitor-fields p {
+        margin-bottom: 0.1rem;
+    }
+
+    /* At full padding the registration card is roughly 420px tall, i.e. most of
+       a 480px panel. Trim it so it sits comfortably inside the viewport and the
+       modal's own overflow-y never has to engage. */
+    #terminalRegModal .modal-dialog {
+        max-width: 380px;
+        margin: 8px auto;
+    }
+
+    #terminalRegModal .modal-content {
+        padding: 12px 18px 14px;
+    }
+
+    #terminalRegModal .reg-icon svg {
+        width: 32px;
+        height: 32px;
+    }
+
+    #terminalRegModal .reg-title {
+        font-size: 1rem;
+        margin-bottom: 10px;
+    }
+
+    #terminalRegModal .reg-field {
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* ---- Narrow panels ---- */
+/* Only the visitor card's internal split is tightened; the outer panes keep
+   their even split. */
+@media (max-width: 900px) {
+    #student-info {
+        gap: 6px;
+    }
+
+    .visitor-photo {
+        flex: 0 1 38%;
+    }
+}
