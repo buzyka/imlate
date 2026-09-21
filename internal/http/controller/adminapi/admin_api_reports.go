@@ -22,8 +22,8 @@ type ReportsVisitsResponse = usecase.ReportsVisitsResponse
 // @Param        is_student  query     boolean false  "Filter by student flag"
 // @Param        year_group  query     integer false  "Filter by year group"
 // @Param        sign_status query     string  false  "Filter by sign status (not_signed, signed_in, signed_out)"
-// @Param        page        query     integer false  "Page number (default 1)"
-// @Param        limit       query     integer false  "Records per page (default 100, max 1000)"
+// @Param        page        query     integer false  "Page number (default 1, max 1000000)"
+// @Param        limit       query     integer false  "Records per page (default 100, min 1, max 1000)"
 // @Success      200  {object}  ReportsVisitsResponse
 // @Failure      400  {object}  ErrorResponse
 // @Failure      500  {object}  ErrorResponse

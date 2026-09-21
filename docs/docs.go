@@ -213,13 +213,13 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "description": "Page number (default 1)",
+                        "description": "Page number (default 1, max 1000000)",
                         "name": "page",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "description": "Records per page (default 100, max 1000)",
+                        "description": "Records per page (default 100, min 1, max 1000)",
                         "name": "limit",
                         "in": "query"
                     }
@@ -1882,7 +1882,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "limit": {
-                    "description": "Limit is the page size. Defaults to 100 when omitted; must not exceed 1000.",
+                    "description": "Limit is the page size. Defaults to 100 when omitted or 0 or less; must not exceed 1000.",
                     "type": "integer",
                     "maximum": 1000
                 },
@@ -1890,7 +1890,9 @@ const docTemplate = `{
                     "$ref": "#/definitions/github_com_buzyka_imlate_internal_usecase_adminapi.PostReportsVisitsOrder"
                 },
                 "page": {
-                    "type": "integer"
+                    "description": "Page is the 1-based page number. Values of 0 or less fall back to 1; must not exceed 1000000.",
+                    "type": "integer",
+                    "maximum": 1000000
                 },
                 "to": {
                     "type": "string"

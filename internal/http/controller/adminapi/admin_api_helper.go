@@ -46,9 +46,13 @@ func readUploadedFormFile(c *gin.Context, fieldName string, maxSize int64) (file
 	return fileHeader.Filename, data, true
 }
 
+// parseVisitorID reads the ":id" path segment as a visitor ID. It parses with
+// an explicit 32-bit size so that a value which does not fit an int32 is
+// rejected instead of silently wrapping around: strconv.Atoi would accept
+// "4294967297" on a 64-bit build and int32() would turn it into visitor 1.
 func parseVisitorID(c *gin.Context) (int32, bool) {
 	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
+	id, err := strconv.ParseInt(idParam, 10, 32)
 	if err != nil || id <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid visitor ID"})
 		return 0, false

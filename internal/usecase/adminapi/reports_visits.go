@@ -12,6 +12,11 @@ import (
 const (
 	DefaultReportsVisitsPageSize = 100
 	MaxReportsVisitsPageSize     = 1000
+	// MaxReportsVisitsPage bounds the page number. The repository hands MySQL an
+	// OFFSET of (page-1)*pageSize; without an upper bound a large page from the
+	// client overflows that multiplication and produces a negative OFFSET, which
+	// the driver rejects with a 500. A million pages is far beyond any real report.
+	MaxReportsVisitsPage = 1_000_000
 )
 
 type ReportsVisitsOption func(*reportsVisitsOptions)
@@ -171,6 +176,14 @@ func (a *AdminAPI) validateReportsVisitsRequest(from, to *time.Time, opts *repor
 
 	if opts.page <= 0 {
 		return fmt.Errorf("%w: 'page' must be a positive integer", ErrInvalidRequestFormat)
+	}
+
+	if opts.page > MaxReportsVisitsPage {
+		return fmt.Errorf("%w: 'page' must not exceed %d", ErrInvalidRequestFormat, MaxReportsVisitsPage)
+	}
+
+	if opts.pageSize <= 0 {
+		return fmt.Errorf("%w: 'limit' must be a positive integer", ErrInvalidRequestFormat)
 	}
 
 	if opts.pageSize > MaxReportsVisitsPageSize {
