@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/buzyka/imlate/internal/config"
+	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/erp"
 	"github.com/buzyka/imlate/internal/domain/provider"
 	"github.com/buzyka/imlate/internal/infrastructure/db"
@@ -102,6 +103,14 @@ func Build(cfg *config.Config) {
 		a := &adminapi.AdminAPI{}
 		container.MustFill(container.Global, a)
 		return a
+	})
+
+	// Registered before the fire list service, which is filled eagerly and
+	// depends on it. Both the admin controller and the public fire list must
+	// get this same instance: the admin writes the switch, the public page
+	// reads it.
+	container.MustSingleton(container.Global, func() *entity.FireAlarmState {
+		return &entity.FireAlarmState{}
 	})
 
 	container.MustSingleton(container.Global, func() *firelistview.Service {

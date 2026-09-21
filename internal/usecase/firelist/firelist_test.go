@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/provider"
 	"github.com/buzyka/imlate/internal/domain/provider/providertest"
 	"github.com/buzyka/imlate/internal/version"
@@ -14,9 +15,16 @@ import (
 	"go.uber.org/zap"
 )
 
+// newService returns a service whose alarm is already running, because every
+// test below is about what the roster does once it is allowed to be read. The
+// gate itself is covered separately by the TestGetFireList_Alarm* tests.
 func newService() (*providertest.VisitDailyReportRepositoryMock, *Service) {
 	repo := new(providertest.VisitDailyReportRepositoryMock)
-	return repo, &Service{Reports: repo, Logger: zap.NewNop().Sugar()}
+	alarm := &entity.FireAlarmState{}
+	if err := alarm.Enable(time.Hour); err != nil {
+		panic(err)
+	}
+	return repo, &Service{Reports: repo, Alarm: alarm, Logger: zap.NewNop().Sugar()}
 }
 
 func row(id int32, name, surname, status string) provider.VisitReportRow {
@@ -330,7 +338,9 @@ func TestGetFireList_EnsureDayRowsErrorIsNotFatal(t *testing.T) {
 // best-effort warning into a panic on the evacuation page.
 func TestGetFireList_NilLoggerDoesNotPanic(t *testing.T) {
 	repo := new(providertest.VisitDailyReportRepositoryMock)
-	svc := &Service{Reports: repo}
+	alarm := &entity.FireAlarmState{}
+	require.NoError(t, alarm.Enable(time.Hour))
+	svc := &Service{Reports: repo, Alarm: alarm}
 
 	repo.On("EnsureDayRows", mock.Anything).Return(errors.New("insert failed"))
 	repo.On("GetVisitReport", mock.Anything, mock.Anything, mock.Anything).Return(result(), nil)
@@ -368,4 +378,79 @@ func TestErrorPageData(t *testing.T) {
 			assert.Empty(t, data.Rows)
 		})
 	}
+}
+
+// The roster names every child in a class and says who is in the building, so
+// with no alarm running nothing may reach the database at all — not even the
+// EnsureDayRows write, which an anonymous request would otherwise be able to
+// trigger. Asserting "no repository calls" is the real leak test; asserting
+// the error alone would still pass if the query ran and the result was dropped.
+func TestGetFireList_AlarmOffReturnsNoDataAndTouchesNoRepository(t *testing.T) {
+	for _, gradeParam := range []string{"5", "staff", "abc"} {
+		t.Run("grade="+gradeParam, func(t *testing.T) {
+			repo := new(providertest.VisitDailyReportRepositoryMock)
+			svc := &Service{Reports: repo, Alarm: &entity.FireAlarmState{}, Logger: zap.NewNop().Sugar()}
+
+			data, err := svc.GetFireList(gradeParam)
+
+			require.ErrorIs(t, err, ErrAlarmInactive)
+			assert.Equal(t, FireListPageData{}, data)
+			repo.AssertNotCalled(t, "EnsureDayRows", mock.Anything)
+			repo.AssertNotCalled(t, "GetVisitReport", mock.Anything, mock.Anything, mock.Anything)
+		})
+	}
+}
+
+// An expired alarm must close the page exactly like a switched-off one.
+func TestGetFireList_ExpiredAlarmReturnsNoData(t *testing.T) {
+	repo := new(providertest.VisitDailyReportRepositoryMock)
+	alarm := &entity.FireAlarmState{}
+	require.NoError(t, alarm.Enable(time.Millisecond))
+	svc := &Service{Reports: repo, Alarm: alarm, Logger: zap.NewNop().Sugar()}
+
+	time.Sleep(5 * time.Millisecond)
+
+	_, err := svc.GetFireList("5")
+
+	require.ErrorIs(t, err, ErrAlarmInactive)
+	repo.AssertNotCalled(t, "GetVisitReport", mock.Anything, mock.Anything, mock.Anything)
+}
+
+// The gate is checked before the grade is parsed, so a bad URL must not reveal
+// that it is bad while the page is closed.
+func TestGetFireList_AlarmGateOutranksGradeValidation(t *testing.T) {
+	repo := new(providertest.VisitDailyReportRepositoryMock)
+	svc := &Service{Reports: repo, Alarm: &entity.FireAlarmState{}, Logger: zap.NewNop().Sugar()}
+
+	_, err := svc.GetFireList("not-a-grade")
+
+	require.ErrorIs(t, err, ErrAlarmInactive)
+	assert.NotErrorIs(t, err, ErrInvalidGrade)
+}
+
+func TestInactivePageData(t *testing.T) {
+	data := InactivePageData("7")
+
+	assert.True(t, data.AlarmInactive)
+	assert.Equal(t, "7", data.GradeParam)
+	assert.Equal(t, "Grade 7", data.GradeLabel)
+	assert.Equal(t, version.Version, data.AppVersion)
+	assert.NotEmpty(t, data.Day)
+	assert.NotEmpty(t, data.GeneratedAt)
+	// Nothing about anyone may ride along on the page that refuses the roster.
+	assert.Empty(t, data.Rows)
+	assert.Equal(t, FireListCounts{}, data.Counts)
+	assert.Empty(t, data.Error)
+}
+
+// A container that failed to inject the alarm must leave the roster closed
+// rather than panicking into a 500 or, worse, defaulting to open.
+func TestGetFireList_NilAlarmClosesTheRoster(t *testing.T) {
+	repo := new(providertest.VisitDailyReportRepositoryMock)
+	svc := &Service{Reports: repo, Logger: zap.NewNop().Sugar()}
+
+	_, err := svc.GetFireList("5")
+
+	require.ErrorIs(t, err, ErrAlarmInactive)
+	repo.AssertNotCalled(t, "GetVisitReport", mock.Anything, mock.Anything, mock.Anything)
 }

@@ -190,10 +190,6 @@ definitions:
   github_com_buzyka_imlate_internal_usecase_theme.ReaderPageData:
     properties:
       app_version:
-        description: |-
-          AppVersion lets the page tell a theme change from a deploy: on a new
-          version the template itself may have changed, which an in-place theme
-          update cannot pick up, so the page reloads instead.
         type: string
       favicon_url:
         type: string
@@ -207,11 +203,6 @@ definitions:
         description: PollSeconds is how often the page should poll for changes.
         type: integer
       revision:
-        description: |-
-          Revision fingerprints the six fields above, so it changes if and only if
-          something the page actually renders changed. The page compares the value
-          baked into it at render time against the one the endpoint reports and only
-          refreshes its theme when they differ.
         type: string
       welcome_animation_url:
         type: string
@@ -282,6 +273,17 @@ definitions:
   internal_http_controller_adminapi.ErrorResponse:
     properties:
       error:
+        type: string
+    type: object
+  internal_http_controller_adminapi.FireAlarmResponse:
+    properties:
+      default_duration:
+        type: integer
+      enabled:
+        type: boolean
+      remaining_seconds:
+        type: integer
+      started_at:
         type: string
     type: object
   internal_http_controller_adminapi.ManualTrackRequest:
@@ -390,6 +392,15 @@ definitions:
         type: integer
       total_pages:
         type: integer
+    type: object
+  internal_http_controller_adminapi.SetFireAlarmRequest:
+    properties:
+      default_duration:
+        type: integer
+      enabled:
+        type: boolean
+    required:
+    - enabled
     type: object
   internal_http_controller_adminapi.UpdatePasswordRequest:
     properties:
@@ -545,6 +556,55 @@ paths:
       summary: Get admin dashboard greeting
       tags:
       - admin-dashboard
+  /admin-api/fire-alarm:
+    get:
+      description: |-
+        Returns whether a fire alarm is running, when it started, how long it lasts and
+        how much of that window is left. Expiration is evaluated before the status is
+        returned, so an elapsed alarm is never reported as active.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.FireAlarmResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get fire alarm status
+      tags:
+      - admin-fire-alarm
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Switches the fire alarm on for a bounded window or off immediately. While it is
+        on, the public /firelist/{grade} page serves evacuation rosters; otherwise that
+        page returns 403. default_duration is in seconds, is mandatory when enabling,
+        and may not exceed 24 hours.
+      parameters:
+      - description: Fire alarm request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_http_controller_adminapi.SetFireAlarmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.FireAlarmResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Set fire alarm status
+      tags:
+      - admin-fire-alarm
   /admin-api/reports/visits:
     get:
       deprecated: true

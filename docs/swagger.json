@@ -87,6 +87,74 @@
                 }
             }
         },
+        "/admin-api/fire-alarm": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns whether a fire alarm is running, when it started, how long it lasts and\nhow much of that window is left. Expiration is evaluated before the status is\nreturned, so an elapsed alarm is never reported as active.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-fire-alarm"
+                ],
+                "summary": "Get fire alarm status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.FireAlarmResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Switches the fire alarm on for a bounded window or off immediately. While it is\non, the public /firelist/{grade} page serves evacuation rosters; otherwise that\npage returns 403. default_duration is in seconds, is mandatory when enabling,\nand may not exceed 24 hours.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-fire-alarm"
+                ],
+                "summary": "Set fire alarm status",
+                "parameters": [
+                    {
+                        "description": "Fire alarm request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.SetFireAlarmRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.FireAlarmResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/admin-api/reports/visits": {
             "get": {
                 "security": [
@@ -1605,7 +1673,6 @@
             "type": "object",
             "properties": {
                 "app_version": {
-                    "description": "AppVersion lets the page tell a theme change from a deploy: on a new\nversion the template itself may have changed, which an in-place theme\nupdate cannot pick up, so the page reloads instead.",
                     "type": "string"
                 },
                 "favicon_url": {
@@ -1625,7 +1692,6 @@
                     "type": "integer"
                 },
                 "revision": {
-                    "description": "Revision fingerprints the six fields above, so it changes if and only if\nsomething the page actually renders changed. The page compares the value\nbaked into it at render time against the one the endpoint reports and only\nrefreshes its theme when they differ.",
                     "type": "string"
                 },
                 "welcome_animation_url": {
@@ -1732,6 +1798,23 @@
             "type": "object",
             "properties": {
                 "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_http_controller_adminapi.FireAlarmResponse": {
+            "type": "object",
+            "properties": {
+                "default_duration": {
+                    "type": "integer"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "remaining_seconds": {
+                    "type": "integer"
+                },
+                "started_at": {
                     "type": "string"
                 }
             }
@@ -1884,6 +1967,20 @@
                 },
                 "total_pages": {
                     "type": "integer"
+                }
+            }
+        },
+        "internal_http_controller_adminapi.SetFireAlarmRequest": {
+            "type": "object",
+            "required": [
+                "enabled"
+            ],
+            "properties": {
+                "default_duration": {
+                    "type": "integer"
+                },
+                "enabled": {
+                    "type": "boolean"
                 }
             }
         },

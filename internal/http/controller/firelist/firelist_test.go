@@ -7,7 +7,9 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
+	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/provider"
 	"github.com/buzyka/imlate/internal/domain/provider/providertest"
 	firelistview "github.com/buzyka/imlate/internal/usecase/firelist"
@@ -26,11 +28,17 @@ func TestMain(m *testing.M) {
 // newTestController wires a real usecase Service onto a repository mock: the
 // controller field is a concrete *Service, and the golobby container fills it
 // by concrete type, so introducing an interface here would diverge from what
-// actually runs in production.
+// actually runs in production. The alarm is switched on, because every test
+// using this helper is about what the handler does once the roster is allowed
+// to be read; the closed case has its own test.
 func newTestController() (*providertest.VisitDailyReportRepositoryMock, *FireListController) {
 	repo := new(providertest.VisitDailyReportRepositoryMock)
+	alarm := &entity.FireAlarmState{}
+	if err := alarm.Enable(time.Hour); err != nil {
+		panic(err)
+	}
 	return repo, &FireListController{
-		FireList: &firelistview.Service{Reports: repo, Logger: zap.NewNop().Sugar()},
+		FireList: &firelistview.Service{Reports: repo, Alarm: alarm, Logger: zap.NewNop().Sugar()},
 		Logger:   zap.NewNop().Sugar(),
 	}
 }
@@ -42,7 +50,8 @@ func performRequest(handler gin.HandlerFunc, path string) *httptest.ResponseReco
 	router.SetHTMLTemplate(template.Must(template.New("firelist.html").Parse(
 		`grade={{ .GradeParam }} label={{ .GradeLabel }} day={{ .Day }} at={{ .GeneratedAt }} ` +
 			`v={{ .AppVersion }} in={{ .Counts.SignedIn }} out={{ .Counts.SignedOut }} ` +
-			`none={{ .Counts.NoStatus }} total={{ .Counts.Total }} error={{ .Error }}` +
+			`none={{ .Counts.NoStatus }} total={{ .Counts.Total }} error={{ .Error }} ` +
+			`inactive={{ .AlarmInactive }}` +
 			`{{ range .Rows }}|{{ .VisitorID }};{{ .Name }};{{ .Surname }};{{ .Status }};{{ .StatusLabel }};{{ .StatusRank }}{{ end }}`,
 	)))
 	router.GET("/firelist/:grade", handler)
@@ -156,8 +165,10 @@ func TestFireListPageHandler_IsNotCacheableOnError(t *testing.T) {
 // a database outage into a panic.
 func TestFireListPageHandler_NilLoggerDoesNotPanic(t *testing.T) {
 	repo := new(providertest.VisitDailyReportRepositoryMock)
+	alarm := &entity.FireAlarmState{}
+	require.NoError(t, alarm.Enable(time.Hour))
 	controller := &FireListController{
-		FireList: &firelistview.Service{Reports: repo},
+		FireList: &firelistview.Service{Reports: repo, Alarm: alarm},
 	}
 
 	repo.On("EnsureDayRows", mock.Anything).Return(nil)
@@ -168,4 +179,57 @@ func TestFireListPageHandler_NilLoggerDoesNotPanic(t *testing.T) {
 		w := performRequest(controller.FireListPageHandler(), "/firelist/5")
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 	})
+}
+
+// The whole point of the feature: with no alarm running the public page must
+// refuse, and must refuse without any roster riding along in the markup.
+func TestFireListPageHandler_AlarmOffIsForbiddenAndCarriesNoRoster(t *testing.T) {
+	repo := new(providertest.VisitDailyReportRepositoryMock)
+	controller := &FireListController{
+		FireList: &firelistview.Service{
+			Reports: repo,
+			Alarm:   &entity.FireAlarmState{},
+			Logger:  zap.NewNop().Sugar(),
+		},
+		Logger: zap.NewNop().Sugar(),
+	}
+
+	for _, path := range []string{"/firelist/5", "/firelist/staff", "/firelist/abc"} {
+		t.Run(path, func(t *testing.T) {
+			w := performRequest(controller.FireListPageHandler(), path)
+
+			require.Equal(t, http.StatusForbidden, w.Code)
+			body := w.Body.String()
+			assert.Contains(t, body, "inactive=true")
+			assert.Contains(t, body, "total=0")
+			// No row markup at all: the stub renders one "|id;name;..." group per
+			// row, so a single pipe would mean a person leaked through the gate.
+			assert.NotContains(t, body, "|")
+			// The refusal is not dressed up as a failure.
+			assert.Contains(t, body, "error=")
+			assert.NotContains(t, body, unavailableMessage)
+			assert.NotContains(t, body, invalidGradeMessage)
+			// A cached refusal would outlive the next alarm being switched on.
+			assert.Equal(t, "no-store", w.Header().Get("Cache-Control"))
+		})
+	}
+	repo.AssertNotCalled(t, "GetVisitReport", mock.Anything, mock.Anything, mock.Anything)
+}
+
+// An expired alarm closes the page exactly like a switched-off one.
+func TestFireListPageHandler_ExpiredAlarmIsForbidden(t *testing.T) {
+	repo := new(providertest.VisitDailyReportRepositoryMock)
+	alarm := &entity.FireAlarmState{}
+	require.NoError(t, alarm.Enable(time.Millisecond))
+	controller := &FireListController{
+		FireList: &firelistview.Service{Reports: repo, Alarm: alarm, Logger: zap.NewNop().Sugar()},
+		Logger:   zap.NewNop().Sugar(),
+	}
+
+	time.Sleep(5 * time.Millisecond)
+
+	w := performRequest(controller.FireListPageHandler(), "/firelist/5")
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+	assert.Contains(t, w.Body.String(), "inactive=true")
 }
