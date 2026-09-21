@@ -38,6 +38,14 @@ func (c *FireListController) FireListPageHandler() gin.HandlerFunc {
 
 		data, err := c.FireList.GetFireList(grade)
 		if err != nil {
+			if errors.Is(err, firelistview.ErrAlarmInactive) {
+				// 403 rather than 200: the roster is withheld, and anything
+				// watching this endpoint — a log, a monitor, a scraper — should
+				// be able to tell that apart from a successful read.
+				ctx.HTML(http.StatusForbidden, fireListTemplateName,
+					firelistview.InactivePageData(grade))
+				return
+			}
 			if errors.Is(err, firelistview.ErrInvalidGrade) {
 				// A readable page, not a JSON error: whoever opened this link is
 				// standing outside with a class.

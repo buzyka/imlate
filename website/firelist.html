@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -31,7 +31,7 @@
             <p class="fl-meta">{{ .Day }} · as of {{ .GeneratedAt }}</p>
         </div>
 
-        {{ if not .Error }}
+        {{ if and (not .Error) (not .AlarmInactive) }}
         <p class="fl-summary" id="flSummary" role="status" aria-live="polite">
             Accounted for <span id="flDone">0</span> of <span id="flTotal">{{ .Counts.Total }}</span>
             · <span id="flLeft">{{ .Counts.Total }}</span> left
@@ -53,6 +53,12 @@
     <main class="fl-main">
         {{ if .Error }}
         <p class="fl-error" role="alert">{{ .Error }}</p>
+        {{ else if .AlarmInactive }}
+        <!-- role="status", not "alert": no alarm running is the ordinary state
+             of this page, not a fault, and dressing it up in red would train
+             teachers to ignore the colour that matters. -->
+        <p class="fl-notice" role="status">Fire Alarm is currently not active. Evacuation list is
+            unavailable.</p>
         {{ else if not .Rows }}
         <p class="fl-empty">No one is listed for this class. Check the class or refresh the page.</p>
         {{ else }}

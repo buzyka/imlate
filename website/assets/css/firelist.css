@@ -347,6 +347,7 @@ body {
 /* ---- Banners ---- */
 
 .fl-error,
+.fl-notice,
 .fl-empty {
     margin: 16px 10px;
     padding: 12px;
@@ -360,6 +361,12 @@ body {
     border: 1px solid var(--fl-error-fg);
 }
 
+/* Deliberately the same neutral palette as .fl-empty rather than the red of
+   .fl-error. "No alarm is running" is the state this page is in almost every
+   day of the year; painting it as a fault would make the red that signals a
+   real problem meaningless. All three custom properties are already redefined
+   in the dark-theme block, so this needs no dark variant of its own. */
+.fl-notice,
 .fl-empty {
     background: var(--fl-head-bg);
     color: var(--fl-muted);

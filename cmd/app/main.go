@@ -229,6 +229,10 @@ func registerAdminRoutes(r *gin.Engine) {
 	adminGroup.GET("/reports/visits", adminController.VisitsReportsHandler())
 	adminGroup.POST("/reports/visits", adminController.VisitsReportsPostHandler())
 	adminGroup.POST("/track/visit", adminController.ManualTrackHandler())
+
+	// The switch that opens and closes the public /firelist pages.
+	adminGroup.GET("/fire-alarm", adminController.GetFireAlarmHandler())
+	adminGroup.POST("/fire-alarm", adminController.SetFireAlarmHandler())
 }
 
 // adminLoginHandler godoc

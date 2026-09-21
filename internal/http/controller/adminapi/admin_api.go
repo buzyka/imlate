@@ -10,6 +10,7 @@ import (
 	themeview "github.com/buzyka/imlate/internal/usecase/theme"
 	"github.com/buzyka/imlate/internal/usecase/tracking"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type AdminAPIController struct {
@@ -18,6 +19,8 @@ type AdminAPIController struct {
 	StudentTracker *tracking.StudentTracker        `container:"type"`
 	ThemeService   *themeview.Service              `container:"type"`
 	Aggregator     *reportaggregator.Aggregator    `container:"type"`
+	FireAlarm      *entity.FireAlarmState          `container:"type"`
+	Logger         *zap.SugaredLogger              `container:"type"`
 }
 
 // CurrentUserHandler godoc

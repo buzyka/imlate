@@ -18,7 +18,7 @@ No authentication required.
 | `GET` | `/admin` | Admin SPA |
 | `GET` | `/admin/settings` | Admin SPA settings route |
 | `GET` | `/search/:id` | Look up a visitor by key |
-| `GET` | `/firelist/:grade` | Evacuation roster for one class (HTML); `:grade` is a year group number or `staff` |
+| `GET` | `/firelist/:grade` | Evacuation roster for one class (HTML); `:grade` is a year group number or `staff`. Returns data only while a fire alarm is active, otherwise `403` with a notice — see `/admin-api/fire-alarm` |
 | `POST` | `/login` | Admin JWT authentication |
 | `POST` | `/refresh` | Refresh JWT token |
 | `POST` | `/change-time` | Override current time (development only) |
@@ -84,6 +84,16 @@ All under `/admin-api/*`. Require a valid JWT token with `admin` role.
 |--------|------|-------------|
 | `GET` | `/admin-api/reports/visits` | Paginated attendance report with filters |
 | `POST` | `/admin-api/track/visit` | Manual sign-in/out on behalf of a visitor |
+
+**Fire Alarm**
+
+The switch that opens and closes the public `/firelist/:grade` pages. State is held in memory
+only, so a restart leaves the alarm off.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/admin-api/fire-alarm` | Current alarm status, start time, duration and remaining time |
+| `POST` | `/admin-api/fire-alarm` | Switch the alarm on for `default_duration` seconds (max 24h), or off |
 
 ## Authentication
 

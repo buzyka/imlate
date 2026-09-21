@@ -158,3 +158,45 @@ func TestFireListStyles_DoNotStrikeThroughCountedRows(t *testing.T) {
 	assert.NotContains(t, css, `line-through`)
 	assert.Contains(t, css, `.fl-table tbody tr.is-checked {`)
 }
+
+// The gate is only worth as much as the page it renders when it refuses. If the
+// template ever stops branching on AlarmInactive, a closed roster would fall
+// through to the table branch and serve the very data the gate withheld.
+func TestFireListTemplate_RendersTheClosedState(t *testing.T) {
+	html := readFireListTemplate(t)
+
+	assert.Contains(t, html, "{{ else if .AlarmInactive }}",
+		"the closed-alarm branch must exist and sit before the table branch")
+	assert.Contains(t, html, `class="fl-notice"`)
+	assert.Contains(t, html, "Fire Alarm is currently not active.")
+}
+
+// The running count, Reset and Refresh belong to a roster being counted. On the
+// closed page they would be controls over nothing, and the "0 of 0" summary
+// reads like an empty class rather than a withheld one.
+func TestFireListTemplate_HidesRollCallControlsWhenClosed(t *testing.T) {
+	html := readFireListTemplate(t)
+
+	assert.Contains(t, html, "{{ if and (not .Error) (not .AlarmInactive) }}")
+}
+
+// The page text is English; a stale lang="ru" makes a screen reader pronounce
+// it with Russian phonetics.
+func TestFireListTemplate_DeclaresItsLanguage(t *testing.T) {
+	html := readFireListTemplate(t)
+
+	assert.Contains(t, html, `<html lang="en">`)
+}
+
+// The closed page is the ordinary state of this URL on all but a handful of
+// days a year. Painting it in the error palette would teach teachers to ignore
+// the red that signals a real failure.
+func TestFireListStyles_DoNotAlarmOnTheClosedState(t *testing.T) {
+	css := readFireListStyles(t)
+
+	assert.Contains(t, css, ".fl-notice")
+	noticeBlock := css[strings.Index(css, ".fl-notice,"):]
+	noticeBlock = noticeBlock[:strings.Index(noticeBlock, "}")]
+	assert.NotContains(t, noticeBlock, "--fl-error",
+		"the closed-state banner must not borrow the error colours")
+}

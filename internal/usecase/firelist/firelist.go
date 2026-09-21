@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/provider"
 	"github.com/buzyka/imlate/internal/infrastructure/util"
 	"github.com/buzyka/imlate/internal/version"
@@ -16,12 +17,19 @@ import (
 )
 
 const (
-	// maxFireListRows is deliberately larger than any realistic class.
+	// maxFireListRows is deliberately larger than any realistic class. The whole
+	// roster must be on the page: a teacher paging through results while
+	// evacuating is not an acceptable interaction.
 	maxFireListRows = 2000
 
 	// staffGradeParam selects everyone who is not a student.
 	staffGradeParam = "staff"
+	// staffGradeLabel heads that group. Everyone in this bucket is an adult who
+	// works here, so the roster names them rather than filing them under a
+	// leftovers heading like "Other".
 	staffGradeLabel = "Staff"
+	// fallbackGradeLabel heads the error page when the URL segment names no
+	// recognisable class.
 	fallbackGradeLabel = "Fire list"
 
 	dayLayout       = "2006-01-02"
@@ -36,6 +44,11 @@ const (
 // controllers can branch on it with errors.Is.
 var ErrInvalidGrade = errors.New("invalid grade")
 
+// ErrAlarmInactive is returned when no fire alarm is running. The roster names
+// every child in a class and says who is in the building, so it is readable
+// only for the duration of an alarm an admin has switched on.
+var ErrAlarmInactive = errors.New("fire alarm is not active")
+
 // FireListPageData is the template data for firelist.html.
 type FireListPageData struct {
 	GradeParam  string // "5" | "staff" — raw URL value, used as the localStorage key
@@ -46,6 +59,10 @@ type FireListPageData struct {
 	Rows        []FireListRow
 	Counts      FireListCounts
 	Error       string // non-empty => template renders an error banner instead of the table
+	// AlarmInactive => template renders a neutral "no alarm running" notice
+	// instead of the table. Distinct from Error: this is an ordinary state, not
+	// a failure, and must not be dressed up as one.
+	AlarmInactive bool
 }
 
 type FireListRow struct {
@@ -67,26 +84,50 @@ type FireListCounts struct {
 // Service assembles the evacuation roster for one class.
 type Service struct {
 	Reports provider.VisitDailyReportRepository `container:"type"`
+	Alarm   *entity.FireAlarmState              `container:"type"`
 	Logger  *zap.SugaredLogger                  `container:"type"`
 }
 
 // GetFireList returns the roster for the given URL grade segment, for today.
 func (s *Service) GetFireList(gradeParam string) (FireListPageData, error) {
+	// Checked first, before the grade is even parsed and before anything
+	// touches the database. The page is public, so this gate is the only thing
+	// standing between an anonymous request and the names of every child in a
+	// class. Keeping it in the service rather than the controller means a
+	// future second caller cannot skip it by accident.
+	if !s.Alarm.IsActive() {
+		return FireListPageData{}, ErrAlarmInactive
+	}
+
 	filter, label, err := parseGrade(gradeParam)
 	if err != nil {
 		return FireListPageData{}, err
 	}
 
 	day := util.Now()
+
+	// The repository filters `r.day >= from AND r.day < to`, so a half-open
+	// [day, day+1) range is exactly one calendar day. Do NOT route this through
+	// adminapi.GetReportsVisits: that helper adds an extra day to `to`
+	// internally, so it returns two days of rows — which is why the admin SPA
+	// has to dedupe by visitor client-side. Here a duplicated child on an
+	// evacuation roster would be counted twice.
 	from := day
 	to := day.AddDate(0, 0, 1)
 
+	// Before the day's first card scan the report table holds no rows for today,
+	// so without this the teacher would be shown an empty class. The call
+	// short-circuits on a single `SELECT 1 ... LIMIT 1` once any row exists, so
+	// the full insert runs at most once per day.
 	if err := s.Reports.EnsureDayRows(day); err != nil {
 		s.logf("firelist: EnsureDayRows failed for %s: %v", day.Format(dayLayout), err)
+		// Deliberately not fatal: stale or partial rows still beat no page.
 	}
 
 	filter.Page = 1
 	filter.PageSize = maxFireListRows
+	// OrderField stays empty: the priority ordering below is not expressible as
+	// a single SQL sort, and the result set is one class at most.
 
 	result, err := s.Reports.GetVisitReport(from, to, filter)
 	if err != nil {
@@ -141,6 +182,21 @@ func ErrorPageData(gradeParam, message string) FireListPageData {
 		GeneratedAt: day.Format(clockLayout),
 		AppVersion:  version.Version,
 		Error:       message,
+	}
+}
+
+// InactivePageData builds page data for the "no alarm running" page. It
+// carries no rows and no counts by construction, so the gate cannot leak a
+// roster through the page it renders when it refuses one.
+func InactivePageData(gradeParam string) FireListPageData {
+	day := util.Now()
+	return FireListPageData{
+		GradeParam:    gradeParam,
+		GradeLabel:    gradeLabel(gradeParam),
+		Day:           day.Format(dayLayout),
+		GeneratedAt:   day.Format(clockLayout),
+		AppVersion:    version.Version,
+		AlarmInactive: true,
 	}
 }
 
