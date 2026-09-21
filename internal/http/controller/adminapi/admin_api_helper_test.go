@@ -144,8 +144,7 @@ func TestParseVisitorID(t *testing.T) {
 		assert.Contains(t, w.Body.String(), "invalid visitor ID")
 	})
 
-	// "4294967297" is 2^32+1: it used to wrap around to visitor 1 once the
-	// parsed int was narrowed to int32.
+	// Values outside the int32 range are not valid visitor IDs.
 	for _, value := range []string{"4294967297", "2147483648", "-2147483649", "9223372036854775808"} {
 		t.Run("out of int32 range "+value, func(t *testing.T) {
 			w := httptest.NewRecorder()

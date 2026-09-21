@@ -150,11 +150,31 @@ func canonicalExtension(contentType, filename string) string {
 		return ".webp"
 	}
 
+	// Fallback for a content type the switch above does not name: derive the
+	// extension from the uploaded name, and use ".bin" when that name carries
+	// nothing usable.
 	ext := strings.ToLower(filepath.Ext(filename))
-	if ext == "" {
+	if !isSafeExtension(ext) {
 		return ".bin"
 	}
 	return ext
+}
+
+// isSafeExtension reports whether ext is a dot followed by 1-8 lowercase ASCII
+// alphanumerics — the shape every image extension has. Anything else is
+// rejected outright rather than trimmed into shape, since a partial clean-up
+// is easy to get wrong and no real extension needs it.
+func isSafeExtension(ext string) bool {
+	if len(ext) < 2 || len(ext) > 9 || ext[0] != '.' {
+		return false
+	}
+	for i := 1; i < len(ext); i++ {
+		c := ext[i]
+		if (c < 'a' || c > 'z') && (c < '0' || c > '9') {
+			return false
+		}
+	}
+	return true
 }
 
 func clampDimension(limit, original int) int {

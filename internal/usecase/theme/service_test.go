@@ -8,6 +8,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -267,4 +268,62 @@ func fakeWebPBytes() []byte {
 		0x2f, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00,
 	}
+}
+
+// The uploaded file name is only a label from the multipart body and has no say
+// in where the asset lands: whatever it looks like, the file is written inside
+// ThemeDir under a slot-prefixed name, with the extension taken from the
+// detected content type.
+func TestServiceUploadAsset_OddFilenameStillWritesInsideThemeDir(t *testing.T) {
+	filenames := []string{
+		"../../../../etc/cron.d/script.sh",
+		"..%2f..%2fimage.png",
+		"favicon.png/../../../../tmp/image.png",
+		`..\..\windows\system32\image.png`,
+		"image.png\x00.txt",
+		strings.Repeat("a", 300) + ".png",
+		"",
+	}
+
+	for _, filename := range filenames {
+		service, rootDir := newTestThemeServiceWithParentDir(t)
+
+		resp, err := service.UploadAsset("favicon", filename, createPNGBytes(t, 64, 64))
+		require.NoError(t, err, "filename %q", filename)
+		assert.True(t, resp.Assets["favicon"].IsCustom)
+
+		files, err := os.ReadDir(service.Config.ThemeDir)
+		require.NoError(t, err)
+
+		var written []string
+		for _, f := range files {
+			if f.Name() != "theme.json" {
+				written = append(written, f.Name())
+			}
+		}
+		require.Len(t, written, 1, "filename %q", filename)
+		assert.True(t, strings.HasPrefix(written[0], "favicon-"), "filename %q wrote %q", filename, written[0])
+		assert.Equal(t, ".png", filepath.Ext(written[0]), "filename %q wrote %q", filename, written[0])
+
+		// The directory above ThemeDir is left untouched.
+		parentEntries, err := os.ReadDir(rootDir)
+		require.NoError(t, err)
+		require.Len(t, parentEntries, 1, "filename %q also wrote into %s", filename, rootDir)
+		assert.Equal(t, "theme", parentEntries[0].Name())
+	}
+}
+
+// themeAssetPath is the single place that turns an asset name into a path, so
+// it accepts plain file names only.
+func TestThemeAssetPath_RejectsNonPlainNames(t *testing.T) {
+	service := newTestThemeService(t)
+
+	for _, name := range []string{"", ".", "..", "../other", "sub/dir.png", `back\slash.png`} {
+		_, err := service.themeAssetPath(name)
+		assert.Error(t, err, "name %q", name)
+	}
+
+	path, err := service.themeAssetPath("favicon-123.png")
+	require.NoError(t, err)
+	assert.Equal(t, filepath.Join(service.Config.ThemeDir, "favicon-123.png"), path)
 }

@@ -12,10 +12,9 @@ import (
 const (
 	DefaultReportsVisitsPageSize = 100
 	MaxReportsVisitsPageSize     = 1000
-	// MaxReportsVisitsPage bounds the page number. The repository hands MySQL an
-	// OFFSET of (page-1)*pageSize; without an upper bound a large page from the
-	// client overflows that multiplication and produces a negative OFFSET, which
-	// the driver rejects with a 500. A million pages is far beyond any real report.
+	// MaxReportsVisitsPage bounds the page number so that the (page-1)*pageSize
+	// offset the repository computes stays in range. A million pages is far
+	// beyond any report this system produces.
 	MaxReportsVisitsPage = 1_000_000
 )
 

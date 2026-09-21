@@ -114,3 +114,40 @@ func fakeWebPBytes() []byte {
 		0x00, 0x00, 0x00, 0x00,
 	}
 }
+
+func TestCanonicalExtension_KnownContentTypesIgnoreFilename(t *testing.T) {
+	// A known content type decides the extension on its own; the uploaded name
+	// is not consulted, whatever it contains.
+	name := "../../../../etc/cron.d/script.sh"
+	assert.Equal(t, ".jpg", canonicalExtension("image/jpeg", name))
+	assert.Equal(t, ".png", canonicalExtension("image/png", name))
+	assert.Equal(t, ".gif", canonicalExtension("image/gif", name))
+	assert.Equal(t, ".webp", canonicalExtension("image/webp", name))
+}
+
+func TestCanonicalExtension_UnknownContentTypeRejectsUnusableFilenames(t *testing.T) {
+	unusable := []string{
+		"",
+		"noext",
+		"trailing.",
+		"nul.pn\x00g",
+		"newline.pn\ng",
+		"space.p ng",
+		"sep.a/b",
+		`backslash.a\b`,
+		"dotdot..",
+		"upper.PNG/../x",
+		"overlong.abcdefghij",
+		"unicode.pñg",
+	}
+	for _, filename := range unusable {
+		assert.Equal(t, ".bin", canonicalExtension("application/octet-stream", filename), "filename %q", filename)
+	}
+}
+
+func TestCanonicalExtension_UnknownContentTypeKeepsPlainExtension(t *testing.T) {
+	assert.Equal(t, ".svg", canonicalExtension("image/svg+xml", "logo.svg"))
+	assert.Equal(t, ".svg", canonicalExtension("image/svg+xml", "logo.SVG"))
+	assert.Equal(t, ".mp4", canonicalExtension("video/mp4", "clip.mp4"))
+	assert.Equal(t, ".jpeg", canonicalExtension("application/octet-stream", "photo.jpeg"))
+}

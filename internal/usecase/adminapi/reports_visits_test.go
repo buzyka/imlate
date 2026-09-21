@@ -62,8 +62,7 @@ func TestGetReportsVisits_ValidateRequestError(t *testing.T) {
 			exErrMsg: "'page' must be a positive integer",
 		},
 		{
-			// An unbounded page overflows the (page-1)*pageSize offset in the
-			// repository and reaches MySQL as a negative OFFSET.
+			// Beyond this bound the computed offset no longer fits an int.
 			name:     "page above the maximum page number",
 			from:     "2026-01-01",
 			to:       "2026-01-02",

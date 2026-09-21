@@ -252,8 +252,7 @@ func TestGetPostReportsVisits_LimitAtMaximumIsAccepted(t *testing.T) {
 	assert.Equal(t, MaxReportsVisitsPageSize, resp.Limit)
 }
 
-// An unbounded page overflows the (page-1)*pageSize offset in the repository
-// and reaches MySQL as a negative OFFSET.
+// Beyond this bound the computed offset no longer fits an int.
 func TestGetPostReportsVisits_PageAboveMaximum(t *testing.T) {
 	for _, page := range []int{MaxReportsVisitsPage + 1, math.MaxInt64} {
 		api := &AdminAPI{}
