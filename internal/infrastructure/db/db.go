@@ -35,7 +35,7 @@ func Open(engine string, dataSourceName string, logger *zap.SugaredLogger) (*sql
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(10)
 	if err := db.Ping(); err != nil {
-		logger.Errorf("Error opening a connection to the database: %s;  with error message: %s", dataSourceName, err.Error())
+		logger.Errorf("Error opening a connection to the %s database; with error message: %s", dbEngine, err.Error())
 		return db, err
 	}
 	if err := MigrateUp(dataSourceName); err != nil && err.Error() != "no change" {

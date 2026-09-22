@@ -138,23 +138,62 @@ func isAllowedMime(contentType string, allowed []string) bool {
 	return false
 }
 
-func canonicalExtension(contentType, filename string) string {
+// extensionForContentType maps a content type this package names onto the
+// extension its files carry. ok is false for anything else.
+func extensionForContentType(contentType string) (string, bool) {
 	switch contentType {
 	case "image/jpeg":
-		return ".jpg"
+		return ".jpg", true
 	case "image/png":
-		return ".png"
+		return ".png", true
 	case "image/gif":
-		return ".gif"
+		return ".gif", true
 	case "image/webp":
-		return ".webp"
+		return ".webp", true
+	}
+	return "", false
+}
+
+// DetectImageExtension reports the content type sniffed from data and the
+// extension belonging to it. ok is false when data is not one of the image
+// types this package names, which lets a caller name a stored file after the
+// bytes it actually received rather than after a name it does not control.
+func DetectImageExtension(data []byte) (contentType, extension string, ok bool) {
+	contentType = http.DetectContentType(data)
+	extension, ok = extensionForContentType(contentType)
+	return contentType, extension, ok
+}
+
+func canonicalExtension(contentType, filename string) string {
+	if ext, ok := extensionForContentType(contentType); ok {
+		return ext
 	}
 
+	// Fallback for a content type the switch above does not name: derive the
+	// extension from the uploaded name, and use ".bin" when that name carries
+	// nothing usable.
 	ext := strings.ToLower(filepath.Ext(filename))
-	if ext == "" {
+	if !isSafeExtension(ext) {
 		return ".bin"
 	}
 	return ext
+}
+
+// isSafeExtension reports whether ext is a dot followed by 1-8 lowercase ASCII
+// alphanumerics — the shape every image extension has. Anything else is
+// rejected outright rather than trimmed into shape, since a partial clean-up
+// is easy to get wrong and no real extension needs it.
+func isSafeExtension(ext string) bool {
+	if len(ext) < 2 || len(ext) > 9 || ext[0] != '.' {
+		return false
+	}
+	for i := 1; i < len(ext); i++ {
+		c := ext[i]
+		if (c < 'a' || c > 'z') && (c < '0' || c > '9') {
+			return false
+		}
+	}
+	return true
 }
 
 func clampDimension(limit, original int) int {

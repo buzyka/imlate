@@ -114,8 +114,13 @@ func (s *Service) UploadAsset(slot, filename string, data []byte) (*Response, er
 
 	current := m.Assets[slot]
 	now := s.clock()
+	// themeAssetPath is the one place that turns an asset name into a path, so
+	// the write goes through it just like the delete below does.
 	fileName := fmt.Sprintf("%s-%d%s", slot, now.UnixNano(), processed.Extension)
-	filePath := filepath.Join(s.Config.ThemeDir, fileName)
+	filePath, err := s.themeAssetPath(fileName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build theme asset path: %w", err)
+	}
 	if err := os.WriteFile(filePath, processed.Data, 0o644); err != nil {
 		return nil, fmt.Errorf("failed to write theme asset: %w", err)
 	}

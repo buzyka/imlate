@@ -46,9 +46,12 @@ func readUploadedFormFile(c *gin.Context, fieldName string, maxSize int64) (file
 	return fileHeader.Filename, data, true
 }
 
+// parseVisitorID reads the ":id" path segment as a visitor ID. Visitor IDs are
+// int32, so the value is parsed at that width: anything outside the range is
+// not a valid ID and is reported as a bad request.
 func parseVisitorID(c *gin.Context) (int32, bool) {
 	idParam := c.Param("id")
-	id, err := strconv.Atoi(idParam)
+	id, err := strconv.ParseInt(idParam, 10, 32)
 	if err != nil || id <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid visitor ID"})
 		return 0, false

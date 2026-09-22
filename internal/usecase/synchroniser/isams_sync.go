@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/buzyka/imlate/internal/config"
 	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/erp"
 	"github.com/buzyka/imlate/internal/domain/provider"
+	"github.com/buzyka/imlate/internal/infrastructure/imageutil"
 	"github.com/buzyka/imlate/internal/infrastructure/integration/isams"
 	"go.uber.org/zap"
 )
@@ -146,6 +148,38 @@ var osWriteFile = func(name string, data []byte, perm os.FileMode) error {
 	return os.WriteFile(name, data, perm)
 }
 
+// studentPhotoFileName builds the on-disk name for one student photo. Both the
+// school ID and the image type arrive in the ERP response, so the ID is checked
+// against the shape an ID actually has and the extension is read from the bytes
+// rather than from anything the response names.
+func studentPhotoFileName(erpSchoolID string, data []byte) (string, bool) {
+	if !isPlainIDToken(erpSchoolID) {
+		return "", false
+	}
+	_, ext, ok := imageutil.DetectImageExtension(data)
+	if !ok {
+		return "", false
+	}
+	return erpSchoolID + ext, true
+}
+
+// isPlainIDToken reports whether s is 1-64 ASCII letters, digits, '-' or '_' —
+// everything a school ID is, and nothing that means something to a file path.
+func isPlainIDToken(s string) bool {
+	if s == "" || len(s) > 64 {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9', c == '-', c == '_':
+		default:
+			return false
+		}
+	}
+	return true
+}
+
 func (s *StudentSync) SyncStudentPhotos() error {
 	ctx := context.Background()
 	err := s.startSyncSession(ctx)
@@ -178,8 +212,13 @@ func (s *StudentSync) SyncStudentPhotos() error {
 		if err := os.MkdirAll(filePath, 0755); err != nil {
 			return fmt.Errorf("failed to create image directory: %w", err)
 		}
-		fileName := fmt.Sprintf("%s.%s", visitor.ErpSchoolID, photoResp.Extension)
-		if err := osWriteFile(filePath+"/"+fileName, photoResp.Data, 0644); err != nil {
+		fileName, ok := studentPhotoFileName(visitor.ErpSchoolID, photoResp.Data)
+		if !ok {
+			s.Logger.Warnw("sync students photos: photo skipped, cannot name the file",
+				"studentSchoolID", visitor.ErpSchoolID)
+			continue
+		}
+		if err := osWriteFile(filepath.Join(filePath, fileName), photoResp.Data, 0644); err != nil {
 			return err
 		} else {
 			visitor.Image = s.Config.StudentsImagePhotoURLPrefix + "/" + fileName

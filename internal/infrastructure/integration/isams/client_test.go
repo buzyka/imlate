@@ -280,7 +280,7 @@ func TestClient_Do_RedactsSensitiveHeadersInLogs(t *testing.T) {
 	assert.NotContains(t, logOutput, "very-secret-token")
 	assert.NotContains(t, logOutput, "secret-cookie")
 	assert.NotContains(t, logOutput, "secret-api-key")
-	assert.Contains(t, logOutput, "payload")
+	assert.NotContains(t, logOutput, "payload")
 }
 
 func TestClient_Do_ErrorRequest(t *testing.T) {
@@ -298,7 +298,7 @@ func TestClient_Do_ErrorRequest(t *testing.T) {
 	assert.Nil(t, resp)
 }
 
-func TestClient_logOutgoingRequest_BodyReadError(t *testing.T) {
+func TestClient_logOutgoingRequest_DoesNotReadBody(t *testing.T) {
 	logBuffer := &bytes.Buffer{}
 	logger := zap.New(zapcore.NewCore(
 		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
@@ -319,8 +319,8 @@ func TestClient_logOutgoingRequest_BodyReadError(t *testing.T) {
 
 	logOutput := logBuffer.String()
 	assert.Contains(t, logOutput, "isams outgoing request")
-	assert.Contains(t, logOutput, "dumpError")
-	assert.Contains(t, logOutput, "read failed")
+	assert.NotContains(t, logOutput, "dumpError")
+	assert.NotContains(t, logOutput, "read failed")
 }
 
 func TestClient_logOutgoingRequest_DumpRequestOutError(t *testing.T) {

@@ -12,6 +12,10 @@ import (
 const (
 	DefaultReportsVisitsPageSize = 100
 	MaxReportsVisitsPageSize     = 1000
+	// MaxReportsVisitsPage bounds the page number so that the (page-1)*pageSize
+	// offset the repository computes stays in range. A million pages is far
+	// beyond any report this system produces.
+	MaxReportsVisitsPage = 1_000_000
 )
 
 type ReportsVisitsOption func(*reportsVisitsOptions)
@@ -171,6 +175,14 @@ func (a *AdminAPI) validateReportsVisitsRequest(from, to *time.Time, opts *repor
 
 	if opts.page <= 0 {
 		return fmt.Errorf("%w: 'page' must be a positive integer", ErrInvalidRequestFormat)
+	}
+
+	if opts.page > MaxReportsVisitsPage {
+		return fmt.Errorf("%w: 'page' must not exceed %d", ErrInvalidRequestFormat, MaxReportsVisitsPage)
+	}
+
+	if opts.pageSize <= 0 {
+		return fmt.Errorf("%w: 'limit' must be a positive integer", ErrInvalidRequestFormat)
 	}
 
 	if opts.pageSize > MaxReportsVisitsPageSize {

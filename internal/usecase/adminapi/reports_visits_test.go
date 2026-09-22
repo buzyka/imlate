@@ -2,6 +2,7 @@ package adminapi
 
 import (
 	"errors"
+	"math"
 	"testing"
 	"time"
 
@@ -54,11 +55,47 @@ func TestGetReportsVisits_ValidateRequestError(t *testing.T) {
 			exErrMsg: "'year_group' filter can only be used when 'is_student' is true",
 		},
 		{
+			name:     "negative 'page' value",
+			from:     "2026-01-01",
+			to:       "2026-01-02",
+			opts:     []ReportsVisitsOption{WithPage(-1)},
+			exErrMsg: "'page' must be a positive integer",
+		},
+		{
+			// Beyond this bound the computed offset no longer fits an int.
+			name:     "page above the maximum page number",
+			from:     "2026-01-01",
+			to:       "2026-01-02",
+			opts:     []ReportsVisitsOption{WithPage(MaxReportsVisitsPage + 1)},
+			exErrMsg: "'page' must not exceed",
+		},
+		{
+			name:     "page at the int64 maximum",
+			from:     "2026-01-01",
+			to:       "2026-01-02",
+			opts:     []ReportsVisitsOption{WithPage(math.MaxInt64)},
+			exErrMsg: "'page' must not exceed",
+		},
+		{
 			name:     "limit above the maximum page size",
 			from:     "2026-01-01",
 			to:       "2026-01-02",
 			opts:     []ReportsVisitsOption{WithLimit(MaxReportsVisitsPageSize + 1)},
 			exErrMsg: "'limit' must not exceed",
+		},
+		{
+			name:     "zero limit",
+			from:     "2026-01-01",
+			to:       "2026-01-02",
+			opts:     []ReportsVisitsOption{WithLimit(0)},
+			exErrMsg: "'limit' must be a positive integer",
+		},
+		{
+			name:     "negative limit",
+			from:     "2026-01-01",
+			to:       "2026-01-02",
+			opts:     []ReportsVisitsOption{WithLimit(-5)},
+			exErrMsg: "'limit' must be a positive integer",
 		},
 	}
 

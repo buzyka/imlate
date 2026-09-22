@@ -2,6 +2,7 @@ package adminapi
 
 import (
 	"errors"
+	"math"
 	"testing"
 	"time"
 
@@ -249,6 +250,55 @@ func TestGetPostReportsVisits_LimitAtMaximumIsAccepted(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, MaxReportsVisitsPageSize, resp.Limit)
+}
+
+// Beyond this bound the computed offset no longer fits an int.
+func TestGetPostReportsVisits_PageAboveMaximum(t *testing.T) {
+	for _, page := range []int{MaxReportsVisitsPage + 1, math.MaxInt64} {
+		api := &AdminAPI{}
+		_, err := api.GetPostReportsVisits(&PostReportsVisitsRequest{
+			From: "2026-04-01",
+			To:   "2026-04-30",
+			Page: page,
+		})
+		assert.ErrorIs(t, err, ErrInvalidRequestFormat)
+		assert.Contains(t, err.Error(), "'page' must not exceed")
+	}
+}
+
+// The maximum itself is accepted; only values beyond it are rejected.
+func TestGetPostReportsVisits_PageAtMaximumIsAccepted(t *testing.T) {
+	mockRepo := new(providertest.VisitDailyReportRepositoryMock)
+	mockRepo.On("GetVisitReport", mock.Anything, mock.Anything, mock.Anything).
+		Return(&provider.VisitReportResult{}, nil)
+	api := &AdminAPI{VisitDailyReportRepo: mockRepo}
+
+	resp, err := api.GetPostReportsVisits(&PostReportsVisitsRequest{
+		From: "2026-04-01",
+		To:   "2026-04-30",
+		Page: MaxReportsVisitsPage,
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, MaxReportsVisitsPage, resp.Page)
+}
+
+// A non-positive limit keeps falling back to the default rather than reaching
+// the repository as "LIMIT 0" or a negative limit.
+func TestGetPostReportsVisits_NonPositiveLimitFallsBackToDefault(t *testing.T) {
+	for _, limit := range []int{0, -1, math.MinInt64} {
+		mockRepo := new(providertest.VisitDailyReportRepositoryMock)
+		mockRepo.On("GetVisitReport", mock.Anything, mock.Anything, mock.Anything).
+			Return(emptyReportResult(), nil)
+		api := &AdminAPI{VisitDailyReportRepo: mockRepo}
+
+		resp, err := api.GetPostReportsVisits(&PostReportsVisitsRequest{
+			From:  "2026-04-01",
+			To:    "2026-04-30",
+			Limit: limit,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, DefaultReportsVisitsPageSize, resp.Limit)
+	}
 }
 
 func TestGetPostReportsVisits_InvalidSortDirection(t *testing.T) {

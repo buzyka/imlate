@@ -7,6 +7,9 @@ on:
       - main
       - develop
 
+permissions:
+  contents: read
+
 env:
   GO_VERSION: 1.26.7
   DATABASE_HOST: 127.0.0.1
@@ -20,7 +23,7 @@ env:
 jobs:
   lint:
     name: Run golangci-lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Checkout code
@@ -39,7 +42,9 @@ jobs:
 
   test:
     name: Run Go Tests
-    runs-on: ubuntu-latest
+    # Pinned rather than ubuntu-latest so the runner image changes only when we
+    # change it, not when GitHub moves the alias.
+    runs-on: ubuntu-26.04
 
     services:
       mysql:

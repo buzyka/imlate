@@ -500,9 +500,11 @@ func TestUploadVisitorImageHandler_Success(t *testing.T) {
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
+	// The uploaded name says .jpg while the bytes are a PNG: the stored file is
+	// named after the bytes.
 	part, err := writer.CreateFormFile("image", "ok.jpg")
 	assert.NoError(t, err)
-	_, err = part.Write([]byte("abc"))
+	_, err = part.Write(createThemePNGBytes(t))
 	assert.NoError(t, err)
 	assert.NoError(t, writer.Close())
 
@@ -511,7 +513,7 @@ func TestUploadVisitorImageHandler_Success(t *testing.T) {
 	c.Params = gin.Params{{Key: "id", Value: "1"}}
 
 	mockRepo.On("FindById", int32(1)).Return(&entity.Visitor{Id: 1}, nil)
-	mockRepo.On("UpdateVisitorImage", int32(1), "/assets/img/visitors/1.jpg").Return(nil)
+	mockRepo.On("UpdateVisitorImage", int32(1), "/assets/img/visitors/1.png").Return(nil)
 
 	controller.UploadVisitorImageHandler()(c)
 

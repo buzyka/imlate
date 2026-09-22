@@ -329,13 +329,16 @@ definitions:
       from:
         type: string
       limit:
-        description: Limit is the page size. Defaults to 100 when omitted; must not
-          exceed 1000.
+        description: Limit is the page size. Defaults to 100 when omitted or 0 or less;
+          must not exceed 1000.
         maximum: 1000
         type: integer
       order:
         $ref: '#/definitions/github_com_buzyka_imlate_internal_usecase_adminapi.PostReportsVisitsOrder'
       page:
+        description: Page is the 1-based page number. Values of 0 or less fall back
+          to 1; must not exceed 1000000.
+        maximum: 1000000
         type: integer
       to:
         type: string
@@ -633,11 +636,11 @@ paths:
         in: query
         name: sign_status
         type: string
-      - description: Page number (default 1)
+      - description: Page number (default 1, max 1000000)
         in: query
         name: page
         type: integer
-      - description: Records per page (default 100, max 1000)
+      - description: Records per page (default 100, min 1, max 1000)
         in: query
         name: limit
         type: integer
