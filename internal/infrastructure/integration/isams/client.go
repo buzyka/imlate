@@ -1,9 +1,7 @@
 package isams
 
 import (
-	"bytes"
 	"context"
-	"io"
 	"net/http"
 	"net/http/httputil"
 	"strings"
@@ -99,25 +97,16 @@ func (c *Client) logOutgoingRequest(req *http.Request) {
 	requestForLog := req.Clone(req.Context())
 	requestForLog.Header = req.Header.Clone()
 
-	if req.Body != nil {
-		bodyBytes, err := io.ReadAll(req.Body)
-		if err != nil {
-			logger.Infow("isams outgoing request", "method", req.Method, "url", req.URL.String(), "dumpError", err.Error())
-			return
-		}
-
-		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-		requestForLog.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-		requestForLog.ContentLength = int64(len(bodyBytes))
-	}
-
 	for _, headerName := range []string{"Authorization", "Cookie", "X-API-Key"} {
 		if requestForLog.Header.Get(headerName) != "" {
 			requestForLog.Header.Set(headerName, "REDACTED")
 		}
 	}
 
-	reqDump, err := httputil.DumpRequestOut(requestForLog, true)
+	// Dumped without the body: the named headers can be blanked one by one, but
+	// a body carries whatever the endpoint happens to take, so it is left out
+	// rather than guessed at field by field.
+	reqDump, err := httputil.DumpRequestOut(requestForLog, false)
 	if err != nil {
 		logger.Infow("isams outgoing request", "method", req.Method, "url", req.URL.String(), "dumpError", err.Error())
 	} else {

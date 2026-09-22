@@ -138,16 +138,35 @@ func isAllowedMime(contentType string, allowed []string) bool {
 	return false
 }
 
-func canonicalExtension(contentType, filename string) string {
+// extensionForContentType maps a content type this package names onto the
+// extension its files carry. ok is false for anything else.
+func extensionForContentType(contentType string) (string, bool) {
 	switch contentType {
 	case "image/jpeg":
-		return ".jpg"
+		return ".jpg", true
 	case "image/png":
-		return ".png"
+		return ".png", true
 	case "image/gif":
-		return ".gif"
+		return ".gif", true
 	case "image/webp":
-		return ".webp"
+		return ".webp", true
+	}
+	return "", false
+}
+
+// DetectImageExtension reports the content type sniffed from data and the
+// extension belonging to it. ok is false when data is not one of the image
+// types this package names, which lets a caller name a stored file after the
+// bytes it actually received rather than after a name it does not control.
+func DetectImageExtension(data []byte) (contentType, extension string, ok bool) {
+	contentType = http.DetectContentType(data)
+	extension, ok = extensionForContentType(contentType)
+	return contentType, extension, ok
+}
+
+func canonicalExtension(contentType, filename string) string {
+	if ext, ok := extensionForContentType(contentType); ok {
+		return ext
 	}
 
 	// Fallback for a content type the switch above does not name: derive the

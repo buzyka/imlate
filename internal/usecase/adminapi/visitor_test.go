@@ -320,3 +320,19 @@ func TestNewVisitorResponse(t *testing.T) {
 	assert.Len(t, list, 1)
 	assert.Equal(t, result, list[0])
 }
+
+// The uploaded name is a label from the multipart body; the stored file is named
+// after the bytes, so a non-image is refused rather than stored under whatever
+// extension the name carried.
+func TestUploadVisitorImage_RejectsNonImageBytes(t *testing.T) {
+	api, mockRepo := newVisitorTestAPI()
+
+	mockRepo.On("FindById", int32(1)).Return(&entity.Visitor{Id: 1}, nil)
+
+	result, err := api.UploadVisitorImage(1, "photo.png", []byte("<html><script>alert(1)</script></html>"))
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "unsupported image type")
+	mockRepo.AssertExpectations(t)
+}

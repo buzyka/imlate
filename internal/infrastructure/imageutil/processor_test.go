@@ -151,3 +151,39 @@ func TestCanonicalExtension_UnknownContentTypeKeepsPlainExtension(t *testing.T) 
 	assert.Equal(t, ".mp4", canonicalExtension("video/mp4", "clip.mp4"))
 	assert.Equal(t, ".jpeg", canonicalExtension("application/octet-stream", "photo.jpeg"))
 }
+
+func TestDetectImageExtension_NamesTheBytes(t *testing.T) {
+	src := image.NewRGBA(image.Rect(0, 0, 4, 4))
+	buf := bytes.NewBuffer(nil)
+	require.NoError(t, png.Encode(buf, src))
+
+	contentType, ext, ok := DetectImageExtension(buf.Bytes())
+
+	assert.True(t, ok)
+	assert.Equal(t, "image/png", contentType)
+	assert.Equal(t, ".png", ext)
+}
+
+func TestDetectImageExtension_RejectsNonImages(t *testing.T) {
+	// A name ending in .png does not make the bytes a PNG, and these bytes are
+	// what a stored file would be named after.
+	for name, data := range map[string][]byte{
+		"html":  []byte("<html><script>alert(1)</script></html>"),
+		"svg":   []byte(`<svg xmlns="http://www.w3.org/2000/svg"><script/></svg>`),
+		"text":  []byte("just some text"),
+		"empty": {},
+	} {
+		contentType, ext, ok := DetectImageExtension(data)
+
+		assert.False(t, ok, "%s detected as %q", name, contentType)
+		assert.Empty(t, ext, "%s", name)
+	}
+}
+
+func TestDetectImageExtension_AcceptsWebP(t *testing.T) {
+	contentType, ext, ok := DetectImageExtension(fakeWebPBytes())
+
+	assert.True(t, ok)
+	assert.Equal(t, "image/webp", contentType)
+	assert.Equal(t, ".webp", ext)
+}

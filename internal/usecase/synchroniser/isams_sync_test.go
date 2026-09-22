@@ -1,12 +1,17 @@
 package synchroniser
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image"
+	"image/color"
+	"image/png"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -880,7 +885,7 @@ func TestSyncStudentPhotos_PhotoAddedSuccess(t *testing.T) {
 
 	osWriteFile = func(filename string, data []byte, perm os.FileMode) error {
 		assert.Equal(t, "storage-path/mypath/S1.png", filename)
-		assert.Equal(t, " some photo data ", string(data))
+		assert.Equal(t, studentPhotoPNG(t), data)
 		assert.Equal(t, os.FileMode(0644), perm)
 		fileWritten = true
 		return nil
@@ -908,10 +913,10 @@ func TestSyncStudentPhotos_PhotoAddedSuccess(t *testing.T) {
 	}
 	mockRepo.On("GetAll").Return(visitors, nil)
 
-	someDataStr := " some photo data "
+	someDataStr := studentPhotoPNG(t)
 	dataResponse := &isams.StudentPhotoResponse{
 		Extension: "png",
-		Data:      []byte(someDataStr),
+		Data:      someDataStr,
 	}
 	mockClient.On("GetStudentPhoto", "S1").Once().Return(dataResponse, nil)
 
@@ -935,7 +940,7 @@ func TestSyncStudentPhotos_SaveImagePathError(t *testing.T) {
 
 	osWriteFile = func(filename string, data []byte, perm os.FileMode) error {
 		assert.Equal(t, "storage-path/mypath/S1.png", filename)
-		assert.Equal(t, " some photo data ", string(data))
+		assert.Equal(t, studentPhotoPNG(t), data)
 		assert.Equal(t, os.FileMode(0644), perm)
 		fileWritten = true
 		return nil
@@ -963,10 +968,10 @@ func TestSyncStudentPhotos_SaveImagePathError(t *testing.T) {
 	}
 	mockRepo.On("GetAll").Return(visitors, nil)
 
-	someDataStr := " some photo data "
+	someDataStr := studentPhotoPNG(t)
 	dataResponse := &isams.StudentPhotoResponse{
 		Extension: "png",
-		Data:      []byte(someDataStr),
+		Data:      someDataStr,
 	}
 	mockClient.On("GetStudentPhoto", "S1").Once().Return(dataResponse, nil)
 
@@ -987,7 +992,7 @@ func TestSyncStudentPhotos_WriteImageError(t *testing.T) {
 
 	osWriteFile = func(filename string, data []byte, perm os.FileMode) error {
 		assert.Equal(t, "storage-path/mypath/S1.png", filename)
-		assert.Equal(t, " some photo data ", string(data))
+		assert.Equal(t, studentPhotoPNG(t), data)
 		assert.Equal(t, os.FileMode(0644), perm)
 		fileWritten = true
 		return fmt.Errorf("file write error")
@@ -1015,10 +1020,10 @@ func TestSyncStudentPhotos_WriteImageError(t *testing.T) {
 	}
 	mockRepo.On("GetAll").Return(visitors, nil)
 
-	someDataStr := " some photo data "
+	someDataStr := studentPhotoPNG(t)
 	dataResponse := &isams.StudentPhotoResponse{
 		Extension: "png",
-		Data:      []byte(someDataStr),
+		Data:      someDataStr,
 	}
 	mockClient.On("GetStudentPhoto", "S1").Once().Return(dataResponse, nil)
 
@@ -1195,4 +1200,40 @@ func TestSyncRegistrationCodesDictionaries_Success(t *testing.T) {
 	}
 	mockFactory.AssertExpectations(t)
 	mockClient.AssertExpectations(t)
+}
+
+// studentPhotoPNG is a real PNG: the sync now names the stored file after the
+// bytes it received, so a fixture has to be a decodable image.
+func studentPhotoPNG(t *testing.T) []byte {
+	t.Helper()
+	src := image.NewRGBA(image.Rect(0, 0, 4, 4))
+	for y := 0; y < 4; y++ {
+		for x := 0; x < 4; x++ {
+			src.Set(x, y, color.RGBA{R: 10, G: 20, B: 30, A: 255})
+		}
+	}
+	buf := bytes.NewBuffer(nil)
+	if err := png.Encode(buf, src); err != nil {
+		t.Fatalf("encode png fixture: %v", err)
+	}
+	return buf.Bytes()
+}
+
+func TestStudentPhotoFileName(t *testing.T) {
+	photo := studentPhotoPNG(t)
+
+	name, ok := studentPhotoFileName("S1", photo)
+	assert.True(t, ok)
+	assert.Equal(t, "S1.png", name)
+
+	// The ID reaches us from the ERP response and ends up in a path, so only the
+	// shape an ID actually has is accepted.
+	for _, id := range []string{"", "../../etc/passwd", "a/b", `a\b`, "a b", "a.b", strings.Repeat("x", 65)} {
+		_, ok := studentPhotoFileName(id, photo)
+		assert.False(t, ok, "id %q", id)
+	}
+
+	// The extension comes from the bytes, not from the response.
+	_, ok = studentPhotoFileName("S1", []byte("<html></html>"))
+	assert.False(t, ok)
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/buzyka/imlate/internal/domain/entity"
+	"github.com/buzyka/imlate/internal/infrastructure/imageutil"
 )
 
 type VisitorResponse struct {
@@ -218,7 +219,13 @@ func (a *AdminAPI) UploadVisitorImage(id int32, filename string, data []byte) (*
 		return nil, fmt.Errorf("failed to create image directory: %w", err)
 	}
 
-	ext := filepath.Ext(filename)
+	// The extension comes from the bytes, not from filename: filename is a label
+	// out of the multipart body and the directory it would land in is served
+	// over HTTP, so the stored name decides the Content-Type browsers get.
+	_, ext, ok := imageutil.DetectImageExtension(data)
+	if !ok {
+		return nil, fmt.Errorf("unsupported image type")
+	}
 	storedFilename := fmt.Sprintf("%d%s", id, ext)
 	filePath := filepath.Join(dir, storedFilename)
 
