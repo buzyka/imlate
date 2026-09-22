@@ -11,9 +11,7 @@ permissions:
 jobs:
   extract-version:
     name: Extract version from tag
-    # Pinned instead of ubuntu-latest: that label moves to Ubuntu 26.04 between
-    # 2026-10-19 and 2026-11-19, and CI should follow on our own schedule.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:

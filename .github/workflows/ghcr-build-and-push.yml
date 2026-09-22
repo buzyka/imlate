@@ -43,9 +43,7 @@ permissions:
 jobs:
   build-and-push:
     name: Build and push ${{ inputs.image_name }}:${{ inputs.version_tag }}
-    # Pinned instead of ubuntu-latest: that label moves to Ubuntu 26.04 between
-    # 2026-10-19 and 2026-11-19, and CI should follow on our own schedule.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Checkout code
