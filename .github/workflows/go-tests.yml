@@ -20,7 +20,9 @@ env:
 jobs:
   lint:
     name: Run golangci-lint
-    runs-on: ubuntu-latest
+    # Pinned instead of ubuntu-latest: that label moves to Ubuntu 26.04 between
+    # 2026-10-19 and 2026-11-19, and CI should follow on our own schedule.
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout code
@@ -39,7 +41,7 @@ jobs:
 
   test:
     name: Run Go Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     services:
       mysql:
