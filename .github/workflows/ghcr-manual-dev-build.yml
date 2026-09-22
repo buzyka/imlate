@@ -20,9 +20,7 @@ permissions:
 jobs:
   compute-params:
     name: Compute tag and branch
-    # Pinned instead of ubuntu-latest: that label moves to Ubuntu 26.04 between
-    # 2026-10-19 and 2026-11-19, and CI should follow on our own schedule.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       tag: ${{ steps.params.outputs.tag }}
       ref: ${{ steps.params.outputs.ref }}
