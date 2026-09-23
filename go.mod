@@ -6,7 +6,7 @@ toolchain go1.26.7
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
-	github.com/appleboy/gin-jwt/v3 v3.5.2
+	github.com/appleboy/gin-jwt/v3 v3.5.3
 	github.com/caarlos0/env/v11 v11.4.1
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-sql-driver/mysql v1.10.1
