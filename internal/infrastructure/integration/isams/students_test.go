@@ -50,6 +50,35 @@ func TestClient_GetStudents_Success(t *testing.T) {
 	assert.Equal(t, "John Doe", *resp.Students[0].FullName)
 }
 
+// formGroup comes back either as a class label ("4 B") or as null.
+func TestClient_GetStudents_FormGroup(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{
+			"page": 1,
+			"totalPages": 1,
+			"students": [
+				{"id": 1042, "schoolId": "S1042", "formGroup": null, "yearGroup": 3},
+				{"id": 1987, "schoolId": "S1987", "formGroup": "4 B", "yearGroup": 4}
+			]
+		}`))
+	}))
+	defer server.Close()
+
+	client := &Client{
+		BaseURL:    server.URL,
+		HTTPClient: server.Client(),
+	}
+
+	resp, err := client.GetStudents(1, 10)
+	assert.NoError(t, err)
+	assert.Len(t, resp.Students, 2)
+	assert.Nil(t, resp.Students[0].FormGroup)
+	if assert.NotNil(t, resp.Students[1].FormGroup) {
+		assert.Equal(t, "4 B", *resp.Students[1].FormGroup)
+	}
+}
+
 func TestClient_GetStudents_HTTPError(t *testing.T) {
 	client := &Client{
 		BaseURL:    "http://invalid-url",

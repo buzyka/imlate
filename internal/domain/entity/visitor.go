@@ -5,11 +5,15 @@ import (
 	"fmt"
 	"hash/crc64"
 	"sort"
+	"strings"
 	"time"
 )
 
 // CRC table (ISO)
 var crcTable = crc64.MakeTable(crc64.ISO)
+
+// FormGroupMaxLength is the size of the visitors.form_group column.
+const FormGroupMaxLength = 32
 
 type Visitor struct {
 	Id             int32      `json:"id"`
@@ -23,6 +27,7 @@ type Visitor struct {
 	ErpID          int64      `json:"isams_id"`
 	ErpSchoolID    string     `json:"isams_school_id"`
 	ErpYearGroupID int32      `json:"isams_year_group_id"`
+	FormGroup      *string    `json:"form_group"`
 	ErpDivisions   []int32    `json:"isams_divisions"`
 	SyncHash       uint64     `json:"-"`
 	UpdatedAt      time.Time  `json:"updated_at"`
@@ -41,6 +46,19 @@ func (v *Visitor) IsImportedFromISAMS() bool {
 	}
 
 	return v.ErpID != 0 && v.ErpSchoolID != ""
+}
+
+// NormalizeFormGroup maps a form group to what is stored: nil and blank values
+// become nil, anything else is trimmed at the edges only ("4 B" stays).
+func NormalizeFormGroup(formGroup *string) *string {
+	if formGroup == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*formGroup)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
 }
 
 func (v *Visitor) GetSyncHash() uint64 {
@@ -71,6 +89,15 @@ func (v *Visitor) calcSyncHash() uint64 {
 
 	// Write ErpYearGroupID (int32)
 	_ = binary.Write(h, binary.BigEndian, v.ErpYearGroupID)
+	h.Write([]byte{0x00})
+
+	// Write FormGroup (*string); a presence marker keeps nil apart from ""
+	if v.FormGroup == nil {
+		h.Write([]byte{0x00})
+	} else {
+		h.Write([]byte{0x01})
+		h.Write([]byte(*v.FormGroup))
+	}
 	h.Write([]byte{0x00})
 
 	// Write ErpDivisions ([]int32)

@@ -37,6 +37,8 @@ definitions:
         type: string
       email:
         type: string
+      form_group:
+        type: string
       full_name:
         type: string
       grade:
@@ -255,6 +257,8 @@ definitions:
     properties:
       email:
         type: string
+      form_group:
+        type: string
       grade:
         type: integer
       is_student:
@@ -442,6 +446,8 @@ definitions:
     properties:
       email:
         type: string
+      form_group:
+        type: string
       grade:
         type: integer
       is_student:
@@ -462,6 +468,8 @@ definitions:
       deleted_at:
         type: string
       email:
+        type: string
+      form_group:
         type: string
       full_name:
         type: string

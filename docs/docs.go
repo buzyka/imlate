@@ -1451,6 +1451,9 @@ const docTemplate = `{
                 "email": {
                     "type": "string"
                 },
+                "form_group": {
+                    "type": "string"
+                },
                 "full_name": {
                     "type": "string"
                 },
@@ -1781,6 +1784,9 @@ const docTemplate = `{
                 "email": {
                     "type": "string"
                 },
+                "form_group": {
+                    "type": "string"
+                },
                 "grade": {
                     "type": "integer"
                 },
@@ -2051,6 +2057,9 @@ const docTemplate = `{
                 "email": {
                     "type": "string"
                 },
+                "form_group": {
+                    "type": "string"
+                },
                 "grade": {
                     "type": "integer"
                 },
@@ -2078,6 +2087,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "email": {
+                    "type": "string"
+                },
+                "form_group": {
                     "type": "string"
                 },
                 "full_name": {

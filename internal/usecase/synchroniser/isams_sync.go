@@ -274,6 +274,7 @@ func (s *StudentSync) SaveStudent(student isams.Student) (updated bool, err erro
 		ErpID:          student.ID,
 		ErpSchoolID:    student.SchoolID,
 		ErpYearGroupID: int32(yearGroup),
+		FormGroup:      entity.NormalizeFormGroup(student.FormGroup),
 		ErpDivisions:   divisions,
 		UpdatedAt:      UpdatedAt,
 	}

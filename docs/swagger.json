@@ -1444,6 +1444,9 @@
                 "email": {
                     "type": "string"
                 },
+                "form_group": {
+                    "type": "string"
+                },
                 "full_name": {
                     "type": "string"
                 },
@@ -1774,6 +1777,9 @@
                 "email": {
                     "type": "string"
                 },
+                "form_group": {
+                    "type": "string"
+                },
                 "grade": {
                     "type": "integer"
                 },
@@ -2044,6 +2050,9 @@
                 "email": {
                     "type": "string"
                 },
+                "form_group": {
+                    "type": "string"
+                },
                 "grade": {
                     "type": "integer"
                 },
@@ -2071,6 +2080,9 @@
                     "type": "string"
                 },
                 "email": {
+                    "type": "string"
+                },
+                "form_group": {
                     "type": "string"
                 },
                 "full_name": {
