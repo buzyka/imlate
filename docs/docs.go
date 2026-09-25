@@ -124,7 +124,7 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Switches the fire alarm on for a bounded window or off immediately. While it is\non, the public /firelist/{grade} page serves evacuation rosters; otherwise that\npage returns 403. default_duration is in seconds, is mandatory when enabling,\nand may not exceed 24 hours.",
+                "description": "Switches the fire alarm on for a bounded window or off immediately. While it is\non, the public /firelist/{grade}[/{formGroup}] page serves evacuation rosters; otherwise that\npage returns 403. default_duration is in seconds, is mandatory when enabling,\nand may not exceed 24 hours.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1451,6 +1451,9 @@ const docTemplate = `{
                 "email": {
                     "type": "string"
                 },
+                "form_group": {
+                    "type": "string"
+                },
                 "full_name": {
                     "type": "string"
                 },
@@ -1781,6 +1784,9 @@ const docTemplate = `{
                 "email": {
                     "type": "string"
                 },
+                "form_group": {
+                    "type": "string"
+                },
                 "grade": {
                     "type": "integer"
                 },
@@ -2051,6 +2057,9 @@ const docTemplate = `{
                 "email": {
                     "type": "string"
                 },
+                "form_group": {
+                    "type": "string"
+                },
                 "grade": {
                     "type": "integer"
                 },
@@ -2078,6 +2087,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "email": {
+                    "type": "string"
+                },
+                "form_group": {
                     "type": "string"
                 },
                 "full_name": {

@@ -37,6 +37,8 @@ definitions:
         type: string
       email:
         type: string
+      form_group:
+        type: string
       full_name:
         type: string
       grade:
@@ -255,6 +257,8 @@ definitions:
     properties:
       email:
         type: string
+      form_group:
+        type: string
       grade:
         type: integer
       is_student:
@@ -442,6 +446,8 @@ definitions:
     properties:
       email:
         type: string
+      form_group:
+        type: string
       grade:
         type: integer
       is_student:
@@ -462,6 +468,8 @@ definitions:
       deleted_at:
         type: string
       email:
+        type: string
+      form_group:
         type: string
       full_name:
         type: string
@@ -582,7 +590,7 @@ paths:
       - application/json
       description: |-
         Switches the fire alarm on for a bounded window or off immediately. While it is
-        on, the public /firelist/{grade} page serves evacuation rosters; otherwise that
+        on, the public /firelist/{grade}[/{formGroup}] page serves evacuation rosters; otherwise that
         page returns 403. default_duration is in seconds, is mandatory when enabling,
         and may not exceed 24 hours.
       parameters:

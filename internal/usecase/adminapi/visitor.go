@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/infrastructure/imageutil"
@@ -23,6 +24,7 @@ type VisitorResponse struct {
 	ErpID             int64      `json:"isams_id"`
 	ErpSchoolID       string     `json:"isams_school_id"`
 	ErpYearGroupID    int32      `json:"isams_year_group_id"`
+	FormGroup         *string    `json:"form_group"`
 	ErpDivisions      []int32    `json:"isams_divisions"`
 	UpdatedAt         time.Time  `json:"updated_at"`
 	DeletedAt         *time.Time `json:"deleted_at,omitempty"`
@@ -53,6 +55,7 @@ func newVisitorResponse(visitor *entity.Visitor) *VisitorResponse {
 		ErpID:             visitor.ErpID,
 		ErpSchoolID:       visitor.ErpSchoolID,
 		ErpYearGroupID:    visitor.ErpYearGroupID,
+		FormGroup:         visitor.FormGroup,
 		ErpDivisions:      divisions,
 		UpdatedAt:         visitor.UpdatedAt,
 		DeletedAt:         visitor.DeletedAt,
@@ -105,13 +108,29 @@ func (a *AdminAPI) GetVisitor(id int32) (*VisitorResponse, error) {
 	return newVisitorResponse(visitor), nil
 }
 
-func (a *AdminAPI) CreateVisitor(name, surname string, isStudent bool, grade *int, email string, keys []string) (*VisitorResponse, error) {
+// validateFormGroup normalizes a form group from a request and checks it fits
+// the visitors.form_group column.
+func validateFormGroup(formGroup *string) (*string, error) {
+	normalized := entity.NormalizeFormGroup(formGroup)
+	if normalized != nil && utf8.RuneCountInString(*normalized) > entity.FormGroupMaxLength {
+		return nil, fmt.Errorf("%w: 'form_group' must be at most %d characters", ErrInvalidRequestFormat, entity.FormGroupMaxLength)
+	}
+	return normalized, nil
+}
+
+func (a *AdminAPI) CreateVisitor(name, surname string, isStudent bool, grade *int, formGroup *string, email string, keys []string) (*VisitorResponse, error) {
+	formGroup, err := validateFormGroup(formGroup)
+	if err != nil {
+		return nil, err
+	}
+
 	visitor := &entity.Visitor{
 		Name:      name,
 		Surname:   surname,
 		Email:     email,
 		IsStudent: isStudent,
 		Grade:     grade,
+		FormGroup: formGroup,
 		UpdatedAt: time.Now(),
 	}
 
@@ -139,7 +158,12 @@ func (a *AdminAPI) CreateVisitor(name, surname string, isStudent bool, grade *in
 	return newVisitorResponse(visitor), nil
 }
 
-func (a *AdminAPI) UpdateVisitor(id int32, name, surname string, isStudent bool, grade *int, email string, keys []string) (*VisitorResponse, error) {
+func (a *AdminAPI) UpdateVisitor(id int32, name, surname string, isStudent bool, grade *int, formGroup *string, email string, keys []string) (*VisitorResponse, error) {
+	formGroup, err := validateFormGroup(formGroup)
+	if err != nil {
+		return nil, err
+	}
+
 	visitor, err := a.VisitorRepo.FindById(id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find visitor: %w", err)
@@ -153,6 +177,7 @@ func (a *AdminAPI) UpdateVisitor(id int32, name, surname string, isStudent bool,
 	visitor.Email = email
 	visitor.IsStudent = isStudent
 	visitor.Grade = grade
+	visitor.FormGroup = formGroup
 	visitor.UpdatedAt = time.Now()
 
 	if err := a.VisitorRepo.SaveVisitor(visitor); err != nil {

@@ -108,7 +108,7 @@ func TestGetFireList_GradeParsing(t *testing.T) {
 					return true
 				})).Return(result(), nil)
 
-			data, err := svc.GetFireList(tt.gradeParam)
+			data, err := svc.GetFireList(tt.gradeParam, "")
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.gradeParam, data.GradeParam)
@@ -124,7 +124,7 @@ func TestGetFireList_InvalidGrade(t *testing.T) {
 		t.Run("grade="+gradeParam, func(t *testing.T) {
 			repo, svc := newService()
 
-			data, err := svc.GetFireList(gradeParam)
+			data, err := svc.GetFireList(gradeParam, "")
 
 			require.ErrorIs(t, err, ErrInvalidGrade)
 			assert.Equal(t, FireListPageData{}, data)
@@ -146,7 +146,7 @@ func TestGetFireList_Pagination(t *testing.T) {
 			return true
 		})).Return(result(), nil)
 
-	_, err := svc.GetFireList("5")
+	_, err := svc.GetFireList("5", "")
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, got.Page)
@@ -173,7 +173,7 @@ func TestGetFireList_DateRangeIsExactlyOneDay(t *testing.T) {
 		mock.Anything,
 	).Return(result(), nil)
 
-	data, err := svc.GetFireList("5")
+	data, err := svc.GetFireList("5", "")
 
 	require.NoError(t, err)
 	assert.Equal(t, 24*time.Hour, to.Sub(from))
@@ -196,7 +196,7 @@ func TestGetFireList_PrioritySort(t *testing.T) {
 		row(7, "Eve", "Zulu", "signed_in"),
 	), nil)
 
-	data, err := svc.GetFireList("5")
+	data, err := svc.GetFireList("5", "")
 
 	require.NoError(t, err)
 	assert.Equal(t, []int32{5, 4, 3, 7, 6, 1, 2},
@@ -224,7 +224,7 @@ func TestGetFireList_DiacriticSort(t *testing.T) {
 		row(5, "E", "Zimmer", "signed_in"),
 	), nil)
 
-	data, err := svc.GetFireList("5")
+	data, err := svc.GetFireList("5", "")
 
 	require.NoError(t, err)
 	assert.Equal(t, []string{"Muller", "Muñecas", "Nauta", "Thézé", "Zimmer"}, surnames(data.Rows))
@@ -242,7 +242,7 @@ func TestGetFireList_CaseInsensitiveSort(t *testing.T) {
 		row(3, "C", "Ubank", "signed_in"),
 	), nil)
 
-	data, err := svc.GetFireList("5")
+	data, err := svc.GetFireList("5", "")
 
 	require.NoError(t, err)
 	assert.Equal(t, []string{"Ubank", "van Dijk", "Wood"}, surnames(data.Rows))
@@ -260,7 +260,7 @@ func TestGetFireList_StatusMapping(t *testing.T) {
 		row(4, "D", "D", "something_else"),
 	), nil)
 
-	data, err := svc.GetFireList("5")
+	data, err := svc.GetFireList("5", "")
 
 	require.NoError(t, err)
 	require.Len(t, data.Rows, 4)
@@ -283,7 +283,7 @@ func TestGetFireList_Counts(t *testing.T) {
 		row(6, "F", "F", "not_signed"),
 	), nil)
 
-	data, err := svc.GetFireList("5")
+	data, err := svc.GetFireList("5", "")
 
 	require.NoError(t, err)
 	assert.Equal(t, FireListCounts{SignedIn: 3, SignedOut: 2, NoStatus: 1, Total: 6}, data.Counts)
@@ -297,7 +297,7 @@ func TestGetFireList_EmptyResult(t *testing.T) {
 	repo.On("EnsureDayRows", mock.Anything).Return(nil)
 	repo.On("GetVisitReport", mock.Anything, mock.Anything, mock.Anything).Return(result(), nil)
 
-	data, err := svc.GetFireList("5")
+	data, err := svc.GetFireList("5", "")
 
 	require.NoError(t, err)
 	assert.Empty(t, data.Rows)
@@ -311,7 +311,7 @@ func TestGetFireList_ReportErrorIsPropagated(t *testing.T) {
 	repo.On("EnsureDayRows", mock.Anything).Return(nil)
 	repo.On("GetVisitReport", mock.Anything, mock.Anything, mock.Anything).Return(nil, wantErr)
 
-	data, err := svc.GetFireList("5")
+	data, err := svc.GetFireList("5", "")
 
 	require.ErrorIs(t, err, wantErr)
 	assert.Equal(t, FireListPageData{}, data)
@@ -327,7 +327,7 @@ func TestGetFireList_EnsureDayRowsErrorIsNotFatal(t *testing.T) {
 		row(1, "A", "A", "signed_in"),
 	), nil)
 
-	data, err := svc.GetFireList("5")
+	data, err := svc.GetFireList("5", "")
 
 	require.NoError(t, err)
 	require.Len(t, data.Rows, 1)
@@ -346,7 +346,7 @@ func TestGetFireList_NilLoggerDoesNotPanic(t *testing.T) {
 	repo.On("GetVisitReport", mock.Anything, mock.Anything, mock.Anything).Return(result(), nil)
 
 	assert.NotPanics(t, func() {
-		_, err := svc.GetFireList("staff")
+		_, err := svc.GetFireList("staff", "")
 		assert.NoError(t, err)
 	})
 }
@@ -367,7 +367,7 @@ func TestErrorPageData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			data := ErrorPageData(tt.gradeParam, "boom")
+			data := ErrorPageData(tt.gradeParam, "", "boom")
 
 			assert.Equal(t, tt.gradeParam, data.GradeParam)
 			assert.Equal(t, tt.wantLabel, data.GradeLabel)
@@ -391,7 +391,7 @@ func TestGetFireList_AlarmOffReturnsNoDataAndTouchesNoRepository(t *testing.T) {
 			repo := new(providertest.VisitDailyReportRepositoryMock)
 			svc := &Service{Reports: repo, Alarm: &entity.FireAlarmState{}, Logger: zap.NewNop().Sugar()}
 
-			data, err := svc.GetFireList(gradeParam)
+			data, err := svc.GetFireList(gradeParam, "")
 
 			require.ErrorIs(t, err, ErrAlarmInactive)
 			assert.Equal(t, FireListPageData{}, data)
@@ -410,7 +410,7 @@ func TestGetFireList_ExpiredAlarmReturnsNoData(t *testing.T) {
 
 	time.Sleep(5 * time.Millisecond)
 
-	_, err := svc.GetFireList("5")
+	_, err := svc.GetFireList("5", "")
 
 	require.ErrorIs(t, err, ErrAlarmInactive)
 	repo.AssertNotCalled(t, "GetVisitReport", mock.Anything, mock.Anything, mock.Anything)
@@ -422,14 +422,14 @@ func TestGetFireList_AlarmGateOutranksGradeValidation(t *testing.T) {
 	repo := new(providertest.VisitDailyReportRepositoryMock)
 	svc := &Service{Reports: repo, Alarm: &entity.FireAlarmState{}, Logger: zap.NewNop().Sugar()}
 
-	_, err := svc.GetFireList("not-a-grade")
+	_, err := svc.GetFireList("not-a-grade", "")
 
 	require.ErrorIs(t, err, ErrAlarmInactive)
 	assert.NotErrorIs(t, err, ErrInvalidGrade)
 }
 
 func TestInactivePageData(t *testing.T) {
-	data := InactivePageData("7")
+	data := InactivePageData("7", "")
 
 	assert.True(t, data.AlarmInactive)
 	assert.Equal(t, "7", data.GradeParam)
@@ -449,8 +449,125 @@ func TestGetFireList_NilAlarmClosesTheRoster(t *testing.T) {
 	repo := new(providertest.VisitDailyReportRepositoryMock)
 	svc := &Service{Reports: repo, Logger: zap.NewNop().Sugar()}
 
-	_, err := svc.GetFireList("5")
+	_, err := svc.GetFireList("5", "")
 
 	require.ErrorIs(t, err, ErrAlarmInactive)
 	repo.AssertNotCalled(t, "GetVisitReport", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestGetFireList_FormGroup(t *testing.T) {
+	tests := []struct {
+		name           string
+		gradeParam     string
+		formGroupParam string
+		wantFormGroups []string
+		wantFormParam  string
+		wantLabel      string
+		wantIsStudent  bool
+		wantYearGroups []int
+	}{
+		{
+			name:       "year group and form group",
+			gradeParam: "2", formGroupParam: "2 B",
+			wantFormGroups: []string{"2 B"}, wantFormParam: "2 B", wantLabel: "Grade 2 · 2 B",
+			wantIsStudent: true, wantYearGroups: []int{2},
+		},
+		{
+			name:       "staff and form group",
+			gradeParam: "staff", formGroupParam: "MyGroup",
+			wantFormGroups: []string{"MyGroup"}, wantFormParam: "MyGroup", wantLabel: "Staff · MyGroup",
+			wantIsStudent: false,
+		},
+		{
+			name:       "form group trimmed at the edges",
+			gradeParam: "2", formGroupParam: " 2 B ",
+			wantFormGroups: []string{"2 B"}, wantFormParam: "2 B", wantLabel: "Grade 2 · 2 B",
+			wantIsStudent: true, wantYearGroups: []int{2},
+		},
+		{
+			name:       "empty form group means whole year group",
+			gradeParam: "2", formGroupParam: "",
+			wantLabel: "Grade 2", wantIsStudent: true, wantYearGroups: []int{2},
+		},
+		{
+			name:       "blank form group means whole year group",
+			gradeParam: "2", formGroupParam: "   ",
+			wantLabel: "Grade 2", wantIsStudent: true, wantYearGroups: []int{2},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo, svc := newService()
+			var got provider.VisitReportFilter
+
+			repo.On("EnsureDayRows", mock.Anything).Return(nil)
+			repo.On("GetVisitReport", mock.Anything, mock.Anything, mock.MatchedBy(
+				func(f provider.VisitReportFilter) bool {
+					got = f
+					return true
+				})).Return(result(), nil)
+
+			data, err := svc.GetFireList(tt.gradeParam, tt.formGroupParam)
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.gradeParam, data.GradeParam)
+			assert.Equal(t, tt.wantFormParam, data.FormGroupParam)
+			assert.Equal(t, tt.wantLabel, data.GradeLabel)
+			assert.Equal(t, tt.wantFormGroups, got.FormGroups)
+			require.NotNil(t, got.IsStudent)
+			assert.Equal(t, tt.wantIsStudent, *got.IsStudent)
+			assert.Equal(t, tt.wantYearGroups, got.YearGroups)
+			repo.AssertExpectations(t)
+		})
+	}
+}
+
+func TestGetFireList_InvalidGradeWithFormGroup(t *testing.T) {
+	repo, svc := newService()
+
+	data, err := svc.GetFireList("abc", "2 B")
+
+	require.ErrorIs(t, err, ErrInvalidGrade)
+	assert.Equal(t, FireListPageData{}, data)
+	repo.AssertNotCalled(t, "GetVisitReport", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestGetFireList_AlarmOffWithFormGroupTouchesNoRepository(t *testing.T) {
+	repo := new(providertest.VisitDailyReportRepositoryMock)
+	svc := &Service{Reports: repo, Alarm: &entity.FireAlarmState{}, Logger: zap.NewNop().Sugar()}
+
+	data, err := svc.GetFireList("2", "2 B")
+
+	require.ErrorIs(t, err, ErrAlarmInactive)
+	assert.Equal(t, FireListPageData{}, data)
+	repo.AssertNotCalled(t, "EnsureDayRows", mock.Anything)
+	repo.AssertNotCalled(t, "GetVisitReport", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestErrorPageData_WithFormGroup(t *testing.T) {
+	data := ErrorPageData("2", " 2 B ", "boom")
+
+	assert.Equal(t, "2", data.GradeParam)
+	assert.Equal(t, "2 B", data.FormGroupParam)
+	assert.Equal(t, "Grade 2 · 2 B", data.GradeLabel)
+	assert.Equal(t, "boom", data.Error)
+	assert.Empty(t, data.Rows)
+}
+
+func TestInactivePageData_WithFormGroup(t *testing.T) {
+	data := InactivePageData("staff", "MyGroup")
+
+	assert.True(t, data.AlarmInactive)
+	assert.Equal(t, "MyGroup", data.FormGroupParam)
+	assert.Equal(t, "Staff · MyGroup", data.GradeLabel)
+	assert.Empty(t, data.Rows)
+	assert.Equal(t, FireListCounts{}, data.Counts)
+}
+
+func TestInactivePageData_BlankFormGroup(t *testing.T) {
+	data := InactivePageData("7", "  ")
+
+	assert.Empty(t, data.FormGroupParam)
+	assert.Equal(t, "Grade 7", data.GradeLabel)
 }

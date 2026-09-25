@@ -48,13 +48,14 @@ func newTestController() (*providertest.VisitDailyReportRepositoryMock, *FireLis
 func performRequest(handler gin.HandlerFunc, path string) *httptest.ResponseRecorder {
 	router := gin.New()
 	router.SetHTMLTemplate(template.Must(template.New("firelist.html").Parse(
-		`grade={{ .GradeParam }} label={{ .GradeLabel }} day={{ .Day }} at={{ .GeneratedAt }} ` +
+		`grade={{ .GradeParam }} fg={{ .FormGroupParam }} label={{ .GradeLabel }} day={{ .Day }} at={{ .GeneratedAt }} ` +
 			`v={{ .AppVersion }} in={{ .Counts.SignedIn }} out={{ .Counts.SignedOut }} ` +
 			`none={{ .Counts.NoStatus }} total={{ .Counts.Total }} error={{ .Error }} ` +
 			`inactive={{ .AlarmInactive }}` +
 			`{{ range .Rows }}|{{ .VisitorID }};{{ .Name }};{{ .Surname }};{{ .Status }};{{ .StatusLabel }};{{ .StatusRank }}{{ end }}`,
 	)))
 	router.GET("/firelist/:grade", handler)
+	router.GET("/firelist/:grade/:formGroup", handler)
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
@@ -232,4 +233,84 @@ func TestFireListPageHandler_ExpiredAlarmIsForbidden(t *testing.T) {
 
 	assert.Equal(t, http.StatusForbidden, w.Code)
 	assert.Contains(t, w.Body.String(), "inactive=true")
+}
+
+func TestFireListPageHandler_YearGroupAndFormGroup(t *testing.T) {
+	repo, controller := newTestController()
+
+	repo.On("EnsureDayRows", mock.Anything).Return(nil)
+	repo.On("GetVisitReport", mock.Anything, mock.Anything, mock.MatchedBy(
+		func(f provider.VisitReportFilter) bool {
+			return f.IsStudent != nil && *f.IsStudent &&
+				len(f.YearGroups) == 1 && f.YearGroups[0] == 2 &&
+				len(f.FormGroups) == 1 && f.FormGroups[0] == "2 B"
+		})).Return(&provider.VisitReportResult{
+		Total: 1,
+		Rows:  []provider.VisitReportRow{{VisitorID: 3, Name: "Alice", Surname: "Adams", SignStatus: "signed_in"}},
+	}, nil)
+
+	// %20 in the path is decoded before it reaches the handler.
+	w := performRequest(controller.FireListPageHandler(), "/firelist/2/2%20B")
+
+	require.Equal(t, http.StatusOK, w.Code)
+	body := w.Body.String()
+	assert.Contains(t, body, "grade=2 fg=2 B label=Grade 2 · 2 B")
+	assert.Contains(t, body, "|3;Alice;Adams;signed_in;Signed In;0")
+	repo.AssertExpectations(t)
+}
+
+func TestFireListPageHandler_StaffAndFormGroup(t *testing.T) {
+	repo, controller := newTestController()
+
+	repo.On("EnsureDayRows", mock.Anything).Return(nil)
+	repo.On("GetVisitReport", mock.Anything, mock.Anything, mock.MatchedBy(
+		func(f provider.VisitReportFilter) bool {
+			return f.IsStudent != nil && !*f.IsStudent && len(f.YearGroups) == 0 &&
+				len(f.FormGroups) == 1 && f.FormGroups[0] == "MyGroup"
+		})).Return(&provider.VisitReportResult{}, nil)
+
+	w := performRequest(controller.FireListPageHandler(), "/firelist/staff/MyGroup")
+
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "fg=MyGroup label=Staff · MyGroup")
+	repo.AssertExpectations(t)
+}
+
+func TestFireListPageHandler_InvalidGradeWithFormGroup(t *testing.T) {
+	repo, controller := newTestController()
+
+	w := performRequest(controller.FireListPageHandler(), "/firelist/abc/2%20B")
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.Contains(t, w.Body.String(), "label=Fire list · 2 B")
+	repo.AssertNotCalled(t, "GetVisitReport", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestFireListPageHandler_ServiceErrorWithFormGroup(t *testing.T) {
+	repo, controller := newTestController()
+
+	repo.On("EnsureDayRows", mock.Anything).Return(nil)
+	repo.On("GetVisitReport", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil, errors.New("db down"))
+
+	w := performRequest(controller.FireListPageHandler(), "/firelist/2/2%20B")
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Contains(t, w.Body.String(), "label=Grade 2 · 2 B")
+	assert.NotContains(t, w.Body.String(), "db down")
+}
+
+func TestFireListPageHandler_AlarmOffWithFormGroup(t *testing.T) {
+	repo := new(providertest.VisitDailyReportRepositoryMock)
+	controller := &FireListController{
+		FireList: &firelistview.Service{Reports: repo, Alarm: &entity.FireAlarmState{}, Logger: zap.NewNop().Sugar()},
+		Logger:   zap.NewNop().Sugar(),
+	}
+
+	w := performRequest(controller.FireListPageHandler(), "/firelist/2/2%20B")
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+	assert.Contains(t, w.Body.String(), "fg=2 B label=Grade 2 · 2 B")
+	assert.Contains(t, w.Body.String(), "inactive=true")
+	repo.AssertNotCalled(t, "GetVisitReport", mock.Anything, mock.Anything, mock.Anything)
 }

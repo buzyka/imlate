@@ -63,7 +63,7 @@ func (ac *AdminAPIController) GetFireAlarmHandler() gin.HandlerFunc {
 // SetFireAlarmHandler godoc
 // @Summary      Set fire alarm status
 // @Description  Switches the fire alarm on for a bounded window or off immediately. While it is
-// @Description  on, the public /firelist/{grade} page serves evacuation rosters; otherwise that
+// @Description  on, the public /firelist/{grade}[/{formGroup}] page serves evacuation rosters; otherwise that
 // @Description  page returns 403. default_duration is in seconds, is mandatory when enabling,
 // @Description  and may not exceed 24 hours.
 // @Tags         admin-fire-alarm
