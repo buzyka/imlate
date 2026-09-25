@@ -9,6 +9,7 @@ import (
 type VisitReportFilter struct {
 	IsStudent      *bool
 	YearGroups     []int
+	FormGroups     []string
 	SignStatuses   []string
 	OrderField     string
 	OrderDirection string

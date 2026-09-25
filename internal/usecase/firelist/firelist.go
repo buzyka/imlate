@@ -51,14 +51,17 @@ var ErrAlarmInactive = errors.New("fire alarm is not active")
 
 // FireListPageData is the template data for firelist.html.
 type FireListPageData struct {
-	GradeParam  string // "5" | "staff" — raw URL value, used as the localStorage key
-	GradeLabel  string // "Grade 5" | "Staff" — page heading
-	Day         string // "2026-09-15" — localStorage key part + header caption
-	GeneratedAt string // "09:41" — when the data snapshot was taken
-	AppVersion  string // for ?v= cache busting on CSS/JS
-	Rows        []FireListRow
-	Counts      FireListCounts
-	Error       string // non-empty => template renders an error banner instead of the table
+	GradeParam string // "5" | "staff" — raw URL value, used as the localStorage key
+	// FormGroupParam narrows the list to one class ("2 B"); empty for the whole
+	// year group or all staff. Part of the localStorage key.
+	FormGroupParam string
+	GradeLabel     string // "Grade 5" | "Staff" | "Grade 2 · 2 B" — page heading
+	Day            string // "2026-09-15" — localStorage key part + header caption
+	GeneratedAt    string // "09:41" — when the data snapshot was taken
+	AppVersion     string // for ?v= cache busting on CSS/JS
+	Rows           []FireListRow
+	Counts         FireListCounts
+	Error          string // non-empty => template renders an error banner instead of the table
 	// AlarmInactive => template renders a neutral "no alarm running" notice
 	// instead of the table. Distinct from Error: this is an ordinary state, not
 	// a failure, and must not be dressed up as one.
@@ -88,8 +91,9 @@ type Service struct {
 	Logger  *zap.SugaredLogger                  `container:"type"`
 }
 
-// GetFireList returns the roster for the given URL grade segment, for today.
-func (s *Service) GetFireList(gradeParam string) (FireListPageData, error) {
+// GetFireList returns the roster for the given URL grade segment, for today,
+// optionally narrowed to one form group. A blank form group means no narrowing.
+func (s *Service) GetFireList(gradeParam, formGroupParam string) (FireListPageData, error) {
 	// Checked first, before the grade is even parsed and before anything
 	// touches the database. The page is public, so this gate is the only thing
 	// standing between an anonymous request and the names of every child in a
@@ -102,6 +106,11 @@ func (s *Service) GetFireList(gradeParam string) (FireListPageData, error) {
 	filter, label, err := parseGrade(gradeParam)
 	if err != nil {
 		return FireListPageData{}, err
+	}
+	formGroup := normalizeFormGroupParam(formGroupParam)
+	if formGroup != "" {
+		filter.FormGroups = []string{formGroup}
+		label = withFormGroup(label, formGroup)
 	}
 
 	day := util.Now()
@@ -160,43 +169,48 @@ func (s *Service) GetFireList(gradeParam string) (FireListPageData, error) {
 	sortRows(rows)
 
 	return FireListPageData{
-		GradeParam:  gradeParam,
-		GradeLabel:  label,
-		Day:         day.Format(dayLayout),
-		GeneratedAt: day.Format(clockLayout),
-		AppVersion:  version.Version,
-		Rows:        rows,
-		Counts:      counts,
+		GradeParam:     gradeParam,
+		FormGroupParam: formGroup,
+		GradeLabel:     label,
+		Day:            day.Format(dayLayout),
+		GeneratedAt:    day.Format(clockLayout),
+		AppVersion:     version.Version,
+		Rows:           rows,
+		Counts:         counts,
 	}, nil
 }
 
 // ErrorPageData builds page data that renders only the error banner, so the
 // controller can serve a readable page instead of a JSON blob to someone who is
 // mid-evacuation.
-func ErrorPageData(gradeParam, message string) FireListPageData {
+func ErrorPageData(gradeParam, formGroupParam, message string) FireListPageData {
 	day := util.Now()
+	formGroup := normalizeFormGroupParam(formGroupParam)
 	return FireListPageData{
-		GradeParam:  gradeParam,
-		GradeLabel:  gradeLabel(gradeParam),
-		Day:         day.Format(dayLayout),
-		GeneratedAt: day.Format(clockLayout),
-		AppVersion:  version.Version,
-		Error:       message,
+		GradeParam:     gradeParam,
+		FormGroupParam: formGroup,
+		GradeLabel:     withFormGroup(gradeLabel(gradeParam), formGroup),
+		Day:            day.Format(dayLayout),
+		GeneratedAt:    day.Format(clockLayout),
+		AppVersion:     version.Version,
+		Error:          message,
 	}
 }
 
 // InactivePageData builds page data for the "no alarm running" page. It
 // carries no rows and no counts by construction, so the gate cannot leak a
 // roster through the page it renders when it refuses one.
-func InactivePageData(gradeParam string) FireListPageData {
+func InactivePageData(gradeParam, formGroupParam string) FireListPageData {
 	day := util.Now()
+	formGroup := normalizeFormGroupParam(formGroupParam)
 	return FireListPageData{
-		GradeParam:    gradeParam,
-		GradeLabel:    gradeLabel(gradeParam),
-		Day:           day.Format(dayLayout),
-		GeneratedAt:   day.Format(clockLayout),
-		AppVersion:    version.Version,
-		AlarmInactive: true,
+		GradeParam:     gradeParam,
+		FormGroupParam: formGroup,
+		GradeLabel:     withFormGroup(gradeLabel(gradeParam), formGroup),
+		Day:            day.Format(dayLayout),
+		GeneratedAt:    day.Format(clockLayout),
+		AppVersion:     version.Version,
+		AlarmInactive:  true,
 	}
 }
 
@@ -231,6 +245,23 @@ func gradeLabel(gradeParam string) string {
 		return fmt.Sprintf("Grade %d", n)
 	}
 	return fallbackGradeLabel
+}
+
+// normalizeFormGroupParam applies the stored-value rules to the URL segment, so
+// " 2 B " finds "2 B" and a blank segment means "whole year group".
+func normalizeFormGroupParam(formGroupParam string) string {
+	if formGroup := entity.NormalizeFormGroup(&formGroupParam); formGroup != nil {
+		return *formGroup
+	}
+	return ""
+}
+
+// withFormGroup appends the class to a heading: "Grade 2" -> "Grade 2 · 2 B".
+func withFormGroup(label, formGroup string) string {
+	if formGroup == "" {
+		return label
+	}
+	return label + " · " + formGroup
 }
 
 // classifyStatus turns the repository's sign_status into the CSS suffix, the

@@ -1,9 +1,10 @@
 // Evacuation roll-call behaviour.
 //
-// Loaded after the inline <script> in firelist.html, which declares the two
+// Loaded after the inline <script> in firelist.html, which declares the three
 // globals this file reads:
-//   fireListDay   — '2026-09-15', the day the server snapshot is for
-//   fireListGrade — '5' | 'staff', the raw URL segment
+//   fireListDay       — '2026-09-15', the day the server snapshot is for
+//   fireListGrade     — '5' | 'staff', the raw URL segment
+//   fireListFormGroup — '2 B', or '' when the list is not narrowed to a class
 // Do not redeclare them here.
 //
 // Everything in this file has to keep working after the network dies: the page
@@ -11,10 +12,11 @@
 // further requests. Nothing below talks to the server.
 
 // ---- Storage ----
-// One key per day and grade, so two teachers on two grades never share a list
-// and yesterday's drill can never be mistaken for today's.
+// One key per day, grade and form group, so two teachers on two classes never
+// share a list and yesterday's drill can never be mistaken for today's.
 var FL_PREFIX = 'firelist:';
-var flStorageKey = FL_PREFIX + fireListDay + ':' + fireListGrade;
+var flStorageKey = FL_PREFIX + fireListDay + ':' + fireListGrade +
+    (fireListFormGroup ? ':' + fireListFormGroup : '');
 
 // localStorage throws outright in Safari private mode and when a device is out
 // of quota. Every access goes through these two so a storage failure costs the
@@ -48,7 +50,7 @@ function flPurgeOldDays() {
         for (i = 0; i < window.localStorage.length; i++) {
             var key = window.localStorage.key(i);
             if (!key || key.indexOf(FL_PREFIX) !== 0) continue;
-            // 'firelist:<day>:<grade>' — anything not for today goes.
+            // 'firelist:<day>:<grade>[:<formGroup>]' — anything not for today goes.
             if (key.indexOf(FL_PREFIX + fireListDay + ':') !== 0) stale.push(key);
         }
         // Removal is a second pass: deleting inside the loop reindexes the keys.
