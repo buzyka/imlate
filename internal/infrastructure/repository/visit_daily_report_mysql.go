@@ -253,6 +253,7 @@ const reportSelectColumns = `SELECT
 	v.image,
 	v.is_student,
 	v.year_group,
+	v.form_group,
 	r.visits_count,
 	CASE
 		WHEN r.visits_count = 0 THEN 'not_signed'
@@ -301,6 +302,7 @@ func (r *VisitDailyReport) GetVisitReport(from, to time.Time, filter provider.Vi
 		var day time.Time
 		var emailRaw, imageRaw sql.NullString
 		var yearGroup sql.NullInt64
+		var formGroup sql.NullString
 		var signedIn, signedOut sql.NullTime
 		var duration, clear sql.NullInt64
 
@@ -313,6 +315,7 @@ func (r *VisitDailyReport) GetVisitReport(from, to time.Time, filter provider.Vi
 			&imageRaw,
 			&row.IsStudent,
 			&yearGroup,
+			&formGroup,
 			&row.VisitsCount,
 			&row.SignStatus,
 			&signedIn,
@@ -329,6 +332,10 @@ func (r *VisitDailyReport) GetVisitReport(from, to time.Time, filter provider.Vi
 		if yearGroup.Valid {
 			yg := int(yearGroup.Int64)
 			row.YearGroup = &yg
+		}
+		if formGroup.Valid {
+			fg := formGroup.String
+			row.FormGroup = &fg
 		}
 		if signedIn.Valid {
 			t := signedIn.Time
@@ -420,6 +427,7 @@ func buildSignStatusWhere(signStatuses []string) string {
 var reportSortSQL = map[string]string{
 	"sign_status":  "sign_status",
 	"year_group":   "v.year_group",
+	"form_group":   "v.form_group",
 	"name":         "v.name",
 	"surname":      "v.surname",
 	"visit_date":   "r.day",

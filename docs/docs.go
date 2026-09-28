@@ -1574,6 +1574,13 @@ const docTemplate = `{
         "github_com_buzyka_imlate_internal_usecase_adminapi.PostReportsVisitsFilters": {
             "type": "object",
             "properties": {
+                "form_group": {
+                    "description": "FormGroup filters by class (e.g. \"2 B\"). Values are trimmed; blank values are ignored.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "is_student": {
                     "type": "boolean"
                 },
@@ -1607,6 +1614,7 @@ const docTemplate = `{
                     "enum": [
                         "sign_status",
                         "year_group",
+                        "form_group",
                         "name",
                         "surname",
                         "visit_date",
@@ -1875,7 +1883,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "fields": {
-                    "description": "Fields selects which optional fields to include in each row.\nComputed fields (visit_date, sign_status, visits_count, signed_in, signed_out, duration_minutes)\nare always present regardless of this list.\nAllowed values: visitor_id, visit_date, name, surname, is_student, year_group,\nvisits_count, sign_status, signed_in, signed_out, duration_minutes, email, image.\nOmit or leave empty to return all optional fields.",
+                    "description": "Fields selects which optional fields to include in each row.\nComputed fields (visit_date, sign_status, visits_count, signed_in, signed_out, duration_minutes)\nare always present regardless of this list.\nAllowed values: visitor_id, visit_date, name, surname, is_student, year_group, form_group,\nvisits_count, sign_status, signed_in, signed_out, duration_minutes, email, image.\nOmit or leave empty to return all optional fields.",
                     "type": "array",
                     "items": {
                         "type": "string"

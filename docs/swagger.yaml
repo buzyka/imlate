@@ -117,6 +117,12 @@ definitions:
     type: object
   github_com_buzyka_imlate_internal_usecase_adminapi.PostReportsVisitsFilters:
     properties:
+      form_group:
+        description: 'FormGroup filters by class (e.g. "2 B"). Values are trimmed;
+          blank values are ignored.'
+        items:
+          type: string
+        type: array
       is_student:
         type: boolean
       sign_status:
@@ -141,6 +147,7 @@ definitions:
         enum:
         - sign_status
         - year_group
+        - form_group
         - name
         - surname
         - visit_date
@@ -322,7 +329,7 @@ definitions:
           Fields selects which optional fields to include in each row.
           Computed fields (visit_date, sign_status, visits_count, signed_in, signed_out, duration_minutes)
           are always present regardless of this list.
-          Allowed values: visitor_id, visit_date, name, surname, is_student, year_group,
+          Allowed values: visitor_id, visit_date, name, surname, is_student, year_group, form_group,
           visits_count, sign_status, signed_in, signed_out, duration_minutes, email, image.
           Omit or leave empty to return all optional fields.
         items:

@@ -5,6 +5,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/buzyka/imlate/internal/domain/entity"
 	"github.com/buzyka/imlate/internal/domain/provider"
 )
 
@@ -28,6 +29,7 @@ var AllowedVisitReportFields = map[string]bool{
 	"surname":    true,
 	"is_student": true,
 	"year_group": true,
+	"form_group": true,
 	"email":      true,
 	"image":      true,
 	// computed — always returned; listed here so they don't trigger unknown-field errors
@@ -43,6 +45,7 @@ var AllowedVisitReportFields = map[string]bool{
 var allowedSortFields = map[string]bool{
 	"sign_status":  true,
 	"year_group":   true,
+	"form_group":   true,
 	"name":         true,
 	"surname":      true,
 	"visit_date":   true,
@@ -64,7 +67,7 @@ type PostReportsVisitsRequest struct {
 	// Fields selects which optional fields to include in each row.
 	// Computed fields (visit_date, sign_status, visits_count, signed_in, signed_out, duration_minutes)
 	// are always present regardless of this list.
-	// Allowed values: visitor_id, visit_date, name, surname, is_student, year_group,
+	// Allowed values: visitor_id, visit_date, name, surname, is_student, year_group, form_group,
 	// visits_count, sign_status, signed_in, signed_out, duration_minutes, email, image.
 	// Omit or leave empty to return all optional fields.
 	Fields  []string                  `json:"fields"`
@@ -77,10 +80,12 @@ type PostReportsVisitsFilters struct {
 	// SignStatus filters rows by sign status. Allowed values: signed_in, signed_out, not_signed.
 	SignStatus []string `json:"sign_status"`
 	YearGroup  []int    `json:"year_group"`
+	// FormGroup filters by class (e.g. "2 B"). Values are trimmed; blank values are ignored.
+	FormGroup []string `json:"form_group"`
 }
 
 type PostReportsVisitsOrder struct {
-	Field     string `json:"field" enums:"sign_status,year_group,name,surname,visit_date,visits_count"`
+	Field     string `json:"field" enums:"sign_status,year_group,form_group,name,surname,visit_date,visits_count"`
 	Direction string `json:"direction" enums:"asc,desc"`
 }
 
@@ -137,6 +142,7 @@ func (a *AdminAPI) GetPostReportsVisits(req *PostReportsVisitsRequest) (*PostRep
 		}
 		filter.SignStatuses = req.Filters.SignStatus
 		filter.YearGroups = req.Filters.YearGroup
+		filter.FormGroups = normalizeFormGroupFilter(req.Filters.FormGroup)
 	}
 
 	if req.Order != nil {
@@ -179,6 +185,22 @@ func (a *AdminAPI) GetPostReportsVisits(req *PostReportsVisitsRequest) (*PostRep
 	}, nil
 }
 
+// normalizeFormGroupFilter applies the stored-value rules to each requested form
+// group, silently dropping blank values and duplicates. nil means no filter.
+func normalizeFormGroupFilter(formGroups []string) []string {
+	var result []string
+	seen := make(map[string]bool, len(formGroups))
+	for i := range formGroups {
+		formGroup := entity.NormalizeFormGroup(&formGroups[i])
+		if formGroup == nil || seen[*formGroup] {
+			continue
+		}
+		seen[*formGroup] = true
+		result = append(result, *formGroup)
+	}
+	return result
+}
+
 // resolveFields returns the optional fields to include. When requested is empty, all optional
 // fields are returned. Computed fields are always present and are filtered out of the result
 // (they don't need to be requested explicitly).
@@ -218,6 +240,7 @@ func buildPostRowMap(row provider.VisitReportRow, fields []string) map[string]in
 		"surname":    row.Surname,
 		"is_student": row.IsStudent,
 		"year_group": row.YearGroup,
+		"form_group": row.FormGroup,
 		"email":      row.Email,
 		"image":      row.Image,
 	}

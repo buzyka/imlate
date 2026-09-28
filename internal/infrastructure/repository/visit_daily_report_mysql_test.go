@@ -29,7 +29,7 @@ func newReportRepo(t *testing.T) (*VisitDailyReport, sqlmock.Sqlmock) {
 
 var reportColumns = []string{
 	"day", "visitor_id", "name", "surname", "email", "image",
-	"is_student", "year_group", "visits_count", "sign_status",
+	"is_student", "year_group", "form_group", "visits_count", "sign_status",
 	"login_time", "logout_time", "total_minutes_inside", "clear_minutes_inside",
 }
 
@@ -412,7 +412,7 @@ func TestGetVisitReport_Success(t *testing.T) {
 	mock.ExpectQuery(q("r.clear_minutes_inside")).
 		WillReturnRows(sqlmock.NewRows(reportColumns).AddRow(
 			day, int32(25), "John", "Smith", "j@x.io", "img.png",
-			true, int64(10), 2, "signed_out",
+			true, int64(10), "2 B", 2, "signed_out",
 			in, out, int64(360), int64(300),
 		))
 
@@ -426,6 +426,8 @@ func TestGetVisitReport_Success(t *testing.T) {
 	assert.Equal(t, "j@x.io", row.Email)
 	require.NotNil(t, row.YearGroup)
 	assert.Equal(t, 10, *row.YearGroup)
+	require.NotNil(t, row.FormGroup)
+	assert.Equal(t, "2 B", *row.FormGroup)
 	require.NotNil(t, row.SignedIn)
 	require.NotNil(t, row.SignedOut)
 	require.NotNil(t, row.DurationMinutes)
@@ -443,7 +445,7 @@ func TestGetVisitReport_NullFields(t *testing.T) {
 	mock.ExpectQuery(q("r.clear_minutes_inside")).
 		WillReturnRows(sqlmock.NewRows(reportColumns).AddRow(
 			day, int32(7), "No", "Show", nil, nil,
-			false, nil, 0, "not_signed",
+			false, nil, nil, 0, "not_signed",
 			nil, nil, nil, nil,
 		))
 
@@ -453,6 +455,7 @@ func TestGetVisitReport_NullFields(t *testing.T) {
 	row := res.Rows[0]
 	assert.Equal(t, "not_signed", row.SignStatus)
 	assert.Nil(t, row.YearGroup)
+	assert.Nil(t, row.FormGroup)
 	assert.Nil(t, row.SignedIn)
 	assert.Nil(t, row.SignedOut)
 	assert.Nil(t, row.DurationMinutes)
@@ -500,7 +503,7 @@ func TestGetVisitReport_ScanError(t *testing.T) {
 	mock.ExpectQuery(q("r.clear_minutes_inside")).
 		WillReturnRows(sqlmock.NewRows(reportColumns).AddRow(
 			"not-a-time", int32(25), "John", "Smith", "e", "i",
-			true, int64(10), 2, "signed_out",
+			true, int64(10), nil, 2, "signed_out",
 			nil, nil, nil, nil,
 		))
 
@@ -516,7 +519,7 @@ func TestGetVisitReport_RowsErr(t *testing.T) {
 	mock.ExpectQuery(q("r.clear_minutes_inside")).
 		WillReturnRows(sqlmock.NewRows(reportColumns).AddRow(
 			day, int32(25), "John", "Smith", "e", "i",
-			true, int64(10), 2, "signed_out", nil, nil, nil, nil,
+			true, int64(10), nil, 2, "signed_out", nil, nil, nil, nil,
 		).RowError(0, errors.New("row error")))
 
 	_, err := repo.GetVisitReport(day, day.AddDate(0, 0, 1), baseFilter())
@@ -573,6 +576,7 @@ func TestBuildOrderClause(t *testing.T) {
 	assert.Equal(t, " ORDER BY v.year_group ASC, r.day ASC, r.visitor_id", buildOrderClause(provider.VisitReportFilter{OrderField: "year_group", OrderDirection: "asc"}))
 	assert.Equal(t, " ORDER BY sign_status DESC, r.day DESC, r.visitor_id", buildOrderClause(provider.VisitReportFilter{OrderField: "sign_status", OrderDirection: "desc"}))
 	assert.Equal(t, " ORDER BY r.visits_count ASC, r.day ASC, r.visitor_id", buildOrderClause(provider.VisitReportFilter{OrderField: "visits_count"}))
+	assert.Equal(t, " ORDER BY v.form_group DESC, r.day DESC, r.visitor_id", buildOrderClause(provider.VisitReportFilter{OrderField: "form_group", OrderDirection: "desc"}))
 }
 
 // Sorting by visit_date must not repeat r.day; it only needs the unique tie-breaker.

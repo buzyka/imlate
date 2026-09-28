@@ -138,19 +138,21 @@ func TestBuildPostRowMap_AllOptionalFields(t *testing.T) {
 		Image:       "/img/alice.jpg",
 		IsStudent:   true,
 		YearGroup:   &yg,
+		FormGroup:   strPtr("11 A"),
 		VisitsCount: 1,
 		SignStatus:  "signed_in",
 		SignedIn:    &signedIn,
 	}
 
-	result := buildPostRowMap(row, []string{"visitor_id", "name", "surname", "is_student", "year_group", "email", "image"})
+	result := buildPostRowMap(row, []string{"visitor_id", "name", "surname", "is_student", "year_group", "form_group", "email", "image"})
 
-	assert.Len(t, result, len(AllowedVisitReportFields)) // 6 computed + 7 optional = 13
+	assert.Len(t, result, len(AllowedVisitReportFields)) // 7 computed + 8 optional
 	assert.Equal(t, 99, result["visitor_id"])
 	assert.Equal(t, "Alice", result["name"])
 	assert.Equal(t, "Wonder", result["surname"])
 	assert.Equal(t, true, result["is_student"])
 	assert.Equal(t, &yg, result["year_group"])
+	assert.Equal(t, strPtr("11 A"), result["form_group"])
 	assert.Equal(t, "alice@test.com", result["email"])
 	assert.Equal(t, "/img/alice.jpg", result["image"])
 	assert.Equal(t, "2026-03-10", result["visit_date"])
@@ -580,8 +582,9 @@ func TestGetPostReportsVisits_EmptyFields_ReturnsAllFields(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Len(t, resp.Data, 1)
-	// 6 computed + 7 optional = 13
+	// every computed and optional field, form_group included
 	assert.Len(t, resp.Data[0], len(AllowedVisitReportFields))
+	assert.Contains(t, resp.Data[0], "form_group")
 	mockRepo.AssertExpectations(t)
 }
 
@@ -654,4 +657,84 @@ func TestGetPostReportsVisits_AllValidSignStatuses(t *testing.T) {
 		assert.NoError(t, err, "status %s should be valid", status)
 		mockRepo.AssertExpectations(t)
 	}
+}
+
+func TestBuildPostRowMap_NilFormGroup(t *testing.T) {
+	row := provider.VisitReportRow{VisitorID: 1, FormGroup: nil}
+	result := buildPostRowMap(row, []string{"form_group"})
+	value, present := result["form_group"]
+	assert.True(t, present)
+	assert.Nil(t, value)
+}
+
+func TestNormalizeFormGroupFilter(t *testing.T) {
+	assert.Nil(t, normalizeFormGroupFilter(nil))
+	assert.Nil(t, normalizeFormGroupFilter([]string{"", "   "}))
+	assert.Equal(t, []string{"2 B", "2 A"}, normalizeFormGroupFilter([]string{"2 B", " 2 A ", "", "2 B"}))
+}
+
+func TestGetPostReportsVisits_FormGroupFilter(t *testing.T) {
+	mockRepo := new(providertest.VisitDailyReportRepositoryMock)
+	mockRepo.On("GetVisitReport", mock.Anything, mock.Anything,
+		mock.MatchedBy(func(f provider.VisitReportFilter) bool {
+			return assert.ObjectsAreEqual([]int{2}, f.YearGroups) &&
+				assert.ObjectsAreEqual([]string{"2 B", "2 A"}, f.FormGroups)
+		}),
+	).Return(emptyReportResult(), nil)
+
+	api := &AdminAPI{VisitDailyReportRepo: mockRepo}
+	_, err := api.GetPostReportsVisits(&PostReportsVisitsRequest{
+		From: "2026-04-01",
+		To:   "2026-04-30",
+		Filters: &PostReportsVisitsFilters{
+			YearGroup: []int{2},
+			FormGroup: []string{"2 B", " 2 A ", "", "2 B"},
+		},
+	})
+	assert.NoError(t, err)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestGetPostReportsVisits_BlankFormGroupsMeanNoFilter(t *testing.T) {
+	mockRepo := new(providertest.VisitDailyReportRepositoryMock)
+	mockRepo.On("GetVisitReport", mock.Anything, mock.Anything,
+		mock.MatchedBy(func(f provider.VisitReportFilter) bool {
+			return len(f.FormGroups) == 0
+		}),
+	).Return(emptyReportResult(), nil)
+
+	api := &AdminAPI{VisitDailyReportRepo: mockRepo}
+	_, err := api.GetPostReportsVisits(&PostReportsVisitsRequest{
+		From:    "2026-04-01",
+		To:      "2026-04-30",
+		Filters: &PostReportsVisitsFilters{FormGroup: []string{"", "  "}},
+	})
+	assert.NoError(t, err)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestGetPostReportsVisits_FormGroupFieldAndSort(t *testing.T) {
+	mockRepo := new(providertest.VisitDailyReportRepositoryMock)
+	mockRepo.On("GetVisitReport", mock.Anything, mock.Anything,
+		mock.MatchedBy(func(f provider.VisitReportFilter) bool {
+			return f.OrderField == "form_group" && f.OrderDirection == "desc"
+		}),
+	).Return(&provider.VisitReportResult{
+		Total: 1,
+		Rows:  []provider.VisitReportRow{{VisitorID: 1, FormGroup: strPtr("2 B")}},
+	}, nil)
+
+	api := &AdminAPI{VisitDailyReportRepo: mockRepo}
+	resp, err := api.GetPostReportsVisits(&PostReportsVisitsRequest{
+		From:   "2026-04-01",
+		To:     "2026-04-30",
+		Fields: []string{"form_group"},
+		Order:  &PostReportsVisitsOrder{Field: "form_group", Direction: "desc"},
+	})
+	assert.NoError(t, err)
+	assert.Len(t, resp.Data, 1)
+	assert.Equal(t, strPtr("2 B"), resp.Data[0]["form_group"])
+	_, hasName := resp.Data[0]["name"]
+	assert.False(t, hasName)
+	mockRepo.AssertExpectations(t)
 }

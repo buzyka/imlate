@@ -225,3 +225,29 @@ func TestVisitsReportsHandler_AllValidParams(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	mockRepo.AssertExpectations(t)
 }
+
+func TestVisitsReportsPostHandler_FormGroupFilter(t *testing.T) {
+	mockRepo, controller := setupReportsTest()
+
+	formGroup := "2 B"
+	mockRepo.On("GetVisitReport", mock.Anything, mock.Anything,
+		mock.MatchedBy(func(f provider.VisitReportFilter) bool {
+			return len(f.FormGroups) == 1 && f.FormGroups[0] == "2 B"
+		})).
+		Return(&provider.VisitReportResult{
+			Total: 1,
+			Rows:  []provider.VisitReportRow{{VisitorID: 1, Name: "John", FormGroup: &formGroup}},
+		}, nil)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/admin-api/reports/visits", bytes.NewBufferString(
+		`{"from":"2026-04-01","to":"2026-04-30","fields":["form_group"],"filters":{"form_group":["2 B"]}}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	controller.VisitsReportsPostHandler()(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"form_group":"2 B"`)
+	mockRepo.AssertExpectations(t)
+}

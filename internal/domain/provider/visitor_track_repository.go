@@ -26,6 +26,7 @@ type VisitReportRow struct {
 	Image           string
 	IsStudent       bool
 	YearGroup       *int
+	FormGroup       *string
 	VisitsCount     int
 	SignStatus      string
 	SignedIn        *time.Time
