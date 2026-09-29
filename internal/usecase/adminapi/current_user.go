@@ -15,6 +15,7 @@ type AdminAPI struct {
 	VisitorRepo          provider.VisitorRepository          `container:"type"`
 	VisitorTrackRepo     provider.VisitorTrackRepository     `container:"type"`
 	VisitDailyReportRepo provider.VisitDailyReportRepository `container:"type"`
+	RefreshTokenRepo     provider.RefreshTokenRepository     `container:"type"`
 	Config               *config.Config                      `container:"type"`
 }
 
@@ -68,6 +69,9 @@ func (a *AdminAPI) UpdateUser(id uuid.UUID, name, surname string, role entity.Us
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 
+	// A session must not outlive the access it was issued for.
+	accessChanged := user.Role != role || (user.IsActive && !isActive)
+
 	user.Name = name
 	user.Surname = surname
 	user.Role = role
@@ -76,6 +80,12 @@ func (a *AdminAPI) UpdateUser(id uuid.UUID, name, surname string, role entity.Us
 
 	if err := a.UserRepo.Update(user); err != nil {
 		return nil, fmt.Errorf("failed to update user: %w", err)
+	}
+
+	if accessChanged {
+		if err := a.revokeSessions(user.ID); err != nil {
+			return nil, err
+		}
 	}
 
 	return user, nil
@@ -97,12 +107,21 @@ func (a *AdminAPI) UpdatePassword(id uuid.UUID, password string) error {
 		return fmt.Errorf("failed to update password: %w", err)
 	}
 
-	return nil
+	return a.revokeSessions(user.ID)
 }
 
 func (a *AdminAPI) DeleteUser(id uuid.UUID) error {
 	if err := a.UserRepo.Delete(id); err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
+	}
+	// Users are soft-deleted, so the FK cascade on refresh tokens does not fire.
+	return a.revokeSessions(id)
+}
+
+// revokeSessions invalidates all refresh tokens of the user, forcing a new login.
+func (a *AdminAPI) revokeSessions(userID uuid.UUID) error {
+	if err := a.RefreshTokenRepo.DeleteByUserID(userID); err != nil {
+		return fmt.Errorf("failed to revoke sessions: %w", err)
 	}
 	return nil
 }

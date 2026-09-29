@@ -18,6 +18,10 @@ import (
 // when CRON_RECONCILE_DAYS is unset or non-positive.
 const defaultReconcileDays = 7
 
+// defaultCleanupRefreshTokensCron is the fallback schedule for the expired refresh
+// token cleanup when CRON_CLEANUP_REFRESH_TOKENS is unset.
+const defaultCleanupRefreshTokensCron = "0 3 * * *"
+
 type JobFunction func()
 
 type StopCronFunc = func()
@@ -57,6 +61,22 @@ func registerJobs(s gocron.Scheduler, cfg *config.Config) error {
 			false,
 		),
 		gocron.NewTask(FinalizeReportsFunc()),
+	)
+	if err != nil {
+		return err
+	}
+
+	// Expired refresh token cleanup job
+	cleanupSchedule := cfg.CronCleanupRefreshTokens
+	if cleanupSchedule == "" {
+		cleanupSchedule = defaultCleanupRefreshTokensCron
+	}
+	_, err = s.NewJob(
+		gocron.CronJob(
+			cleanupSchedule, // default: at 03:00 every day
+			false,
+		),
+		gocron.NewTask(CleanupRefreshTokensFunc()),
 	)
 	return err
 }
@@ -198,6 +218,22 @@ func FinalizeReportsFunc() JobFunction {
 			}
 		}
 		log.Infof("Finish visit report finalization... finalized %d day(s)", len(days))
+	}
+}
+
+func CleanupRefreshTokensFunc() JobFunction {
+	return func() {
+		var log *zap.SugaredLogger
+		container.MustResolve(container.Global, &log)
+		var repo provider.RefreshTokenRepository
+		container.MustResolve(container.Global, &repo)
+
+		deleted, err := repo.DeleteExpired(time.Now())
+		if err != nil {
+			log.Errorf("Error cleaning up expired refresh tokens: %v\n", err)
+			return
+		}
+		log.Infof("Expired refresh tokens cleanup... deleted %d token(s)", deleted)
 	}
 }
 

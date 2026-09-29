@@ -20,10 +20,17 @@ import (
 
 func setupTest() (*providertest.UserRepositoryMock, *AdminAPIController) {
 	mockRepo := new(providertest.UserRepositoryMock)
-	api := &usecase.AdminAPI{UserRepo: mockRepo}
+	api := &usecase.AdminAPI{UserRepo: mockRepo, RefreshTokenRepo: newRefreshTokenRepoMock()}
 	controller := &AdminAPIController{AdminAPI: api}
 	gin.SetMode(gin.TestMode)
 	return mockRepo, controller
+}
+
+// newRefreshTokenRepoMock accepts session revocation, which the usecase tests cover in detail.
+func newRefreshTokenRepoMock() *providertest.RefreshTokenRepositoryMock {
+	m := new(providertest.RefreshTokenRepositoryMock)
+	m.On("DeleteByUserID", mock.Anything).Return(nil).Maybe()
+	return m
 }
 
 func TestCurrentUserHandler_Success(t *testing.T) {

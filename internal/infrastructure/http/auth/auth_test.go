@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	gjwt "github.com/appleboy/gin-jwt/v3"
 	"github.com/buzyka/imlate/internal/config"
@@ -22,7 +23,11 @@ const testJWTPayloadKey = "JWT_PAYLOAD"
 
 func newAuthManagerForTests(repo *providertest.UserRepositoryMock, secret string) *AuthManager {
 	return &AuthManager{
-		Config:   &config.Config{AuthTokenSecret: secret},
+		Config: &config.Config{
+			AuthTokenSecret:     secret,
+			AuthAccessTokenTTL:  30 * time.Minute,
+			AuthRefreshTokenTTL: 336 * time.Hour,
+		},
 		UserRepo: repo,
 	}
 }
@@ -347,7 +352,7 @@ func TestUnauthorizedResponse(t *testing.T) {
 	assert.Equal(t, "unauthorized", body["message"])
 }
 
-func TestLogoutResponse_WithClaimsAndUser(t *testing.T) {
+func TestLogoutResponse(t *testing.T) {
 	gintestSetup()
 	manager := newAuthManagerForTests(new(providertest.UserRepositoryMock), "0123456789abcdef0123456789abcdef")
 
@@ -362,31 +367,57 @@ func TestLogoutResponse_WithClaimsAndUser(t *testing.T) {
 	var body map[string]any
 	err := json.Unmarshal(rec.Body.Bytes(), &body)
 	assert.NoError(t, err)
-	assert.Equal(t, float64(http.StatusOK), body["code"])
-	assert.Equal(t, "Successfully logged out", body["message"])
-	assert.Equal(t, "u-1", body["logged_out_user"])
-	assert.Equal(t, "admin", body["user_info"])
+	assert.Equal(t, map[string]any{"code": float64(http.StatusOK), "message": "Successfully logged out"}, body)
 }
 
-func TestLogoutResponse_WithoutClaimsAndUser(t *testing.T) {
+func TestInitParams_UsesConfiguredTTLs(t *testing.T) {
+	manager := &AuthManager{
+		Config: &config.Config{
+			AuthTokenSecret:     "0123456789abcdef0123456789abcdef",
+			AuthAccessTokenTTL:  15 * time.Minute,
+			AuthRefreshTokenTTL: 72 * time.Hour,
+		},
+		UserRepo: new(providertest.UserRepositoryMock),
+	}
+
+	params := manager.initParams()
+
+	assert.Equal(t, 15*time.Minute, params.Timeout)
+	assert.Equal(t, 72*time.Hour, params.MaxRefresh)
+	assert.Equal(t, 72*time.Hour, params.RefreshTokenTimeout)
+	assert.Nil(t, params.RefreshTokenStore)
+}
+
+func TestInitParams_UsesDBRefreshTokenStore(t *testing.T) {
+	userRepo := new(providertest.UserRepositoryMock)
+	refreshRepo := new(providertest.RefreshTokenRepositoryMock)
+	manager := newAuthManagerForTests(userRepo, "0123456789abcdef0123456789abcdef")
+	manager.RefreshRepo = refreshRepo
+
+	params := manager.initParams()
+
+	store, ok := params.RefreshTokenStore.(*DBRefreshTokenStore)
+	assert.True(t, ok)
+	assert.Same(t, refreshRepo, store.Repo)
+	assert.Same(t, userRepo, store.UserRepo)
+}
+
+func TestIdentityHandler_InactiveUserReturnsNil(t *testing.T) {
 	gintestSetup()
-	manager := newAuthManagerForTests(new(providertest.UserRepositoryMock), "0123456789abcdef0123456789abcdef")
+	repo := new(providertest.UserRepositoryMock)
+	manager := newAuthManagerForTests(repo, "0123456789abcdef0123456789abcdef")
+
+	userID := uuid.New()
+	repo.On("FindByID", userID).Return(&entity.User{ID: userID, UserName: "admin", IsActive: false}, nil)
 
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
+	c.Set(testJWTPayloadKey, jwt.MapClaims{identityKey: userID.String()})
 
-	manager.logoutResponse()(c)
+	identity := manager.identityHandler()(c)
 
-	assert.Equal(t, http.StatusOK, rec.Code)
-	var body map[string]any
-	err := json.Unmarshal(rec.Body.Bytes(), &body)
-	assert.NoError(t, err)
-	assert.Equal(t, float64(http.StatusOK), body["code"])
-	assert.Equal(t, "Successfully logged out", body["message"])
-	_, hasLoggedOutUser := body["logged_out_user"]
-	_, hasUserInfo := body["user_info"]
-	assert.False(t, hasLoggedOutUser)
-	assert.False(t, hasUserInfo)
+	assert.Nil(t, identity)
+	repo.AssertExpectations(t)
 }
 
 func gintestSetup() {

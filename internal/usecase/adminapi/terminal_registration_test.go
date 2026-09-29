@@ -146,7 +146,8 @@ func TestRegisterTerminal_TerminalAlreadyExists_NoForce(t *testing.T) {
 
 func TestRegisterTerminal_ForceUpdate_Success(t *testing.T) {
 	mockRepo := new(providertest.UserRepositoryMock)
-	api := &AdminAPI{UserRepo: mockRepo}
+	refreshRepo := new(providertest.RefreshTokenRepositoryMock)
+	api := &AdminAPI{UserRepo: mockRepo, RefreshTokenRepo: refreshRepo}
 
 	admin := newAdminUser(t)
 	existingTerminal := &entity.User{
@@ -162,10 +163,12 @@ func TestRegisterTerminal_ForceUpdate_Success(t *testing.T) {
 	mockRepo.On("FindByUsername", "admin").Return(admin, nil)
 	mockRepo.On("FindByUsername", "terminal-1").Return(existingTerminal, nil)
 	mockRepo.On("Update", mock.AnythingOfType("*entity.User")).Return(nil)
+	refreshRepo.On("DeleteByUserID", existingTerminal.ID).Return(nil)
 
 	result, err := api.RegisterTerminal("admin", "admin-password", "terminal-1", true)
 
 	assert.NoError(t, err)
+	refreshRepo.AssertExpectations(t)
 	assert.NotNil(t, result)
 	assert.NotEmpty(t, result.AuthToken)
 	assert.Equal(t, "terminal-1", result.TerminalName)
@@ -240,6 +243,25 @@ func TestRegisterTerminal_UpdateError(t *testing.T) {
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "failed to update terminal")
 	mockRepo.AssertExpectations(t)
+}
+
+func TestRegisterTerminal_ForceUpdate_RevokeSessionsError(t *testing.T) {
+	mockRepo := new(providertest.UserRepositoryMock)
+	refreshRepo := new(providertest.RefreshTokenRepositoryMock)
+	api := &AdminAPI{UserRepo: mockRepo, RefreshTokenRepo: refreshRepo}
+
+	admin := newAdminUser(t)
+	existingTerminal := &entity.User{ID: uuid.New(), UserName: "terminal-1", Role: entity.UserRoleTerminal, IsActive: true}
+
+	mockRepo.On("FindByUsername", "admin").Return(admin, nil)
+	mockRepo.On("FindByUsername", "terminal-1").Return(existingTerminal, nil)
+	mockRepo.On("Update", mock.AnythingOfType("*entity.User")).Return(nil)
+	refreshRepo.On("DeleteByUserID", existingTerminal.ID).Return(errors.New("db error"))
+
+	result, err := api.RegisterTerminal("admin", "admin-password", "terminal-1", true)
+
+	assert.Nil(t, result)
+	assert.EqualError(t, err, "failed to revoke sessions: db error")
 }
 
 func TestRegisterTerminal_CheckExistingTerminalError(t *testing.T) {

@@ -30,8 +30,9 @@ var (
 )
 
 type AuthManager struct {
-	Config   *config.Config          `container:"type"`
-	UserRepo provider.UserRepository `container:"type"`
+	Config      *config.Config                  `container:"type"`
+	UserRepo    provider.UserRepository         `container:"type"`
+	RefreshRepo provider.RefreshTokenRepository `container:"type"`
 }
 
 func (a *AuthManager) Init() (*gjwt.GinJWTMiddleware, error) {
@@ -66,13 +67,16 @@ func (a *AuthManager) validateAuthTokenSecret() error {
 }
 
 func (a *AuthManager) initParams() *gjwt.GinJWTMiddleware {
-	return &gjwt.GinJWTMiddleware{
-		Realm:       "admin zone",
-		Key:         []byte(a.Config.AuthTokenSecret),
-		Timeout:     time.Minute * 30,
-		MaxRefresh:  time.Minute * 30,
-		IdentityKey: identityKey,
-		PayloadFunc: a.payloadFunc(),
+	params := &gjwt.GinJWTMiddleware{
+		Realm: "admin zone",
+		Key:   []byte(a.Config.AuthTokenSecret),
+		// Every refresh rotates the refresh token for the full TTL, so an
+		// active session never expires and an idle one ends after the TTL.
+		Timeout:             a.Config.AuthAccessTokenTTL,
+		MaxRefresh:          a.Config.AuthRefreshTokenTTL,
+		RefreshTokenTimeout: a.Config.AuthRefreshTokenTTL,
+		IdentityKey:         identityKey,
+		PayloadFunc:         a.payloadFunc(),
 
 		IdentityHandler: a.identityHandler(),
 		Authenticator:   a.authenticator(),
@@ -85,6 +89,11 @@ func (a *AuthManager) initParams() *gjwt.GinJWTMiddleware {
 		TokenHeadName: "Bearer",
 		TimeFunc:      time.Now,
 	}
+	// Without a repository gin-jwt falls back to its in-memory store.
+	if a.RefreshRepo != nil {
+		params.RefreshTokenStore = &DBRefreshTokenStore{Repo: a.RefreshRepo, UserRepo: a.UserRepo}
+	}
+	return params
 }
 
 func (a *AuthManager) payloadFunc() func(data any) jwt.MapClaims {
@@ -118,7 +127,7 @@ func (a *AuthManager) identityHandler() func(c *gin.Context) any {
 		}
 
 		user, err := a.UserRepo.FindByID(userID)
-		if err != nil || user == nil {
+		if err != nil || user == nil || !user.IsActive {
 			return nil
 		}
 
@@ -168,23 +177,9 @@ func (a *AuthManager) unauthorized() func(c *gin.Context, code int, message stri
 
 func (a *AuthManager) logoutResponse() func(c *gin.Context) {
 	return func(c *gin.Context) {
-		// This demonstrates that claims are now accessible during logout
-		claims := gjwt.ExtractClaims(c)
-		user, exists := c.Get(identityKey)
-
-		response := gin.H{
+		c.JSON(http.StatusOK, gin.H{
 			"code":    http.StatusOK,
 			"message": "Successfully logged out",
-		}
-
-		// Show that we can access user information during logout
-		if len(claims) > 0 {
-			response["logged_out_user"] = claims[identityKey]
-		}
-		if exists {
-			response["user_info"] = user.(*entity.User).UserName
-		}
-
-		c.JSON(http.StatusOK, response)
+		})
 	}
 }

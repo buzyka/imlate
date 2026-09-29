@@ -146,21 +146,105 @@ func TestCreateUser_DuplicateUsername(t *testing.T) {
 
 func TestUpdateUser_Success(t *testing.T) {
 	mockRepo := new(providertest.UserRepositoryMock)
-	api := &AdminAPI{UserRepo: mockRepo}
+	refreshRepo := new(providertest.RefreshTokenRepositoryMock)
+	api := &AdminAPI{UserRepo: mockRepo, RefreshTokenRepo: refreshRepo}
 
 	userID := uuid.New()
-	existing := &entity.User{ID: userID, UserName: "admin", Name: "Old", Surname: "Name"}
+	existing := &entity.User{ID: userID, UserName: "admin", Name: "Old", Surname: "Name", Role: entity.UserRoleAdmin, IsActive: true}
 	mockRepo.On("FindByID", userID).Return(existing, nil)
 	mockRepo.On("Update", mock.AnythingOfType("*entity.User")).Return(nil)
 
-	user, err := api.UpdateUser(userID, "New", "Name", entity.UserRoleTerminal, false)
+	user, err := api.UpdateUser(userID, "New", "Name", entity.UserRoleAdmin, true)
 
 	assert.NoError(t, err)
 	assert.Equal(t, "New", user.Name)
 	assert.Equal(t, "Name", user.Surname)
-	assert.Equal(t, entity.UserRoleTerminal, user.Role)
-	assert.False(t, user.IsActive)
+	assert.Equal(t, entity.UserRoleAdmin, user.Role)
+	assert.True(t, user.IsActive)
 	mockRepo.AssertExpectations(t)
+	// Profile-only changes keep the sessions.
+	refreshRepo.AssertNotCalled(t, "DeleteByUserID", mock.Anything)
+}
+
+func TestUpdateUser_AccessChangeRevokesSessions(t *testing.T) {
+	tests := []struct {
+		name     string
+		role     entity.UserRole
+		isActive bool
+	}{
+		{name: "role changed", role: entity.UserRoleTerminal, isActive: true},
+		{name: "deactivated", role: entity.UserRoleAdmin, isActive: false},
+		{name: "role changed and deactivated", role: entity.UserRoleTerminal, isActive: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mockRepo := new(providertest.UserRepositoryMock)
+			refreshRepo := new(providertest.RefreshTokenRepositoryMock)
+			api := &AdminAPI{UserRepo: mockRepo, RefreshTokenRepo: refreshRepo}
+
+			userID := uuid.New()
+			existing := &entity.User{ID: userID, UserName: "admin", Role: entity.UserRoleAdmin, IsActive: true}
+			mockRepo.On("FindByID", userID).Return(existing, nil)
+			mockRepo.On("Update", mock.AnythingOfType("*entity.User")).Return(nil)
+			refreshRepo.On("DeleteByUserID", userID).Return(nil)
+
+			user, err := api.UpdateUser(userID, "New", "Name", tc.role, tc.isActive)
+
+			assert.NoError(t, err)
+			assert.Equal(t, tc.role, user.Role)
+			assert.Equal(t, tc.isActive, user.IsActive)
+			mockRepo.AssertExpectations(t)
+			refreshRepo.AssertExpectations(t)
+		})
+	}
+}
+
+func TestUpdateUser_ReactivationKeepsSessions(t *testing.T) {
+	mockRepo := new(providertest.UserRepositoryMock)
+	refreshRepo := new(providertest.RefreshTokenRepositoryMock)
+	api := &AdminAPI{UserRepo: mockRepo, RefreshTokenRepo: refreshRepo}
+
+	userID := uuid.New()
+	existing := &entity.User{ID: userID, Role: entity.UserRoleAdmin, IsActive: false}
+	mockRepo.On("FindByID", userID).Return(existing, nil)
+	mockRepo.On("Update", mock.AnythingOfType("*entity.User")).Return(nil)
+
+	_, err := api.UpdateUser(userID, "A", "B", entity.UserRoleAdmin, true)
+
+	assert.NoError(t, err)
+	refreshRepo.AssertNotCalled(t, "DeleteByUserID", mock.Anything)
+}
+
+func TestUpdateUser_UpdateError(t *testing.T) {
+	mockRepo := new(providertest.UserRepositoryMock)
+	refreshRepo := new(providertest.RefreshTokenRepositoryMock)
+	api := &AdminAPI{UserRepo: mockRepo, RefreshTokenRepo: refreshRepo}
+
+	userID := uuid.New()
+	mockRepo.On("FindByID", userID).Return(&entity.User{ID: userID, Role: entity.UserRoleAdmin, IsActive: true}, nil)
+	mockRepo.On("Update", mock.AnythingOfType("*entity.User")).Return(errors.New("db error"))
+
+	user, err := api.UpdateUser(userID, "A", "B", entity.UserRoleAdmin, false)
+
+	assert.Nil(t, user)
+	assert.ErrorContains(t, err, "failed to update user")
+	refreshRepo.AssertNotCalled(t, "DeleteByUserID", mock.Anything)
+}
+
+func TestUpdateUser_RevokeSessionsError(t *testing.T) {
+	mockRepo := new(providertest.UserRepositoryMock)
+	refreshRepo := new(providertest.RefreshTokenRepositoryMock)
+	api := &AdminAPI{UserRepo: mockRepo, RefreshTokenRepo: refreshRepo}
+
+	userID := uuid.New()
+	mockRepo.On("FindByID", userID).Return(&entity.User{ID: userID, Role: entity.UserRoleAdmin, IsActive: true}, nil)
+	mockRepo.On("Update", mock.AnythingOfType("*entity.User")).Return(nil)
+	refreshRepo.On("DeleteByUserID", userID).Return(errors.New("db error"))
+
+	user, err := api.UpdateUser(userID, "A", "B", entity.UserRoleAdmin, false)
+
+	assert.Nil(t, user)
+	assert.EqualError(t, err, "failed to revoke sessions: db error")
 }
 
 func TestUpdateUser_NotFound(t *testing.T) {
@@ -179,15 +263,32 @@ func TestUpdateUser_NotFound(t *testing.T) {
 
 func TestDeleteUser_Success(t *testing.T) {
 	mockRepo := new(providertest.UserRepositoryMock)
-	api := &AdminAPI{UserRepo: mockRepo}
+	refreshRepo := new(providertest.RefreshTokenRepositoryMock)
+	api := &AdminAPI{UserRepo: mockRepo, RefreshTokenRepo: refreshRepo}
 
 	userID := uuid.New()
 	mockRepo.On("Delete", userID).Return(nil)
+	refreshRepo.On("DeleteByUserID", userID).Return(nil)
 
 	err := api.DeleteUser(userID)
 
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
+	refreshRepo.AssertExpectations(t)
+}
+
+func TestDeleteUser_RevokeSessionsError(t *testing.T) {
+	mockRepo := new(providertest.UserRepositoryMock)
+	refreshRepo := new(providertest.RefreshTokenRepositoryMock)
+	api := &AdminAPI{UserRepo: mockRepo, RefreshTokenRepo: refreshRepo}
+
+	userID := uuid.New()
+	mockRepo.On("Delete", userID).Return(nil)
+	refreshRepo.On("DeleteByUserID", userID).Return(errors.New("db error"))
+
+	err := api.DeleteUser(userID)
+
+	assert.EqualError(t, err, "failed to revoke sessions: db error")
 }
 
 func TestDeleteUser_Error(t *testing.T) {
@@ -205,13 +306,15 @@ func TestDeleteUser_Error(t *testing.T) {
 
 func TestUpdatePassword_Success(t *testing.T) {
 	mockRepo := new(providertest.UserRepositoryMock)
-	api := &AdminAPI{UserRepo: mockRepo}
+	refreshRepo := new(providertest.RefreshTokenRepositoryMock)
+	api := &AdminAPI{UserRepo: mockRepo, RefreshTokenRepo: refreshRepo}
 
 	userID := uuid.New()
 	existing := &entity.User{ID: userID, UserName: "admin"}
 	_ = existing.SetPassword("oldpassword")
 	mockRepo.On("FindByID", userID).Return(existing, nil)
 	mockRepo.On("Update", mock.AnythingOfType("*entity.User")).Return(nil)
+	refreshRepo.On("DeleteByUserID", userID).Return(nil)
 
 	err := api.UpdatePassword(userID, "newpassword123")
 
@@ -219,6 +322,22 @@ func TestUpdatePassword_Success(t *testing.T) {
 	assert.True(t, existing.PasswordValidate("newpassword123"))
 	assert.False(t, existing.PasswordValidate("oldpassword"))
 	mockRepo.AssertExpectations(t)
+	refreshRepo.AssertExpectations(t)
+}
+
+func TestUpdatePassword_RevokeSessionsError(t *testing.T) {
+	mockRepo := new(providertest.UserRepositoryMock)
+	refreshRepo := new(providertest.RefreshTokenRepositoryMock)
+	api := &AdminAPI{UserRepo: mockRepo, RefreshTokenRepo: refreshRepo}
+
+	userID := uuid.New()
+	mockRepo.On("FindByID", userID).Return(&entity.User{ID: userID}, nil)
+	mockRepo.On("Update", mock.AnythingOfType("*entity.User")).Return(nil)
+	refreshRepo.On("DeleteByUserID", userID).Return(errors.New("db error"))
+
+	err := api.UpdatePassword(userID, "newpassword123")
+
+	assert.EqualError(t, err, "failed to revoke sessions: db error")
 }
 
 func TestUpdatePassword_UserNotFound(t *testing.T) {

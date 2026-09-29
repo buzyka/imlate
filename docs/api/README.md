@@ -21,6 +21,7 @@ No authentication required.
 | `GET` | `/firelist/:grade` | Evacuation roster for one class (HTML); `:grade` is a year group number or `staff`. Returns data only while a fire alarm is active, otherwise `403` with a notice — see `/admin-api/fire-alarm` |
 | `POST` | `/login` | Admin JWT authentication |
 | `POST` | `/refresh` | Refresh JWT token |
+| `POST` | `/logout` | Revoke a refresh token (end the session) |
 | `POST` | `/change-time` | Override current time (development only) |
 | `POST` | `/register-terminal` | Register a new terminal device |
 
@@ -113,9 +114,10 @@ curl -X POST http://localhost:8080/login \
 
 ```json
 {
-  "code": 200,
-  "expire": "2026-03-15T15:30:00Z",
-  "token": "eyJhbG..."
+  "access_token": "eyJhbG...",
+  "expires_in": 1800,
+  "refresh_token": "xHqQUuaBa0kW-IEfSd67Jwexea-7FNit8oPdjeiuyzo=",
+  "token_type": "Bearer"
 }
 ```
 
@@ -131,7 +133,16 @@ Token lookup order:
 2. `token` query parameter
 3. `jwt` cookie
 
-Token expires after 30 minutes. Use `POST /refresh` to get a new token.
+**Session lifetime:**
+
+- The access token expires after `AUTH_ACCESS_TOKEN_TTL` (default 30 minutes); `expires_in` is in seconds.
+- The refresh token is valid for `AUTH_REFRESH_TOKEN_TTL` (default 14 days). `POST /refresh` with
+  `{"refresh_token": "..."}` (JSON or form) returns a new token pair and revokes the old refresh token,
+  so an active session never expires and an idle one ends after the TTL.
+- Refresh tokens are stored in the `auth_refresh_tokens` table (SHA-256 hash only) and survive restarts.
+- `POST /logout` with `{"refresh_token": "..."}` revokes the token. All sessions of a user are revoked on
+  password change, deactivation, role change, deletion and terminal credential re-issue.
+- A deactivated user is rejected on the next request, even with a non-expired access token.
 
 ### Terminal Auth
 

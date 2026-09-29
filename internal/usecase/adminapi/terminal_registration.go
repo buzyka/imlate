@@ -69,6 +69,9 @@ func (a *AdminAPI) RegisterTerminal(adminLogin, adminPassword, terminalName stri
 		if err := a.UserRepo.Update(existing); err != nil {
 			return nil, fmt.Errorf("failed to update terminal: %w", err)
 		}
+		if err := a.revokeSessions(existing.ID); err != nil {
+			return nil, err
+		}
 
 		return &TerminalRegistrationResult{
 			AuthToken:    rawPassword,
