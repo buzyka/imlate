@@ -10,8 +10,8 @@ github.com/KyleBanks/depth v1.2.1 h1:5h8fQADFrWtarTdtDudMmGsC7GPbOAu6RVB3ffsVFHc
 github.com/KyleBanks/depth v1.2.1/go.mod h1:jzSb9d0L43HxTQfT+oSA1EEp2q+ne2uh6XgeJcm8brE=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
-github.com/appleboy/gin-jwt/v3 v3.5.2 h1:dBxuZsZ6onVD/a8Hejm6AsOaiJaBZ39/uA9aT8eRaUw=
-github.com/appleboy/gin-jwt/v3 v3.5.2/go.mod h1:rQbinpxAC78MsoEjUV0/BJZg0LrV5Gzcy/nCH8v9QTs=
+github.com/appleboy/gin-jwt/v3 v3.5.3 h1:+3cdr/2pRhrDvSYNnaZxYO7YQm4EPD1hHvMI3cvR05w=
+github.com/appleboy/gin-jwt/v3 v3.5.3/go.mod h1:npllyKRA8QYK61wfv8wEyR1UnJXt/8inf9+JdJZ/xZQ=
 github.com/appleboy/gofight/v2 v2.1.2 h1:VOy3jow4vIK8BRQJoC/I9muxyYlJ2yb9ht2hZoS3rf4=
 github.com/appleboy/gofight/v2 v2.1.2/go.mod h1:frW+U1QZEdDgixycTj4CygQ48yLTUhplt43+Wczp3rw=
 github.com/bytedance/gopkg v0.1.4 h1:oZnQwnX82KAIWb7033bEwtxvTqXcYMxDBaQxo5JJHWM=
