@@ -396,6 +396,7 @@ func TestNewFromEnv_CronScheduleDefaults(t *testing.T) {
 	// Report finalization runs regardless of ERP integration.
 	assert.Equal(t, "30 0 * * *", cfg.CronFinalizeReports)
 	assert.Equal(t, 7, cfg.CronReconcileDays)
+	assert.Equal(t, "0 3 * * *", cfg.CronCleanupRefreshTokens)
 }
 
 func TestNewFromEnv_CronScheduleCustomValues(t *testing.T) {
@@ -406,6 +407,7 @@ func TestNewFromEnv_CronScheduleCustomValues(t *testing.T) {
 		"CRON_MARK_ABSENT":             "15 9 * * 1-5",
 		"CRON_FINALIZE_REPORTS":        "45 2 * * *",
 		"CRON_RECONCILE_DAYS":          "14",
+		"CRON_CLEANUP_REFRESH_TOKENS":  "15 4 * * *",
 	})
 
 	cfg, err := NewFromEnv()
@@ -416,6 +418,78 @@ func TestNewFromEnv_CronScheduleCustomValues(t *testing.T) {
 	assert.Equal(t, "15 9 * * 1-5", cfg.CronMarkAbsent)
 	assert.Equal(t, "45 2 * * *", cfg.CronFinalizeReports)
 	assert.Equal(t, 14, cfg.CronReconcileDays)
+	assert.Equal(t, "15 4 * * *", cfg.CronCleanupRefreshTokens)
+}
+
+func TestNewFromEnv_AuthTokenTTLDefaults(t *testing.T) {
+	loadTestEnvVariables(t, map[string]string{})
+
+	cfg, err := NewFromEnv()
+	assert.NoError(t, err)
+	assert.Equal(t, 30*time.Minute, cfg.AuthAccessTokenTTL)
+	assert.Equal(t, 14*24*time.Hour, cfg.AuthRefreshTokenTTL)
+}
+
+func TestNewFromEnv_AuthTokenTTLCustomValues(t *testing.T) {
+	loadTestEnvVariables(t, map[string]string{
+		"AUTH_ACCESS_TOKEN_TTL":  "15m",
+		"AUTH_REFRESH_TOKEN_TTL": "720h",
+	})
+
+	cfg, err := NewFromEnv()
+	assert.NoError(t, err)
+	assert.Equal(t, 15*time.Minute, cfg.AuthAccessTokenTTL)
+	assert.Equal(t, 720*time.Hour, cfg.AuthRefreshTokenTTL)
+}
+
+func TestNewFromEnv_AuthTokenTTLInvalidValue(t *testing.T) {
+	loadTestEnvVariables(t, map[string]string{"AUTH_ACCESS_TOKEN_TTL": "thirty minutes"})
+
+	_, err := NewFromEnv()
+	assert.Error(t, err)
+}
+
+func TestValidate(t *testing.T) {
+	const validSecret = "0123456789abcdef0123456789abcdef"
+	tests := []struct {
+		name        string
+		cfg         Config
+		expectedErr string
+	}{
+		{
+			name: "valid",
+			cfg:  Config{AuthTokenSecret: validSecret, AuthAccessTokenTTL: 30 * time.Minute, AuthRefreshTokenTTL: 336 * time.Hour},
+		},
+		{
+			name: "equal access and refresh TTL",
+			cfg:  Config{AuthTokenSecret: validSecret, AuthAccessTokenTTL: time.Hour, AuthRefreshTokenTTL: time.Hour},
+		},
+		{
+			name:        "secret too short",
+			cfg:         Config{AuthTokenSecret: "short", AuthAccessTokenTTL: time.Minute, AuthRefreshTokenTTL: time.Hour},
+			expectedErr: "AUTH_TOKEN_SECRET must be at least 32 characters",
+		},
+		{
+			name:        "access TTL not positive",
+			cfg:         Config{AuthTokenSecret: validSecret, AuthAccessTokenTTL: 0, AuthRefreshTokenTTL: time.Hour},
+			expectedErr: "AUTH_ACCESS_TOKEN_TTL must be positive",
+		},
+		{
+			name:        "refresh TTL shorter than access TTL",
+			cfg:         Config{AuthTokenSecret: validSecret, AuthAccessTokenTTL: time.Hour, AuthRefreshTokenTTL: time.Minute},
+			expectedErr: "AUTH_REFRESH_TOKEN_TTL must not be shorter than AUTH_ACCESS_TOKEN_TTL",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.cfg.Validate()
+			if tc.expectedErr == "" {
+				assert.NoError(t, err)
+				return
+			}
+			assert.EqualError(t, err, tc.expectedErr)
+		})
+	}
 }
 
 func TestNewFromEnv_ReaderThemePollSecondsDefault(t *testing.T) {
@@ -493,6 +567,9 @@ func resetConfigEnv(t *testing.T) {
 		"CRON_MARK_ABSENT",
 		"CRON_FINALIZE_REPORTS",
 		"CRON_RECONCILE_DAYS",
+		"CRON_CLEANUP_REFRESH_TOKENS",
+		"AUTH_ACCESS_TOKEN_TTL",
+		"AUTH_REFRESH_TOKEN_TTL",
 		"DATABASE_HOST",
 		"DATABASE_PORT",
 		"DATABASE_USERNAME",

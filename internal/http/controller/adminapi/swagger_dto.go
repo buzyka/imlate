@@ -42,6 +42,17 @@ type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
+// LogoutRequest defines the refresh token to revoke on /logout.
+type LogoutRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+// LogoutResponse matches the /logout response payload.
+type LogoutResponse struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
 // VersionResponse is the success payload for the version endpoint.
 type VersionResponse struct {
 	Version string `json:"version"`

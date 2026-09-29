@@ -39,6 +39,8 @@ The application supports MySQL (primary) and SQLite engines. MySQL is the defaul
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
 | `AUTH_TOKEN_SECRET` | JWT signing secret for admin auth (HS256) | -- | **Yes** (min 32 chars) |
+| `AUTH_ACCESS_TOKEN_TTL` | Lifetime of the JWT access token (Go duration, e.g. `15m`) | `30m` | No |
+| `AUTH_REFRESH_TOKEN_TTL` | Idle session lifetime: refresh token validity, renewed on every refresh (e.g. `720h`) | `336h` (14 days) | No (must be ≥ access TTL) |
 
 The application validates this on startup and panics if it is missing or too short.
 
@@ -68,6 +70,7 @@ These jobs run regardless of ERP integration (registered in `registerJobs`).
 |----------|-------------|---------|
 | `CRON_FINALIZE_REPORTS` | Aggregates and finalizes the daily visit report | `30 0 * * *` |
 | `CRON_RECONCILE_DAYS` | How many past days the finalization job looks back over when searching for days that still need aggregating | `7` |
+| `CRON_CLEANUP_REFRESH_TOKENS` | Deletes expired refresh tokens from `auth_refresh_tokens` | `0 3 * * *` |
 
 These cron expressions are only used when ERP integration is enabled.
 

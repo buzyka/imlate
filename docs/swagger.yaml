@@ -103,6 +103,18 @@ definitions:
     - password
     - username
     type: object
+  github_com_buzyka_imlate_internal_http_controller_adminapi.LogoutRequest:
+    properties:
+      refresh_token:
+        type: string
+    type: object
+  github_com_buzyka_imlate_internal_http_controller_adminapi.LogoutResponse:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+    type: object
   github_com_buzyka_imlate_internal_http_controller_adminapi.RefreshRequest:
     properties:
       refresh_token:
@@ -118,8 +130,8 @@ definitions:
   github_com_buzyka_imlate_internal_usecase_adminapi.PostReportsVisitsFilters:
     properties:
       form_group:
-        description: 'FormGroup filters by class (e.g. "2 B"). Values are trimmed;
-          blank values are ignored.'
+        description: FormGroup filters by class (e.g. "2 B"). Values are trimmed;
+          blank values are ignored.
         items:
           type: string
         type: array
@@ -340,8 +352,8 @@ definitions:
       from:
         type: string
       limit:
-        description: Limit is the page size. Defaults to 100 when omitted or 0 or less;
-          must not exceed 1000.
+        description: Limit is the page size. Defaults to 100 when omitted or 0 or
+          less; must not exceed 1000.
         maximum: 1000
         type: integer
       order:
@@ -1330,6 +1342,31 @@ paths:
           schema:
             $ref: '#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.AuthErrorResponse'
       summary: Login for admin API
+      tags:
+      - auth
+  /logout:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Revokes the given refresh token, ending the session on the server.
+        The refresh token can be sent as JSON or form field (`refresh_token`). The access token
+        stays valid until it expires, so clients must discard it.
+      parameters:
+      - description: Refresh token to revoke
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.LogoutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.LogoutResponse'
+      summary: Logout from admin API
       tags:
       - auth
   /refresh:

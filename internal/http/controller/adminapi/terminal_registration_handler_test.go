@@ -22,7 +22,7 @@ func init() {
 }
 
 func setupRegHandler(repo *providertest.UserRepositoryMock) (*gin.Engine, *httptest.ResponseRecorder) {
-	api := &usecase.AdminAPI{UserRepo: repo}
+	api := &usecase.AdminAPI{UserRepo: repo, RefreshTokenRepo: newRefreshTokenRepoMock()}
 	controller := &AdminAPIController{AdminAPI: api}
 
 	rec := httptest.NewRecorder()

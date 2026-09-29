@@ -199,6 +199,7 @@ func registerAdminRoutes(r *gin.Engine) {
 	// Public routes
 	r.POST("/login", adminLoginHandler(authMiddleware))
 	r.POST("/refresh", adminRefreshHandler(authMiddleware)) // RFC 6749 compliant refresh endpoint
+	r.POST("/logout", adminLogoutHandler(authMiddleware))
 
 	adminGroup := r.Group("/admin-api", authMiddleware.MiddlewareFunc())
 	adminGroup.GET("/dashboard", adminDashboardHandler)
@@ -268,6 +269,23 @@ func adminLoginHandler(authMiddleware *gjwt.GinJWTMiddleware) gin.HandlerFunc {
 func adminRefreshHandler(authMiddleware *gjwt.GinJWTMiddleware) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authMiddleware.RefreshHandler(c)
+	}
+}
+
+// adminLogoutHandler godoc
+// @Summary      Logout from admin API
+// @Description  Revokes the given refresh token, ending the session on the server.
+// @Description  The refresh token can be sent as JSON or form field (`refresh_token`). The access token
+// @Description  stays valid until it expires, so clients must discard it.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      adminapi.LogoutRequest  true  "Refresh token to revoke"
+// @Success      200  {object}  adminapi.LogoutResponse
+// @Router       /logout [post]
+func adminLogoutHandler(authMiddleware *gjwt.GinJWTMiddleware) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authMiddleware.LogoutHandler(c)
 	}
 }
 

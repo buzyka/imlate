@@ -1257,6 +1257,40 @@
                 }
             }
         },
+        "/logout": {
+            "post": {
+                "description": "Revokes the given refresh token, ending the session on the server.\nThe refresh token can be sent as JSON or form field (`refresh_token`). The access token\nstays valid until it expires, so clients must discard it.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Logout from admin API",
+                "parameters": [
+                    {
+                        "description": "Refresh token to revoke",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.LogoutRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_buzyka_imlate_internal_http_controller_adminapi.LogoutResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/refresh": {
             "post": {
                 "description": "Refreshes a valid JWT token and returns a new token pair.",
@@ -1541,6 +1575,25 @@
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_buzyka_imlate_internal_http_controller_adminapi.LogoutRequest": {
+            "type": "object",
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_buzyka_imlate_internal_http_controller_adminapi.LogoutResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "message": {
                     "type": "string"
                 }
             }

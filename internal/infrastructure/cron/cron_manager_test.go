@@ -327,7 +327,58 @@ func TestRegisterReportJobs_RegistersFinalizationJob(t *testing.T) {
 
 	err = registerJobs(s, &config.Config{CronFinalizeReports: "30 0 * * *"})
 	assert.NoError(t, err)
-	assert.Len(t, s.Jobs(), 1)
+	// Report finalization + refresh token cleanup (default schedule).
+	assert.Len(t, s.Jobs(), 2)
+}
+
+func TestRegisterJobs_CustomRefreshTokenCleanupSchedule(t *testing.T) {
+	s, err := gocron.NewScheduler()
+	assert.NoError(t, err)
+	defer func() { _ = s.Shutdown() }()
+
+	err = registerJobs(s, &config.Config{CronFinalizeReports: "30 0 * * *", CronCleanupRefreshTokens: "15 4 * * *"})
+	assert.NoError(t, err)
+	assert.Len(t, s.Jobs(), 2)
+}
+
+func TestRegisterJobs_InvalidRefreshTokenCleanupSchedule(t *testing.T) {
+	s, err := gocron.NewScheduler()
+	assert.NoError(t, err)
+	defer func() { _ = s.Shutdown() }()
+
+	err = registerJobs(s, &config.Config{CronFinalizeReports: "30 0 * * *", CronCleanupRefreshTokens: "not a cron"})
+	assert.Error(t, err)
+}
+
+func registerCleanupRefreshTokensDeps(t *testing.T) *providertest.RefreshTokenRepositoryMock {
+	t.Helper()
+	testContainer := container.New()
+	oldGlobal := container.Global
+	container.Global = testContainer
+	t.Cleanup(func() { container.Global = oldGlobal })
+
+	repo := new(providertest.RefreshTokenRepositoryMock)
+	container.MustSingleton(container.Global, func() *zap.SugaredLogger { return zap.NewNop().Sugar() })
+	container.MustSingleton(container.Global, func() provider.RefreshTokenRepository { return repo })
+	return repo
+}
+
+func TestCleanupRefreshTokensFunc_DeletesExpiredTokens(t *testing.T) {
+	repo := registerCleanupRefreshTokensDeps(t)
+	repo.On("DeleteExpired", mock.Anything).Return(2, nil)
+
+	CleanupRefreshTokensFunc()()
+
+	repo.AssertExpectations(t)
+}
+
+func TestCleanupRefreshTokensFunc_ErrorIsLogged(t *testing.T) {
+	repo := registerCleanupRefreshTokensDeps(t)
+	repo.On("DeleteExpired", mock.Anything).Return(0, errors.New("db error"))
+
+	CleanupRefreshTokensFunc()()
+
+	repo.AssertExpectations(t)
 }
 
 func TestRegisterReportJobs_InvalidCronExpression(t *testing.T) {

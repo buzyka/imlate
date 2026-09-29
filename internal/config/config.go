@@ -48,8 +48,14 @@ type Config struct {
 	CronMarkAbsent            string `env:"CRON_MARK_ABSENT" envDefault:"10 8-12/1 * * 1-5"`
 	CronFinalizeReports       string `env:"CRON_FINALIZE_REPORTS" envDefault:"30 0 * * *"`
 	CronReconcileDays         int    `env:"CRON_RECONCILE_DAYS" envDefault:"7"`
+	CronCleanupRefreshTokens  string `env:"CRON_CLEANUP_REFRESH_TOKENS" envDefault:"0 3 * * *"`
 
 	AuthTokenSecret string `env:"AUTH_TOKEN_SECRET"`
+	// AuthAccessTokenTTL is the lifetime of the JWT access token.
+	AuthAccessTokenTTL time.Duration `env:"AUTH_ACCESS_TOKEN_TTL" envDefault:"30m"`
+	// AuthRefreshTokenTTL is the idle lifetime of a session: every refresh
+	// rotates the refresh token and starts this window again.
+	AuthRefreshTokenTTL time.Duration `env:"AUTH_REFRESH_TOKEN_TTL" envDefault:"336h"`
 
 	erpLocation *time.Location
 	appLocation *time.Location
@@ -147,6 +153,12 @@ func (c *Config) IsERPIntegrated() bool {
 func (c *Config) Validate() error {
 	if len(c.AuthTokenSecret) < minAuthTokenSecretLength {
 		return fmt.Errorf("AUTH_TOKEN_SECRET must be at least %d characters", minAuthTokenSecretLength)
+	}
+	if c.AuthAccessTokenTTL <= 0 {
+		return fmt.Errorf("AUTH_ACCESS_TOKEN_TTL must be positive")
+	}
+	if c.AuthRefreshTokenTTL < c.AuthAccessTokenTTL {
+		return fmt.Errorf("AUTH_REFRESH_TOKEN_TTL must not be shorter than AUTH_ACCESS_TOKEN_TTL")
 	}
 	return nil
 }
