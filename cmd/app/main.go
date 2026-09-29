@@ -135,6 +135,7 @@ func main() {
 	container.MustFill(container.Global, fireListController)
 	// Public by necessity: requiring a login during an evacuation is not an option.
 	r.GET("/firelist/:grade", fireListController.FireListPageHandler())
+	r.GET("/firelist/:grade/:formGroup", fireListController.FireListPageHandler())
 
 	var terminalAuth httpauth.TerminalAuthMiddleware
 	container.MustFill(container.Global, &terminalAuth)

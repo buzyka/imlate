@@ -375,6 +375,14 @@ func buildVisitorFilters(filter provider.VisitReportFilter) (string, []interface
 		}
 		clauses = append(clauses, "v.year_group IN ("+strings.Join(placeholders, ", ")+")")
 	}
+	if len(filter.FormGroups) > 0 {
+		placeholders := make([]string, len(filter.FormGroups))
+		for i, fg := range filter.FormGroups {
+			placeholders[i] = "?"
+			args = append(args, fg)
+		}
+		clauses = append(clauses, "v.form_group IN ("+strings.Join(placeholders, ", ")+")")
+	}
 
 	if len(clauses) == 0 {
 		return "", nil

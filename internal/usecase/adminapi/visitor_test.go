@@ -2,6 +2,7 @@ package adminapi
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/buzyka/imlate/internal/config"
@@ -99,7 +100,7 @@ func TestCreateVisitor_Success(t *testing.T) {
 	mockRepo.On("AddKeyToVisitor", mock.AnythingOfType("*entity.Visitor"), "KEY1").Return(nil)
 	mockRepo.On("FindKeysByVisitorId", int32(10)).Return([]string{"KEY1"}, nil)
 
-	result, err := api.CreateVisitor("Alice", "Smith", true, intPtr(5), "", []string{" key1 "})
+	result, err := api.CreateVisitor("Alice", "Smith", true, intPtr(5), nil, "", []string{" key1 "})
 
 	assert.NoError(t, err)
 	assert.Equal(t, int32(10), result.Id)
@@ -121,7 +122,7 @@ func TestCreateVisitor_IgnoreEmptyTrimmedKeys(t *testing.T) {
 	}).Return(nil)
 	mockRepo.On("FindKeysByVisitorId", int32(12)).Return([]string{}, nil)
 
-	result, err := api.CreateVisitor("Alice", "Smith", false, nil, "", []string{"   ", ""})
+	result, err := api.CreateVisitor("Alice", "Smith", false, nil, nil, "", []string{"   ", ""})
 
 	assert.NoError(t, err)
 	assert.Equal(t, int32(12), result.Id)
@@ -134,7 +135,7 @@ func TestCreateVisitor_SaveError(t *testing.T) {
 
 	mockRepo.On("SaveVisitor", mock.AnythingOfType("*entity.Visitor")).Return(errors.New("db error"))
 
-	result, err := api.CreateVisitor("Alice", "Smith", false, nil, "", nil)
+	result, err := api.CreateVisitor("Alice", "Smith", false, nil, nil, "", nil)
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
@@ -150,7 +151,7 @@ func TestCreateVisitor_NoKeys(t *testing.T) {
 	}).Return(nil)
 	mockRepo.On("FindKeysByVisitorId", int32(11)).Return([]string{}, nil)
 
-	result, err := api.CreateVisitor("Bob", "Jones", false, nil, "", nil)
+	result, err := api.CreateVisitor("Bob", "Jones", false, nil, nil, "", nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, int32(11), result.Id)
@@ -170,7 +171,7 @@ func TestUpdateVisitor_Success(t *testing.T) {
 	mockRepo.On("AddKeyToVisitor", mock.AnythingOfType("*entity.Visitor"), "NEW_KEY").Return(nil)
 	mockRepo.On("FindKeysByVisitorId", int32(1)).Return([]string{"NEW_KEY"}, nil).Once()
 
-	result, err := api.UpdateVisitor(1, "New", "Name", true, intPtr(3), "", []string{"NEW_KEY"})
+	result, err := api.UpdateVisitor(1, "New", "Name", true, intPtr(3), nil, "", []string{"NEW_KEY"})
 
 	assert.NoError(t, err)
 	assert.Equal(t, "New", result.Name)
@@ -186,12 +187,137 @@ func TestUpdateVisitor_NotFound(t *testing.T) {
 
 	mockRepo.On("FindById", int32(999)).Return(&entity.Visitor{}, nil)
 
-	result, err := api.UpdateVisitor(999, "Name", "Sur", false, nil, "", nil)
+	result, err := api.UpdateVisitor(999, "Name", "Sur", false, nil, nil, "", nil)
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "visitor not found")
 	mockRepo.AssertExpectations(t)
+}
+
+func strPtr(s string) *string { return &s }
+
+func TestValidateFormGroup(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *string
+		expected *string
+		wantErr  bool
+	}{
+		{name: "nil", input: nil, expected: nil},
+		{name: "empty becomes nil", input: strPtr(""), expected: nil},
+		{name: "blank becomes nil", input: strPtr("   "), expected: nil},
+		{name: "trimmed", input: strPtr(" 4 B "), expected: strPtr("4 B")},
+		{name: "max length ASCII", input: strPtr(strings.Repeat("a", 32)), expected: strPtr(strings.Repeat("a", 32))},
+		{name: "max length multibyte", input: strPtr(strings.Repeat("я", 32)), expected: strPtr(strings.Repeat("я", 32))},
+		{name: "too long", input: strPtr(strings.Repeat("a", 33)), wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := validateFormGroup(tt.input)
+			if tt.wantErr {
+				assert.ErrorIs(t, err, ErrInvalidRequestFormat)
+				assert.Contains(t, err.Error(), "form_group")
+				assert.Nil(t, result)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestCreateVisitor_WithFormGroup(t *testing.T) {
+	api, mockRepo := newVisitorTestAPI()
+
+	mockRepo.On("SaveVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
+		return v.FormGroup != nil && *v.FormGroup == "4 B"
+	})).Run(func(args mock.Arguments) {
+		args.Get(0).(*entity.Visitor).Id = 20
+	}).Return(nil)
+	mockRepo.On("FindKeysByVisitorId", int32(20)).Return([]string{}, nil)
+
+	result, err := api.CreateVisitor("Alice", "Smith", true, intPtr(4), strPtr(" 4 B "), "", nil)
+
+	assert.NoError(t, err)
+	assert.Equal(t, strPtr("4 B"), result.FormGroup)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestCreateVisitor_EmptyFormGroupStoredAsNull(t *testing.T) {
+	for _, input := range []string{"", "   "} {
+		t.Run("input="+input, func(t *testing.T) {
+			api, mockRepo := newVisitorTestAPI()
+
+			mockRepo.On("SaveVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
+				return v.FormGroup == nil
+			})).Run(func(args mock.Arguments) {
+				args.Get(0).(*entity.Visitor).Id = 21
+			}).Return(nil)
+			mockRepo.On("FindKeysByVisitorId", int32(21)).Return([]string{}, nil)
+
+			result, err := api.CreateVisitor("Alice", "Smith", true, nil, strPtr(input), "", nil)
+
+			assert.NoError(t, err)
+			assert.Nil(t, result.FormGroup)
+			mockRepo.AssertExpectations(t)
+		})
+	}
+}
+
+func TestCreateVisitor_FormGroupTooLong(t *testing.T) {
+	api, mockRepo := newVisitorTestAPI()
+
+	result, err := api.CreateVisitor("Alice", "Smith", true, nil, strPtr(strings.Repeat("a", 33)), "", nil)
+
+	assert.ErrorIs(t, err, ErrInvalidRequestFormat)
+	assert.Nil(t, result)
+	mockRepo.AssertNotCalled(t, "SaveVisitor", mock.Anything)
+}
+
+func TestUpdateVisitor_SetsFormGroup(t *testing.T) {
+	api, mockRepo := newVisitorTestAPI()
+
+	existing := &entity.Visitor{Id: 1, Name: "Old", FormGroup: strPtr("4 A")}
+	mockRepo.On("FindById", int32(1)).Return(existing, nil)
+	mockRepo.On("SaveVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
+		return v.FormGroup != nil && *v.FormGroup == "4 B"
+	})).Return(nil)
+	mockRepo.On("FindKeysByVisitorId", int32(1)).Return([]string{}, nil)
+
+	result, err := api.UpdateVisitor(1, "New", "Name", true, nil, strPtr(" 4 B "), "", nil)
+
+	assert.NoError(t, err)
+	assert.Equal(t, strPtr("4 B"), result.FormGroup)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestUpdateVisitor_EmptyFormGroupClearsIt(t *testing.T) {
+	api, mockRepo := newVisitorTestAPI()
+
+	existing := &entity.Visitor{Id: 1, Name: "Old", FormGroup: strPtr("4 A")}
+	mockRepo.On("FindById", int32(1)).Return(existing, nil)
+	mockRepo.On("SaveVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
+		return v.FormGroup == nil
+	})).Return(nil)
+	mockRepo.On("FindKeysByVisitorId", int32(1)).Return([]string{}, nil)
+
+	result, err := api.UpdateVisitor(1, "New", "Name", true, nil, strPtr(""), "", nil)
+
+	assert.NoError(t, err)
+	assert.Nil(t, result.FormGroup)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestUpdateVisitor_FormGroupTooLong(t *testing.T) {
+	api, mockRepo := newVisitorTestAPI()
+
+	result, err := api.UpdateVisitor(1, "New", "Name", true, nil, strPtr(strings.Repeat("a", 33)), "", nil)
+
+	assert.ErrorIs(t, err, ErrInvalidRequestFormat)
+	assert.Nil(t, result)
+	mockRepo.AssertNotCalled(t, "FindById", mock.Anything)
+	mockRepo.AssertNotCalled(t, "SaveVisitor", mock.Anything)
 }
 
 func TestAddVisitorKey_Success(t *testing.T) {
@@ -296,6 +422,7 @@ func TestNewVisitorResponse(t *testing.T) {
 	assert.Nil(t, newVisitorResponse(nil))
 
 	grade := 9
+	formGroup := "4 B"
 	visitor := &entity.Visitor{
 		Id:           7,
 		Name:         "Alice",
@@ -306,6 +433,7 @@ func TestNewVisitorResponse(t *testing.T) {
 		Image:        "/img/alice.jpg",
 		ErpID:        555,
 		ErpSchoolID:  "S555",
+		FormGroup:    &formGroup,
 		ErpDivisions: []int32{1, 2},
 		Keys:         []string{"KEY1", "KEY2"},
 	}
@@ -317,6 +445,7 @@ func TestNewVisitorResponse(t *testing.T) {
 	assert.True(t, result.ImportedFromISAMS)
 	assert.Equal(t, []string{"KEY1", "KEY2"}, result.Keys)
 	assert.Equal(t, []int32{1, 2}, result.ErpDivisions)
+	assert.Equal(t, &formGroup, result.FormGroup)
 	assert.Len(t, list, 1)
 	assert.Equal(t, result, list[0])
 }

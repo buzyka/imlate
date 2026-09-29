@@ -71,6 +71,29 @@ func TestVisitor_GetSyncHash(t *testing.T) {
 	assert.NotEqual(t, v1.GetSyncHash(), v7.GetSyncHash(), "Hash should change when ErpDivisions length changes")
 }
 
+func TestVisitor_GetSyncHash_FormGroup(t *testing.T) {
+	newVisitor := func(formGroup *string) *Visitor {
+		return &Visitor{
+			ErpID:          12345,
+			ErpSchoolID:    "S1",
+			ErpYearGroupID: 4,
+			FormGroup:      formGroup,
+			ErpDivisions:   []int32{1},
+		}
+	}
+
+	withoutForm := newVisitor(nil)
+	emptyForm := newVisitor(strPtr(""))
+	form4B := newVisitor(strPtr("4 B"))
+	form4BCopy := newVisitor(strPtr("4 B"))
+	form4A := newVisitor(strPtr("4 A"))
+
+	assert.Equal(t, form4B.GetSyncHash(), form4BCopy.GetSyncHash(), "Same form group should give the same hash")
+	assert.NotEqual(t, form4B.GetSyncHash(), form4A.GetSyncHash(), "Hash should change when FormGroup changes")
+	assert.NotEqual(t, withoutForm.GetSyncHash(), form4B.GetSyncHash(), "Hash should change when FormGroup appears")
+	assert.NotEqual(t, withoutForm.GetSyncHash(), emptyForm.GetSyncHash(), "nil and empty FormGroup should hash differently")
+}
+
 func TestVisitor_IsImportedFromISAMS(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -116,4 +139,32 @@ func TestVisitor_IsImportedFromISAMS(t *testing.T) {
 			assert.Equal(t, tt.expected, tt.visitor.IsImportedFromISAMS())
 		})
 	}
+}
+
+func strPtr(s string) *string { return &s }
+
+func TestNormalizeFormGroup(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *string
+		expected *string
+	}{
+		{name: "nil stays nil", input: nil, expected: nil},
+		{name: "empty becomes nil", input: strPtr(""), expected: nil},
+		{name: "blank becomes nil", input: strPtr("   "), expected: nil},
+		{name: "value kept", input: strPtr("4 B"), expected: strPtr("4 B")},
+		{name: "edges trimmed, inner space kept", input: strPtr(" 4 B "), expected: strPtr("4 B")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, NormalizeFormGroup(tt.input))
+		})
+	}
+}
+
+func TestNormalizeFormGroup_DoesNotAliasInput(t *testing.T) {
+	input := strPtr("4 B")
+	result := NormalizeFormGroup(input)
+	*input = "5 A"
+	assert.Equal(t, "4 B", *result)
 }

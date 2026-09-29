@@ -31,6 +31,9 @@ func intPtr(i int) *int { return &i }
 //go:embed _fixtures/single_student.json
 var testSingleStudentResponse []byte
 
+//go:embed _fixtures/students_form_group.json
+var testFormGroupStudentsResponse []byte
+
 // MockERPFactory
 type MockERPFactory struct {
 	mock.Mock
@@ -1236,4 +1239,116 @@ func TestStudentPhotoFileName(t *testing.T) {
 	// The extension comes from the bytes, not from the response.
 	_, ok = studentPhotoFileName("S1", []byte("<html></html>"))
 	assert.False(t, ok)
+}
+
+func strPtr(s string) *string { return &s }
+
+func formGroupTestStudents(t *testing.T) []isams.Student {
+	resp := isams.StudentsResponse{}
+	assert.NoError(t, json.Unmarshal(testFormGroupStudentsResponse, &resp))
+	assert.Len(t, resp.Students, 2)
+	return resp.Students
+}
+
+func TestSaveStudent_FormGroupFromISAMSResponse(t *testing.T) {
+	students := formGroupTestStudents(t)
+
+	vRMock := new(providertest.VisitorRepositoryMock)
+	vRMock.On("SaveVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
+		return v.ErpID == 1042 && v.FormGroup == nil && v.ErpYearGroupID == 3
+	})).Once().Return(nil)
+	vRMock.On("SaveVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
+		return v.ErpID == 1987 && v.FormGroup != nil && *v.FormGroup == "4 B" && v.ErpYearGroupID == 4
+	})).Once().Return(nil)
+
+	sync := &StudentSync{
+		VisitorRepo:        vRMock,
+		yearGroupDivisions: map[int32][]int32{3: {1}, 4: {1}},
+		currentVisitors:    []*entity.Visitor{},
+		Logger:             zap.NewNop().Sugar(),
+	}
+
+	for _, student := range students {
+		updated, err := sync.SaveStudent(student)
+		assert.NoError(t, err)
+		assert.True(t, updated)
+	}
+	vRMock.AssertExpectations(t)
+}
+
+// existingFormGroupVisitor is what a previous sync stored for student 1987,
+// with the given form group.
+func existingFormGroupVisitor(formGroup *string) *entity.Visitor {
+	v := &entity.Visitor{
+		Id:             7,
+		ErpID:          1987,
+		Name:           "Test",
+		Surname:        "Student",
+		ErpSchoolID:    "S1987",
+		ErpYearGroupID: 4,
+		FormGroup:      formGroup,
+		ErpDivisions:   []int32{1},
+	}
+	v.GetSyncHash()
+	return v
+}
+
+func TestSaveStudent_FormGroupChangeTriggersUpdate(t *testing.T) {
+	student := formGroupTestStudents(t)[1]
+
+	vRMock := new(providertest.VisitorRepositoryMock)
+	vRMock.On("SaveVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
+		return v.Id == 7 && v.FormGroup != nil && *v.FormGroup == "4 B"
+	})).Once().Return(nil)
+
+	sync := &StudentSync{
+		VisitorRepo:        vRMock,
+		yearGroupDivisions: map[int32][]int32{4: {1}},
+		currentVisitors:    []*entity.Visitor{existingFormGroupVisitor(strPtr("4 A"))},
+		Logger:             zap.NewNop().Sugar(),
+	}
+
+	updated, err := sync.SaveStudent(student)
+	assert.NoError(t, err)
+	assert.True(t, updated)
+	vRMock.AssertExpectations(t)
+}
+
+func TestSaveStudent_FormGroupAppearsTriggersUpdate(t *testing.T) {
+	student := formGroupTestStudents(t)[1]
+
+	vRMock := new(providertest.VisitorRepositoryMock)
+	vRMock.On("SaveVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
+		return v.Id == 7 && v.FormGroup != nil && *v.FormGroup == "4 B"
+	})).Once().Return(nil)
+
+	sync := &StudentSync{
+		VisitorRepo:        vRMock,
+		yearGroupDivisions: map[int32][]int32{4: {1}},
+		currentVisitors:    []*entity.Visitor{existingFormGroupVisitor(nil)},
+		Logger:             zap.NewNop().Sugar(),
+	}
+
+	updated, err := sync.SaveStudent(student)
+	assert.NoError(t, err)
+	assert.True(t, updated)
+	vRMock.AssertExpectations(t)
+}
+
+func TestSaveStudent_SameFormGroupNoUpdate(t *testing.T) {
+	student := formGroupTestStudents(t)[1]
+
+	vRMock := new(providertest.VisitorRepositoryMock)
+
+	sync := &StudentSync{
+		VisitorRepo:        vRMock,
+		yearGroupDivisions: map[int32][]int32{4: {1}},
+		currentVisitors:    []*entity.Visitor{existingFormGroupVisitor(strPtr("4 B"))},
+		Logger:             zap.NewNop().Sugar(),
+	}
+
+	updated, err := sync.SaveStudent(student)
+	assert.NoError(t, err)
+	assert.False(t, updated)
+	vRMock.AssertNotCalled(t, "SaveVisitor", mock.Anything)
 }

@@ -29,7 +29,7 @@ func (r *Visitor) FindAll(opts ...provider.VisitorFilterOption) ([]*entity.Visit
 		}
 	}
 
-	query := "SELECT id, name, surname, email, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, sync_hash, updated_at FROM visitors"
+	query := "SELECT id, name, surname, email, is_student, grade, image, isams_id, isams_school_id, year_group, form_group, divisions, sync_hash, updated_at FROM visitors"
 	args := make([]interface{}, 0)
 	clauses := []string{"deleted_at IS NULL"}
 	if len(cfg.ERPYearGroup) > 0 {
@@ -61,6 +61,7 @@ func (r *Visitor) FindAll(opts ...provider.VisitorFilterOption) ([]*entity.Visit
 		var tmpErpID sql.NullInt64
 		var tmpErpSchoolID sql.NullString
 		var tmpYearGroup sql.NullInt32
+		var tmpFormGroup sql.NullString
 		var tmpDivisions sql.NullString
 		var tmpUpdatedAt sql.NullTime
 		var tmpSyncHash sql.NullString
@@ -77,6 +78,7 @@ func (r *Visitor) FindAll(opts ...provider.VisitorFilterOption) ([]*entity.Visit
 			&tmpErpID,
 			&tmpErpSchoolID,
 			&tmpYearGroup,
+			&tmpFormGroup,
 			&tmpDivisions,
 			&tmpSyncHash,
 			&tmpUpdatedAt,
@@ -105,6 +107,9 @@ func (r *Visitor) FindAll(opts ...provider.VisitorFilterOption) ([]*entity.Visit
 		if tmpYearGroup.Valid {
 			visitor.ErpYearGroupID = tmpYearGroup.Int32
 		}
+		if tmpFormGroup.Valid {
+			visitor.FormGroup = &tmpFormGroup.String
+		}
 		if tmpDivisions.Valid {
 			err = json.Unmarshal([]byte(tmpDivisions.String), &visitor.ErpDivisions)
 			if err != nil {
@@ -132,11 +137,12 @@ func (r *Visitor) FindByKey(key string) (*entity.VisitDetails, error) {
 	var tmpErpID sql.NullInt64
 	var tmpErpSchoolID sql.NullString
 	var tmpYearGroup sql.NullInt32
+	var tmpFormGroup sql.NullString
 	var tmpDivisions sql.NullString
 	var tmpSyncHash sql.NullString
 
 	key = strings.ToUpper(key)
-	row := r.Connection.QueryRow("SELECT v.id, v.name, v.surname, v.email, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.divisions, v.sync_hash, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk ON vk.visitor_id = v.id WHERE vk.key_id = ? AND v.deleted_at IS NULL", key)
+	row := r.Connection.QueryRow("SELECT v.id, v.name, v.surname, v.email, v.is_student, v.grade, v.image, v.isams_id, v.isams_school_id, v.year_group, v.form_group, v.divisions, v.sync_hash, vk.key_id FROM visitors AS v INNER JOIN visitor_key AS vk ON vk.visitor_id = v.id WHERE vk.key_id = ? AND v.deleted_at IS NULL", key)
 
 	visitor := &entity.Visitor{}
 	visit := &entity.VisitDetails{
@@ -154,6 +160,7 @@ func (r *Visitor) FindByKey(key string) (*entity.VisitDetails, error) {
 		&tmpErpID,
 		&tmpErpSchoolID,
 		&tmpYearGroup,
+		&tmpFormGroup,
 		&tmpDivisions,
 		&tmpSyncHash,
 		&visit.Key,
@@ -185,6 +192,9 @@ func (r *Visitor) FindByKey(key string) (*entity.VisitDetails, error) {
 	if tmpYearGroup.Valid {
 		visitor.ErpYearGroupID = tmpYearGroup.Int32
 	}
+	if tmpFormGroup.Valid {
+		visitor.FormGroup = &tmpFormGroup.String
+	}
 	if tmpDivisions.Valid {
 		err = json.Unmarshal([]byte(tmpDivisions.String), &visitor.ErpDivisions)
 		if err != nil {
@@ -207,10 +217,11 @@ func (r *Visitor) FindById(id int32) (*entity.Visitor, error) {
 	var tmpErpID sql.NullInt64
 	var tmpErpSchoolID sql.NullString
 	var tmpYearGroup sql.NullInt32
+	var tmpFormGroup sql.NullString
 	var tmpDivisions sql.NullString
 	var tmpSyncHash sql.NullString
 
-	row := r.Connection.QueryRow("SELECT id, name, surname, email, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, sync_hash FROM visitors WHERE id = ? AND deleted_at IS NULL", id)
+	row := r.Connection.QueryRow("SELECT id, name, surname, email, is_student, grade, image, isams_id, isams_school_id, year_group, form_group, divisions, sync_hash FROM visitors WHERE id = ? AND deleted_at IS NULL", id)
 	student := &entity.Visitor{}
 	err := row.Scan(
 		&student.Id,
@@ -223,6 +234,7 @@ func (r *Visitor) FindById(id int32) (*entity.Visitor, error) {
 		&tmpErpID,
 		&tmpErpSchoolID,
 		&tmpYearGroup,
+		&tmpFormGroup,
 		&tmpDivisions,
 		&tmpSyncHash,
 	)
@@ -252,6 +264,9 @@ func (r *Visitor) FindById(id int32) (*entity.Visitor, error) {
 	}
 	if tmpYearGroup.Valid {
 		student.ErpYearGroupID = tmpYearGroup.Int32
+	}
+	if tmpFormGroup.Valid {
+		student.FormGroup = &tmpFormGroup.String
 	}
 	if tmpDivisions.Valid {
 		err = json.Unmarshal([]byte(tmpDivisions.String), &student.ErpDivisions)
@@ -341,7 +356,7 @@ func (r *Visitor) updateVisitor(visitor *entity.Visitor) error {
 	}
 
 	_, err = r.Connection.Exec(
-		"UPDATE visitors SET name = ?, surname = ?, email = ?, is_student = ?, grade = ?, image = ?, isams_id = ?, isams_school_id = ?, year_group = ?, divisions = ?, updated_at = ?, sync_hash = ? WHERE id = ?",
+		"UPDATE visitors SET name = ?, surname = ?, email = ?, is_student = ?, grade = ?, image = ?, isams_id = ?, isams_school_id = ?, year_group = ?, form_group = ?, divisions = ?, updated_at = ?, sync_hash = ? WHERE id = ?",
 		visitor.Name,
 		visitor.Surname,
 		email,
@@ -351,6 +366,7 @@ func (r *Visitor) updateVisitor(visitor *entity.Visitor) error {
 		erpID,
 		erpSchoolID,
 		visitor.ErpYearGroupID,
+		visitor.FormGroup,
 		string(divisionsStr),
 		visitor.UpdatedAt,
 		fmt.Sprintf("%d", visitor.GetSyncHash()),
@@ -395,7 +411,7 @@ func (r *Visitor) insertVisitor(visitor *entity.Visitor) error {
 	}
 
 	result, err := r.Connection.Exec(
-		"INSERT INTO visitors (name, surname, email, is_student, grade, image, isams_id, isams_school_id, year_group, divisions, updated_at, sync_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		"INSERT INTO visitors (name, surname, email, is_student, grade, image, isams_id, isams_school_id, year_group, form_group, divisions, updated_at, sync_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		visitor.Name,
 		visitor.Surname,
 		email,
@@ -405,6 +421,7 @@ func (r *Visitor) insertVisitor(visitor *entity.Visitor) error {
 		erpID,
 		erpSchoolID,
 		visitor.ErpYearGroupID,
+		visitor.FormGroup,
 		string(divisionsStr),
 		visitor.UpdatedAt,
 		fmt.Sprintf("%d", visitor.GetSyncHash()),

@@ -27,7 +27,8 @@ type FireListController struct {
 	Logger   *zap.SugaredLogger    `container:"type"`
 }
 
-// FireListPageHandler renders the roster for one class.
+// FireListPageHandler renders the roster for one year group (or staff),
+// optionally narrowed to one form group.
 func (c *FireListController) FireListPageHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// The roster changes minute by minute during an evacuation; a cached copy
@@ -35,27 +36,30 @@ func (c *FireListController) FireListPageHandler() gin.HandlerFunc {
 		ctx.Header("Cache-Control", "no-store")
 
 		grade := ctx.Param("grade")
+		// Empty on the /firelist/:grade route; narrows the list to one class on
+		// /firelist/:grade/:formGroup.
+		formGroup := ctx.Param("formGroup")
 
-		data, err := c.FireList.GetFireList(grade)
+		data, err := c.FireList.GetFireList(grade, formGroup)
 		if err != nil {
 			if errors.Is(err, firelistview.ErrAlarmInactive) {
 				// 403 rather than 200: the roster is withheld, and anything
 				// watching this endpoint — a log, a monitor, a scraper — should
 				// be able to tell that apart from a successful read.
 				ctx.HTML(http.StatusForbidden, fireListTemplateName,
-					firelistview.InactivePageData(grade))
+					firelistview.InactivePageData(grade, formGroup))
 				return
 			}
 			if errors.Is(err, firelistview.ErrInvalidGrade) {
 				// A readable page, not a JSON error: whoever opened this link is
 				// standing outside with a class.
 				ctx.HTML(http.StatusNotFound, fireListTemplateName,
-					firelistview.ErrorPageData(grade, invalidGradeMessage))
+					firelistview.ErrorPageData(grade, formGroup, invalidGradeMessage))
 				return
 			}
-			c.logf("firelist: failed to build list for grade %q: %v", grade, err)
+			c.logf("firelist: failed to build list for grade %q, form group %q: %v", grade, formGroup, err)
 			ctx.HTML(http.StatusInternalServerError, fireListTemplateName,
-				firelistview.ErrorPageData(grade, unavailableMessage))
+				firelistview.ErrorPageData(grade, formGroup, unavailableMessage))
 			return
 		}
 

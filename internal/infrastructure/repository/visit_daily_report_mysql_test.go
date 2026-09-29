@@ -540,6 +540,23 @@ func TestBuildVisitorFilters(t *testing.T) {
 	assert.Nil(t, args)
 }
 
+func TestBuildVisitorFilters_FormGroups(t *testing.T) {
+	isStudent := true
+	clause, args := buildVisitorFilters(provider.VisitReportFilter{
+		IsStudent:  &isStudent,
+		YearGroups: []int{2},
+		FormGroups: []string{"2 B"},
+	})
+	assert.Equal(t, " AND v.is_student = ? AND v.year_group IN (?) AND v.form_group IN (?)", clause)
+	assert.Equal(t, []interface{}{true, 2, "2 B"}, args)
+
+	clause, args = buildVisitorFilters(provider.VisitReportFilter{
+		FormGroups: []string{"2 A", "2 B"},
+	})
+	assert.Equal(t, " AND v.form_group IN (?, ?)", clause)
+	assert.Equal(t, []interface{}{"2 A", "2 B"}, args)
+}
+
 func TestBuildSignStatusWhere(t *testing.T) {
 	assert.Equal(t, "", buildSignStatusWhere(nil))
 	assert.Equal(t, "", buildSignStatusWhere([]string{"unknown"}))
@@ -576,6 +593,31 @@ func TestBuildOrderClause_AlwaysHasUniqueTieBreaker(t *testing.T) {
 }
 
 // exercise the filter/sign-status/order args flowing through GetVisitReport
+func TestGetVisitReport_WithFormGroupFilter(t *testing.T) {
+	repo, mock := newReportRepo(t)
+	day := time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC)
+	isStudent := true
+	filter := provider.VisitReportFilter{
+		IsStudent:  &isStudent,
+		YearGroups: []int{2},
+		FormGroups: []string{"2 B"},
+		Page:       1,
+		PageSize:   20,
+	}
+
+	mock.ExpectQuery(q("SELECT COUNT(*) FROM visit_daily_report r JOIN visitors v ON v.id = r.visitor_id WHERE r.day >= ? AND r.day < ? AND v.deleted_at IS NULL AND v.is_student = ? AND v.year_group IN (?) AND v.form_group IN (?)")).
+		WithArgs("2026-03-10", "2026-03-11", true, 2, "2 B").
+		WillReturnRows(sqlmock.NewRows([]string{"cnt"}).AddRow(0))
+	mock.ExpectQuery(q("AND v.form_group IN (?)")).
+		WithArgs("2026-03-10", "2026-03-11", true, 2, "2 B", 20, 0).
+		WillReturnRows(sqlmock.NewRows(reportColumns))
+
+	res, err := repo.GetVisitReport(day, day.AddDate(0, 0, 1), filter)
+	require.NoError(t, err)
+	assert.Equal(t, 0, res.Total)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestGetVisitReport_WithFiltersAndOrder(t *testing.T) {
 	repo, mock := newReportRepo(t)
 	day := time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC)

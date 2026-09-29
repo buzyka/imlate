@@ -14,6 +14,7 @@ type CreateVisitorRequest struct {
 	Email     string   `json:"email"`
 	IsStudent bool     `json:"is_student"`
 	Grade     *int     `json:"grade"`
+	FormGroup *string  `json:"form_group"`
 	Keys      []string `json:"keys"`
 }
 
@@ -23,6 +24,7 @@ type UpdateVisitorRequest struct {
 	Email     string   `json:"email"`
 	IsStudent bool     `json:"is_student"`
 	Grade     *int     `json:"grade"`
+	FormGroup *string  `json:"form_group"`
 	Keys      []string `json:"keys"`
 }
 
@@ -97,7 +99,7 @@ func (ac *AdminAPIController) CreateVisitorHandler() gin.HandlerFunc {
 			return
 		}
 
-		visitor, err := ac.AdminAPI.CreateVisitor(req.Name, req.Surname, req.IsStudent, req.Grade, req.Email, req.Keys)
+		visitor, err := ac.AdminAPI.CreateVisitor(req.Name, req.Surname, req.IsStudent, req.Grade, req.FormGroup, req.Email, req.Keys)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -132,7 +134,7 @@ func (ac *AdminAPIController) UpdateVisitorHandler() gin.HandlerFunc {
 			return
 		}
 
-		visitor, err := ac.AdminAPI.UpdateVisitor(id, req.Name, req.Surname, req.IsStudent, req.Grade, req.Email, req.Keys)
+		visitor, err := ac.AdminAPI.UpdateVisitor(id, req.Name, req.Surname, req.IsStudent, req.Grade, req.FormGroup, req.Email, req.Keys)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return

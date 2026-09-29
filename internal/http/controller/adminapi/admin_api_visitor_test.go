@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/buzyka/imlate/internal/config"
@@ -519,4 +520,77 @@ func TestUploadVisitorImageHandler_Success(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	mockRepo.AssertExpectations(t)
+}
+
+func TestCreateVisitorHandler_WithFormGroup(t *testing.T) {
+	mockRepo, controller := setupVisitorTest()
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	c.Request = httptest.NewRequest(http.MethodPost, "/admin-api/visitors",
+		bytes.NewBufferString(`{"name":"Alice","is_student":true,"form_group":"4 B"}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	mockRepo.On("SaveVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
+		return v.FormGroup != nil && *v.FormGroup == "4 B"
+	})).Run(func(args mock.Arguments) {
+		args.Get(0).(*entity.Visitor).Id = 10
+	}).Return(nil)
+	mockRepo.On("FindKeysByVisitorId", int32(10)).Return([]string{}, nil)
+
+	controller.CreateVisitorHandler()(c)
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+	var result usecase.VisitorResponse
+	assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
+	if assert.NotNil(t, result.FormGroup) {
+		assert.Equal(t, "4 B", *result.FormGroup)
+	}
+	mockRepo.AssertExpectations(t)
+}
+
+func TestUpdateVisitorHandler_EmptyFormGroupReturnsNull(t *testing.T) {
+	mockRepo, controller := setupVisitorTest()
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	c.Request = httptest.NewRequest(http.MethodPut, "/admin-api/visitors/1",
+		bytes.NewBufferString(`{"name":"Updated","is_student":true,"form_group":""}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Params = gin.Params{{Key: "id", Value: "1"}}
+
+	formGroup := "4 A"
+	existing := &entity.Visitor{Id: 1, Name: "Old", FormGroup: &formGroup}
+	mockRepo.On("FindById", int32(1)).Return(existing, nil)
+	mockRepo.On("SaveVisitor", mock.MatchedBy(func(v *entity.Visitor) bool {
+		return v.FormGroup == nil
+	})).Return(nil)
+	mockRepo.On("FindKeysByVisitorId", int32(1)).Return([]string{}, nil)
+
+	controller.UpdateVisitorHandler()(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var body map[string]interface{}
+	assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	value, present := body["form_group"]
+	assert.True(t, present)
+	assert.Nil(t, value)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestUpdateVisitorHandler_FormGroupTooLong(t *testing.T) {
+	mockRepo, controller := setupVisitorTest()
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	c.Request = httptest.NewRequest(http.MethodPut, "/admin-api/visitors/1",
+		bytes.NewBufferString(`{"name":"Updated","form_group":"`+strings.Repeat("a", 33)+`"}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Params = gin.Params{{Key: "id", Value: "1"}}
+
+	controller.UpdateVisitorHandler()(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "form_group")
+	mockRepo.AssertNotCalled(t, "SaveVisitor", mock.Anything)
 }

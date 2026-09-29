@@ -1,0 +1,29 @@
+{
+    "count": 2,
+    "page": 1,
+    "pageSize": 100,
+    "students": [
+        {
+            "id": 1042,
+            "forename": "Wendy",
+            "formGroup": null,
+            "fullName": "Wendy Peffercorn",
+            "lastUpdated": "2023-05-19T08:21:19+01:00",
+            "schoolId": "S1042",
+            "surname": "Peffercorn",
+            "yearGroup": 3
+        },
+        {
+            "id": 1987,
+            "forename": "Test",
+            "formGroup": "4 B",
+            "fullName": "Test Student",
+            "lastUpdated": "2026-08-14T20:26:37+02:00",
+            "schoolId": "S1987",
+            "surname": "Student",
+            "yearGroup": 4
+        }
+    ],
+    "totalCount": 2,
+    "totalPages": 1
+}
