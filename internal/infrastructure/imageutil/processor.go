@@ -138,9 +138,10 @@ func isAllowedMime(contentType string, allowed []string) bool {
 	return false
 }
 
-// extensionForContentType maps a content type this package names onto the
-// extension its files carry. ok is false for anything else.
-func extensionForContentType(contentType string) (string, bool) {
+// ExtensionForContentType maps a content type this package names onto the
+// extension its files carry. ok is false for anything else. The result is
+// always one of a few fixed literals, so it is safe to use in a file name.
+func ExtensionForContentType(contentType string) (string, bool) {
 	switch contentType {
 	case "image/jpeg":
 		return ".jpg", true
@@ -160,12 +161,12 @@ func extensionForContentType(contentType string) (string, bool) {
 // bytes it actually received rather than after a name it does not control.
 func DetectImageExtension(data []byte) (contentType, extension string, ok bool) {
 	contentType = http.DetectContentType(data)
-	extension, ok = extensionForContentType(contentType)
+	extension, ok = ExtensionForContentType(contentType)
 	return contentType, extension, ok
 }
 
 func canonicalExtension(contentType, filename string) string {
-	if ext, ok := extensionForContentType(contentType); ok {
+	if ext, ok := ExtensionForContentType(contentType); ok {
 		return ext
 	}
 

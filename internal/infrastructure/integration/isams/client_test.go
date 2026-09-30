@@ -3,12 +3,14 @@ package isams
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
@@ -242,17 +244,23 @@ func TestClient_Do_Success(t *testing.T) {
 	_ = resp.Body.Close()
 }
 
-func TestClient_Do_RedactsSensitiveHeadersInLogs(t *testing.T) {
+func newTestLogger(level zapcore.Level) (*zap.SugaredLogger, *bytes.Buffer) {
 	logBuffer := &bytes.Buffer{}
 	logger := zap.New(zapcore.NewCore(
 		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
 		zapcore.AddSync(logBuffer),
-		zapcore.DebugLevel,
+		level,
 	)).Sugar()
+	return logger, logBuffer
+}
+
+func TestClient_Do_LogsResultWithoutHeadersQueryOrBody(t *testing.T) {
+	logger, logBuffer := newTestLogger(zapcore.DebugLevel)
 
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"success"}`))
+		w.Header().Set("X-Response-Secret", "response-secret")
+		w.WriteHeader(http.StatusTooManyRequests)
+		_, _ = w.Write([]byte(`{"status":"slow down"}`))
 	}))
 	defer testServer.Close()
 
@@ -262,25 +270,72 @@ func TestClient_Do_RedactsSensitiveHeadersInLogs(t *testing.T) {
 		Logger:     logger,
 	}
 
-	req, err := http.NewRequest(http.MethodPost, testServer.URL+"/test", strings.NewReader("payload"))
+	req, err := http.NewRequest(http.MethodPost, testServer.URL+"/api/students/123?secret=query-secret", strings.NewReader("payload"))
 	assert.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer very-secret-token")
 	req.Header.Set("Cookie", "session=secret-cookie")
 	req.Header.Set("X-API-Key", "secret-api-key")
+	req.Header.Set("X-Custom-Secret", "custom-secret")
 
 	resp, err := client.Do(req)
 
 	assert.NoError(t, err)
-	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusTooManyRequests, resp.StatusCode)
 	_ = resp.Body.Close()
 
+	var entry map[string]any
+	assert.NoError(t, json.Unmarshal(logBuffer.Bytes(), &entry))
+	assert.Equal(t, "isams request", entry["msg"])
+	assert.Equal(t, "POST", entry["method"])
+	assert.Equal(t, "/api/students/123", entry["path"])
+	assert.Equal(t, float64(http.StatusTooManyRequests), entry["status"])
+	assert.Equal(t, float64(len(`{"status":"slow down"}`)), entry["content_length"])
+	assert.Contains(t, entry, "duration_ms")
+
 	logOutput := logBuffer.String()
-	assert.Contains(t, logOutput, "isams outgoing request")
-	assert.Contains(t, logOutput, "REDACTED")
-	assert.NotContains(t, logOutput, "very-secret-token")
-	assert.NotContains(t, logOutput, "secret-cookie")
-	assert.NotContains(t, logOutput, "secret-api-key")
-	assert.NotContains(t, logOutput, "payload")
+	for _, leaked := range []string{"very-secret-token", "secret-cookie", "secret-api-key", "custom-secret", "query-secret", "payload", "response-secret", "Authorization"} {
+		assert.NotContains(t, logOutput, leaked)
+	}
+}
+
+func TestClient_Do_LogsFailureWithoutURLQuery(t *testing.T) {
+	logger, logBuffer := newTestLogger(zapcore.DebugLevel)
+	client := &Client{HTTPClient: &http.Client{}, Logger: logger}
+
+	req, err := http.NewRequest(http.MethodGet, "http://invalid-server-that-does-not-exist.test/api/students?secret=query-secret", nil)
+	assert.NoError(t, err)
+
+	resp, err := client.Do(req)
+
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+	var entry map[string]any
+	assert.NoError(t, json.Unmarshal(logBuffer.Bytes(), &entry))
+	assert.Equal(t, "isams request failed", entry["msg"])
+	assert.Equal(t, "/api/students", entry["path"])
+	assert.NotEmpty(t, entry["error"])
+	assert.NotContains(t, logBuffer.String(), "query-secret")
+}
+
+func TestRequestErrorMessage(t *testing.T) {
+	urlErr := &url.Error{Op: "Get", URL: "https://example.com/x?token=secret", Err: errors.New("connection refused")}
+	assert.Equal(t, "Get: connection refused", requestErrorMessage(urlErr))
+	assert.Equal(t, "plain error", requestErrorMessage(errors.New("plain error")))
+}
+
+func TestClient_logRequestResult_IsDebugLevel(t *testing.T) {
+	logger, logBuffer := newTestLogger(zapcore.InfoLevel)
+	client := &Client{Logger: logger}
+
+	req := &http.Request{
+		Method: http.MethodGet,
+		URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/api/students"},
+		Header: make(http.Header),
+	}
+
+	client.logRequestResult(req, &http.Response{StatusCode: http.StatusOK}, nil, time.Millisecond)
+
+	assert.Empty(t, logBuffer.String())
 }
 
 func TestClient_Do_ErrorRequest(t *testing.T) {
@@ -298,14 +353,8 @@ func TestClient_Do_ErrorRequest(t *testing.T) {
 	assert.Nil(t, resp)
 }
 
-func TestClient_logOutgoingRequest_DoesNotReadBody(t *testing.T) {
-	logBuffer := &bytes.Buffer{}
-	logger := zap.New(zapcore.NewCore(
-		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
-		zapcore.AddSync(logBuffer),
-		zapcore.DebugLevel,
-	)).Sugar()
-
+func TestClient_logRequestResult_DoesNotReadBody(t *testing.T) {
+	logger, logBuffer := newTestLogger(zapcore.DebugLevel)
 	client := &Client{Logger: logger}
 
 	req := &http.Request{
@@ -314,37 +363,14 @@ func TestClient_logOutgoingRequest_DoesNotReadBody(t *testing.T) {
 		Header: make(http.Header),
 		Body:   errReadCloser{},
 	}
+	resp := &http.Response{StatusCode: http.StatusOK, ContentLength: -1, Body: errReadCloser{}}
 
-	client.logOutgoingRequest(req)
+	client.logRequestResult(req, resp, nil, time.Millisecond)
 
 	logOutput := logBuffer.String()
-	assert.Contains(t, logOutput, "isams outgoing request")
-	assert.NotContains(t, logOutput, "dumpError")
+	assert.Contains(t, logOutput, "isams request")
+	assert.Contains(t, logOutput, `"host":"example.com"`)
 	assert.NotContains(t, logOutput, "read failed")
-}
-
-func TestClient_logOutgoingRequest_DumpRequestOutError(t *testing.T) {
-	logBuffer := &bytes.Buffer{}
-	logger := zap.New(zapcore.NewCore(
-		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
-		zapcore.AddSync(logBuffer),
-		zapcore.DebugLevel,
-	)).Sugar()
-
-	client := &Client{Logger: logger}
-
-	req := &http.Request{
-		Method: "BAD METHOD",
-		URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/api/students"},
-		Header: make(http.Header),
-	}
-
-	client.logOutgoingRequest(req)
-
-	logOutput := logBuffer.String()
-	assert.Contains(t, logOutput, "isams outgoing request")
-	assert.Contains(t, logOutput, "dumpError")
-	assert.Contains(t, logOutput, "invalid method")
 }
 
 func TestConstants(t *testing.T) {

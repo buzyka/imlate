@@ -327,3 +327,46 @@ func TestThemeAssetPath_RejectsNonPlainNames(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, filepath.Join(service.Config.ThemeDir, "favicon-123.png"), path)
 }
+
+func TestThemeAssetFileName(t *testing.T) {
+	now := time.Unix(0, 1700000000000000000)
+
+	name, err := themeAssetFileName(slotSpecs["logo_background"], now, "image/jpeg")
+	require.NoError(t, err)
+	assert.Equal(t, "logo_background-1700000000000000000.jpg", name)
+
+	name, err = themeAssetFileName(slotSpecs["welcome_animation"], now, "image/gif")
+	require.NoError(t, err)
+	assert.Equal(t, "welcome_animation-1700000000000000000.gif", name)
+
+	_, err = themeAssetFileName(slotSpecs["favicon"], now, "text/plain; charset=utf-8")
+	var themeErr *Error
+	require.ErrorAs(t, err, &themeErr)
+	assert.Equal(t, 400, themeErr.StatusCode)
+}
+
+// Every slot must name its files after a fixed prefix equal to the slot key.
+func TestSlotSpecs_FilePrefixIsConstantSlotName(t *testing.T) {
+	for slot, spec := range slotSpecs {
+		assert.Equal(t, slot, spec.FilePrefix, "slot %q", slot)
+		assert.True(t, isPlainThemeAssetFileName(spec.FilePrefix+"-1.png"), "slot %q", slot)
+	}
+}
+
+// A traversal attempt in the slot path value is rejected before any file I/O.
+func TestServiceUploadAsset_TraversalSlotRejected(t *testing.T) {
+	service, rootDir := newTestThemeServiceWithParentDir(t)
+
+	for _, slot := range []string{"../favicon", "favicon/../../x", `..\favicon`, "favicon\x00"} {
+		_, err := service.UploadAsset(slot, "x.png", createPNGBytes(t, 16, 16))
+		var themeErr *Error
+		require.ErrorAs(t, err, &themeErr, "slot %q", slot)
+		assert.Equal(t, 400, themeErr.StatusCode)
+	}
+
+	entries, err := os.ReadDir(rootDir)
+	require.NoError(t, err)
+	for _, e := range entries {
+		assert.Equal(t, "theme", e.Name())
+	}
+}
