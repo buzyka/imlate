@@ -2,9 +2,11 @@ package isams
 
 import (
 	"context"
+	"errors"
 	"net/http"
-	"net/http/httputil"
+	"net/url"
 	"strings"
+	"time"
 
 	"github.com/buzyka/imlate/internal/infrastructure/logging"
 	"go.uber.org/zap"
@@ -83,33 +85,42 @@ type Client struct {
 }
 
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
-	c.logOutgoingRequest(req)
-
-	return c.HTTPClient.Do(req)
+	start := time.Now()
+	resp, err := c.HTTPClient.Do(req)
+	c.logRequestResult(req, resp, err, time.Since(start))
+	return resp, err
 }
 
-func (c *Client) logOutgoingRequest(req *http.Request) {
+// logRequestResult logs how an iSAMS request ended. Only fields that are safe
+// by construction are logged: headers are never dumped, so credentials added
+// now or later (including the OAuth token the transport sets) cannot reach the
+// logs; the query string and body are left out for the same reason.
+func (c *Client) logRequestResult(req *http.Request, resp *http.Response, err error, duration time.Duration) {
 	logger := c.Logger
 	if logger == nil {
 		logger = logging.Fallback()
 	}
 
-	requestForLog := req.Clone(req.Context())
-	requestForLog.Header = req.Header.Clone()
-
-	for _, headerName := range []string{"Authorization", "Cookie", "X-API-Key"} {
-		if requestForLog.Header.Get(headerName) != "" {
-			requestForLog.Header.Set(headerName, "REDACTED")
-		}
+	fields := []any{
+		"method", req.Method,
+		"host", req.URL.Host,
+		"path", req.URL.Path,
+		"duration_ms", duration.Milliseconds(),
 	}
-
-	// Dumped without the body: the named headers can be blanked one by one, but
-	// a body carries whatever the endpoint happens to take, so it is left out
-	// rather than guessed at field by field.
-	reqDump, err := httputil.DumpRequestOut(requestForLog, false)
 	if err != nil {
-		logger.Infow("isams outgoing request", "method", req.Method, "url", req.URL.String(), "dumpError", err.Error())
-	} else {
-		logger.Infow("isams outgoing request", "method", req.Method, "url", req.URL.String(), "request", string(reqDump))
+		logger.Debugw("isams request failed", append(fields, "error", requestErrorMessage(err))...)
+		return
 	}
+	logger.Debugw("isams request",
+		append(fields, "status", resp.StatusCode, "content_length", resp.ContentLength)...)
+}
+
+// requestErrorMessage drops the request URL that *url.Error puts into its
+// message, since it carries the query string.
+func requestErrorMessage(err error) string {
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		return urlErr.Op + ": " + urlErr.Err.Error()
+	}
+	return err.Error()
 }
