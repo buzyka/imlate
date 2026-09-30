@@ -220,6 +220,7 @@ func registerAdminRoutes(r *gin.Engine) {
 	adminGroup.DELETE("/users/:id", adminController.DeleteUserHandler())
 
 	adminGroup.GET("/visitors", adminController.ListVisitorsHandler())
+	adminGroup.GET("/visitors/form-groups", adminController.ListFormGroupsHandler())
 	adminGroup.GET("/visitors/:id", adminController.GetVisitorHandler())
 	adminGroup.POST("/visitors", adminController.CreateVisitorHandler())
 	adminGroup.PUT("/visitors/:id", adminController.UpdateVisitorHandler())

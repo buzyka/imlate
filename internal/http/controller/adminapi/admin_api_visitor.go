@@ -2,6 +2,7 @@ package adminapi
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -49,6 +50,39 @@ func (ac *AdminAPIController) ListVisitorsHandler() gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusOK, visitors)
+	}
+}
+
+// ListFormGroupsHandler godoc
+// @Summary      List form groups in use
+// @Description  Returns distinct form groups of non-deleted visitors with the number of visitors in each,
+// @Description  sorted by grade (visitors without a grade last), then by form group. Used for autocomplete.
+// @Tags         admin-visitors
+// @Produce      json
+// @Param        grade  query     int  false  "Only form groups of visitors in this grade"
+// @Success      200    {array}   FormGroupResponse
+// @Failure      400    {object}  ErrorResponse
+// @Failure      500    {object}  ErrorResponse
+// @Security     ApiKeyAuth
+// @Router       /admin-api/visitors/form-groups [get]
+func (ac *AdminAPIController) ListFormGroupsHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var grade *int
+		if raw := c.Query("grade"); raw != "" {
+			parsed, err := strconv.Atoi(raw)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid 'grade': must be an integer"})
+				return
+			}
+			grade = &parsed
+		}
+
+		formGroups, err := ac.AdminAPI.GetFormGroups(grade)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, formGroups)
 	}
 }
 
@@ -112,6 +146,8 @@ func (ac *AdminAPIController) CreateVisitorHandler() gin.HandlerFunc {
 // UpdateVisitorHandler godoc
 // @Summary      Update visitor
 // @Description  Updates visitor profile data, including keys and student fields.
+// @Description  `keys` replaces the visitor's key set when present; omit it to keep the keys unchanged,
+// @Description  send `[]` to remove all keys.
 // @Tags         admin-visitors
 // @Accept       json
 // @Produce      json

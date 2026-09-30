@@ -32,6 +32,13 @@ type VisitorResponse struct {
 	ImportedFromISAMS bool       `json:"imported_from_isams"`
 }
 
+// FormGroupResponse is one form group in use, with the number of visitors in it.
+type FormGroupResponse struct {
+	FormGroup     string `json:"form_group"`
+	Grade         *int   `json:"grade"`
+	VisitorsCount int    `json:"visitors_count"`
+}
+
 func newVisitorResponse(visitor *entity.Visitor) *VisitorResponse {
 	if visitor == nil {
 		return nil
@@ -106,6 +113,25 @@ func (a *AdminAPI) GetVisitor(id int32) (*VisitorResponse, error) {
 	visitor.Keys = keys
 
 	return newVisitorResponse(visitor), nil
+}
+
+// GetFormGroups lists the form groups in use, optionally for one grade, so the
+// admin UI can suggest existing values.
+func (a *AdminAPI) GetFormGroups(grade *int) ([]*FormGroupResponse, error) {
+	rows, err := a.VisitorRepo.FindFormGroups(grade)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get form groups: %w", err)
+	}
+
+	responses := make([]*FormGroupResponse, 0, len(rows))
+	for _, row := range rows {
+		responses = append(responses, &FormGroupResponse{
+			FormGroup:     row.FormGroup,
+			Grade:         row.Grade,
+			VisitorsCount: row.VisitorsCount,
+		})
+	}
+	return responses, nil
 }
 
 // validateFormGroup normalizes a form group from a request and checks it fits
@@ -184,10 +210,29 @@ func (a *AdminAPI) UpdateVisitor(id int32, name, surname string, isStudent bool,
 		return nil, fmt.Errorf("failed to update visitor: %w", err)
 	}
 
-	// Sync keys: remove old ones not in new set, add new ones not in old set
-	existingKeys, err := a.VisitorRepo.FindKeysByVisitorId(id)
+	// A request without "keys" leaves the keys untouched; an explicit empty
+	// list removes them all.
+	if keys != nil {
+		if err := a.syncVisitorKeys(visitor, keys); err != nil {
+			return nil, err
+		}
+	}
+
+	savedKeys, err := a.VisitorRepo.FindKeysByVisitorId(id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get existing keys: %w", err)
+		return nil, fmt.Errorf("failed to get keys: %w", err)
+	}
+	visitor.Keys = savedKeys
+
+	return newVisitorResponse(visitor), nil
+}
+
+// syncVisitorKeys makes the visitor's keys equal to keys: removes old ones not
+// in the new set and adds new ones not in the old set.
+func (a *AdminAPI) syncVisitorKeys(visitor *entity.Visitor, keys []string) error {
+	existingKeys, err := a.VisitorRepo.FindKeysByVisitorId(visitor.Id)
+	if err != nil {
+		return fmt.Errorf("failed to get existing keys: %w", err)
 	}
 
 	newKeysMap := make(map[string]bool)
@@ -206,8 +251,8 @@ func (a *AdminAPI) UpdateVisitor(id int32, name, surname string, isStudent bool,
 	// Remove keys that are no longer in the set
 	for _, k := range existingKeys {
 		if !newKeysMap[k] {
-			if err := a.VisitorRepo.RemoveKeyFromVisitor(id, k); err != nil {
-				return nil, fmt.Errorf("failed to remove key %q: %w", k, err)
+			if err := a.VisitorRepo.RemoveKeyFromVisitor(visitor.Id, k); err != nil {
+				return fmt.Errorf("failed to remove key %q: %w", k, err)
 			}
 		}
 	}
@@ -216,18 +261,11 @@ func (a *AdminAPI) UpdateVisitor(id int32, name, surname string, isStudent bool,
 	for k := range newKeysMap {
 		if !existingKeysMap[k] {
 			if err := a.VisitorRepo.AddKeyToVisitor(visitor, k); err != nil {
-				return nil, fmt.Errorf("failed to add key %q: %w", k, err)
+				return fmt.Errorf("failed to add key %q: %w", k, err)
 			}
 		}
 	}
-
-	savedKeys, err := a.VisitorRepo.FindKeysByVisitorId(id)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get keys: %w", err)
-	}
-	visitor.Keys = savedKeys
-
-	return newVisitorResponse(visitor), nil
+	return nil
 }
 
 func (a *AdminAPI) UploadVisitorImage(id int32, filename string, data []byte) (*VisitorResponse, error) {

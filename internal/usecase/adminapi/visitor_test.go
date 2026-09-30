@@ -465,3 +465,77 @@ func TestUploadVisitorImage_RejectsNonImageBytes(t *testing.T) {
 	assert.Contains(t, err.Error(), "unsupported image type")
 	mockRepo.AssertExpectations(t)
 }
+
+func TestGetFormGroups_MapsRows(t *testing.T) {
+	api, mockRepo := newVisitorTestAPI()
+	grade := 4
+	mockRepo.On("FindFormGroups", &grade).Return([]provider.FormGroupRow{
+		{FormGroup: "4 A", Grade: &grade, VisitorsCount: 22},
+		{FormGroup: "4 B", Grade: &grade, VisitorsCount: 23},
+	}, nil)
+
+	result, err := api.GetFormGroups(&grade)
+
+	assert.NoError(t, err)
+	assert.Equal(t, []*FormGroupResponse{
+		{FormGroup: "4 A", Grade: &grade, VisitorsCount: 22},
+		{FormGroup: "4 B", Grade: &grade, VisitorsCount: 23},
+	}, result)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestGetFormGroups_EmptyReturnsEmptySlice(t *testing.T) {
+	api, mockRepo := newVisitorTestAPI()
+	mockRepo.On("FindFormGroups", (*int)(nil)).Return([]provider.FormGroupRow{}, nil)
+
+	result, err := api.GetFormGroups(nil)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Empty(t, result)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestGetFormGroups_RepoError(t *testing.T) {
+	api, mockRepo := newVisitorTestAPI()
+	mockRepo.On("FindFormGroups", (*int)(nil)).Return(nil, errors.New("db error"))
+
+	result, err := api.GetFormGroups(nil)
+
+	assert.Nil(t, result)
+	assert.EqualError(t, err, "failed to get form groups: db error")
+}
+
+// A PUT without "keys" (nil) must not touch the visitor's keys.
+func TestUpdateVisitor_NilKeysKeepsExistingKeys(t *testing.T) {
+	api, mockRepo := newVisitorTestAPI()
+
+	mockRepo.On("FindById", int32(2048)).Return(&entity.Visitor{Id: 2048, Name: "Old"}, nil)
+	mockRepo.On("SaveVisitor", mock.AnythingOfType("*entity.Visitor")).Return(nil)
+	mockRepo.On("FindKeysByVisitorId", int32(2048)).Return([]string{"KEY1", "KEY2"}, nil).Once()
+
+	result, err := api.UpdateVisitor(2048, "test224", "test222", false, nil, strPtr("TEST-Group"), "", nil)
+
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"KEY1", "KEY2"}, result.Keys)
+	mockRepo.AssertNotCalled(t, "RemoveKeyFromVisitor", mock.Anything, mock.Anything)
+	mockRepo.AssertNotCalled(t, "AddKeyToVisitor", mock.Anything, mock.Anything)
+	mockRepo.AssertExpectations(t)
+}
+
+// An explicit empty list removes all keys.
+func TestUpdateVisitor_EmptyKeysRemovesAllKeys(t *testing.T) {
+	api, mockRepo := newVisitorTestAPI()
+
+	mockRepo.On("FindById", int32(1)).Return(&entity.Visitor{Id: 1}, nil)
+	mockRepo.On("SaveVisitor", mock.AnythingOfType("*entity.Visitor")).Return(nil)
+	mockRepo.On("FindKeysByVisitorId", int32(1)).Return([]string{"KEY1"}, nil).Once()
+	mockRepo.On("RemoveKeyFromVisitor", int32(1), "KEY1").Return(nil)
+	mockRepo.On("FindKeysByVisitorId", int32(1)).Return([]string{}, nil).Once()
+
+	result, err := api.UpdateVisitor(1, "Name", "", false, nil, nil, "", []string{})
+
+	assert.NoError(t, err)
+	assert.Empty(t, result.Keys)
+	mockRepo.AssertExpectations(t)
+}

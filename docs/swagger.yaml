@@ -309,6 +309,15 @@ definitions:
       started_at:
         type: string
     type: object
+  internal_http_controller_adminapi.FormGroupResponse:
+    properties:
+      form_group:
+        type: string
+      grade:
+        type: integer
+      visitors_count:
+        type: integer
+    type: object
   internal_http_controller_adminapi.ManualTrackRequest:
     properties:
       description:
@@ -1184,7 +1193,10 @@ paths:
     put:
       consumes:
       - application/json
-      description: Updates visitor profile data, including keys and student fields.
+      description: |-
+        Updates visitor profile data, including keys and student fields.
+        `keys` replaces the visitor's key set when present; omit it to keep the keys unchanged,
+        send `[]` to remove all keys.
       parameters:
       - description: Visitor ID
         in: path
@@ -1310,6 +1322,38 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Remove visitor key
+      tags:
+      - admin-visitors
+  /admin-api/visitors/form-groups:
+    get:
+      description: |-
+        Returns distinct form groups of non-deleted visitors with the number of visitors in each,
+        sorted by grade (visitors without a grade last), then by form group. Used for autocomplete.
+      parameters:
+      - description: Only form groups of visitors in this grade
+        in: query
+        name: grade
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_http_controller_adminapi.FormGroupResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_http_controller_adminapi.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: List form groups in use
       tags:
       - admin-visitors
   /login:

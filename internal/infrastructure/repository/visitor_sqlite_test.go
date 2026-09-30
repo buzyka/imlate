@@ -836,3 +836,111 @@ func TestGetAll_AliasForFindAll(t *testing.T) {
 	assert.Equal(t, int32(3), result[0].Id)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
+
+// ==================== FindFormGroups ====================
+
+var formGroupColumns = []string{"form_group", "grade", "count"}
+
+func TestFindFormGroups_AllGrades(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer func() { _ = db.Close() }()
+	repo := &Visitor{Connection: db}
+
+	mock.ExpectQuery("SELECT form_group, grade, COUNT\\(\\*\\) FROM visitors WHERE deleted_at IS NULL AND form_group IS NOT NULL GROUP BY form_group, grade ORDER BY grade IS NULL, grade, form_group").
+		WithoutArgs().
+		WillReturnRows(sqlmock.NewRows(formGroupColumns).
+			AddRow("4 A", 4, 22).
+			AddRow("4 B", 4, 23).
+			AddRow("Staff", nil, 5))
+
+	rows, err := repo.FindFormGroups(nil)
+
+	assert.NoError(t, err)
+	assert.Equal(t, []provider.FormGroupRow{
+		{FormGroup: "4 A", Grade: intPtr(4), VisitorsCount: 22},
+		{FormGroup: "4 B", Grade: intPtr(4), VisitorsCount: 23},
+		{FormGroup: "Staff", Grade: nil, VisitorsCount: 5},
+	}, rows)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestFindFormGroups_FilteredByGrade(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer func() { _ = db.Close() }()
+	repo := &Visitor{Connection: db}
+
+	mock.ExpectQuery("FROM visitors WHERE deleted_at IS NULL AND form_group IS NOT NULL AND grade = \\? GROUP BY").
+		WithArgs(4).
+		WillReturnRows(sqlmock.NewRows(formGroupColumns).AddRow("4 B", 4, 23))
+
+	rows, err := repo.FindFormGroups(intPtr(4))
+
+	assert.NoError(t, err)
+	assert.Equal(t, []provider.FormGroupRow{{FormGroup: "4 B", Grade: intPtr(4), VisitorsCount: 23}}, rows)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestFindFormGroups_EmptyReturnsEmptySlice(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer func() { _ = db.Close() }()
+	repo := &Visitor{Connection: db}
+
+	mock.ExpectQuery("SELECT form_group, grade").WillReturnRows(sqlmock.NewRows(formGroupColumns))
+
+	rows, err := repo.FindFormGroups(nil)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, rows)
+	assert.Empty(t, rows)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestFindFormGroups_QueryError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer func() { _ = db.Close() }()
+	repo := &Visitor{Connection: db}
+
+	mock.ExpectQuery("SELECT form_group, grade").WillReturnError(errors.New("db error"))
+
+	rows, err := repo.FindFormGroups(nil)
+
+	assert.Nil(t, rows)
+	assert.EqualError(t, err, "failed to query form groups: db error")
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestFindFormGroups_ScanError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer func() { _ = db.Close() }()
+	repo := &Visitor{Connection: db}
+
+	mock.ExpectQuery("SELECT form_group, grade").
+		WillReturnRows(sqlmock.NewRows(formGroupColumns).AddRow("4 B", 4, "not-a-number"))
+
+	rows, err := repo.FindFormGroups(nil)
+
+	assert.Nil(t, rows)
+	assert.ErrorContains(t, err, "failed to scan form group row")
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestFindFormGroups_RowsError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer func() { _ = db.Close() }()
+	repo := &Visitor{Connection: db}
+
+	mock.ExpectQuery("SELECT form_group, grade").
+		WillReturnRows(sqlmock.NewRows(formGroupColumns).AddRow("4 B", 4, 23).RowError(0, errors.New("row error")))
+
+	rows, err := repo.FindFormGroups(nil)
+
+	assert.Nil(t, rows)
+	assert.EqualError(t, err, "form groups rows iteration error: row error")
+	assert.NoError(t, mock.ExpectationsWereMet())
+}

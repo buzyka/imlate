@@ -916,6 +916,54 @@
                 }
             }
         },
+        "/admin-api/visitors/form-groups": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns distinct form groups of non-deleted visitors with the number of visitors in each,\nsorted by grade (visitors without a grade last), then by form group. Used for autocomplete.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin-visitors"
+                ],
+                "summary": "List form groups in use",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Only form groups of visitors in this grade",
+                        "name": "grade",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/internal_http_controller_adminapi.FormGroupResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_http_controller_adminapi.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/admin-api/visitors/{id}": {
             "get": {
                 "security": [
@@ -967,7 +1015,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Updates visitor profile data, including keys and student fields.",
+                "description": "Updates visitor profile data, including keys and student fields.\n`keys` replaces the visitor's key set when present; omit it to keep the keys unchanged,\nsend `[]` to remove all keys.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1883,6 +1931,20 @@
                 },
                 "started_at": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_http_controller_adminapi.FormGroupResponse": {
+            "type": "object",
+            "properties": {
+                "form_group": {
+                    "type": "string"
+                },
+                "grade": {
+                    "type": "integer"
+                },
+                "visitors_count": {
+                    "type": "integer"
                 }
             }
         },

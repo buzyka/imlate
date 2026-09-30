@@ -75,6 +75,14 @@ func (m *VisitorRepositoryMock) FindKeysByVisitorId(visitorID int32) ([]string, 
 	return args.Get(0).([]string), args.Error(1)
 }
 
+func (m *VisitorRepositoryMock) FindFormGroups(grade *int) ([]provider.FormGroupRow, error) {
+	args := m.Called(grade)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]provider.FormGroupRow), args.Error(1)
+}
+
 func (m *VisitorRepositoryMock) UpdateVisitorImage(id int32, imagePath string) error {
 	args := m.Called(id, imagePath)
 	return args.Error(0)
