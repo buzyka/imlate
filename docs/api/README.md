@@ -62,6 +62,7 @@ All under `/admin-api/*`. Require a valid JWT token with `admin` role.
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/admin-api/visitors` | List all visitors |
+| `GET` | `/admin-api/visitors/form-groups` | List form groups in use with visitor counts (optional `?grade=N`), for autocomplete |
 | `GET` | `/admin-api/visitors/:id` | Get visitor by ID |
 | `POST` | `/admin-api/visitors` | Create a new visitor |
 | `PUT` | `/admin-api/visitors/:id` | Update a visitor |

@@ -594,3 +594,112 @@ func TestUpdateVisitorHandler_FormGroupTooLong(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "form_group")
 	mockRepo.AssertNotCalled(t, "SaveVisitor", mock.Anything)
 }
+
+func TestListFormGroupsHandler_Success(t *testing.T) {
+	mockRepo, controller := setupVisitorTest()
+	grade := 4
+	mockRepo.On("FindFormGroups", (*int)(nil)).Return([]provider.FormGroupRow{
+		{FormGroup: "4 B", Grade: &grade, VisitorsCount: 23},
+		{FormGroup: "Staff", Grade: nil, VisitorsCount: 5},
+	}, nil)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/admin-api/visitors/form-groups", nil)
+
+	controller.ListFormGroupsHandler()(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.JSONEq(t, `[
+		{"form_group":"4 B","grade":4,"visitors_count":23},
+		{"form_group":"Staff","grade":null,"visitors_count":5}
+	]`, w.Body.String())
+	mockRepo.AssertExpectations(t)
+}
+
+func TestListFormGroupsHandler_GradeFilter(t *testing.T) {
+	mockRepo, controller := setupVisitorTest()
+	mockRepo.On("FindFormGroups", mock.MatchedBy(func(g *int) bool { return g != nil && *g == 4 })).
+		Return([]provider.FormGroupRow{}, nil)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/admin-api/visitors/form-groups?grade=4", nil)
+
+	controller.ListFormGroupsHandler()(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.JSONEq(t, `[]`, w.Body.String())
+	mockRepo.AssertExpectations(t)
+}
+
+func TestListFormGroupsHandler_InvalidGrade(t *testing.T) {
+	mockRepo, controller := setupVisitorTest()
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/admin-api/visitors/form-groups?grade=x", nil)
+
+	controller.ListFormGroupsHandler()(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.JSONEq(t, `{"error":"invalid 'grade': must be an integer"}`, w.Body.String())
+	mockRepo.AssertNotCalled(t, "FindFormGroups", mock.Anything)
+}
+
+func TestListFormGroupsHandler_RepoError(t *testing.T) {
+	mockRepo, controller := setupVisitorTest()
+	mockRepo.On("FindFormGroups", (*int)(nil)).Return(nil, errors.New("db error"))
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/admin-api/visitors/form-groups", nil)
+
+	controller.ListFormGroupsHandler()(c)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.JSONEq(t, `{"error":"failed to get form groups: db error"}`, w.Body.String())
+}
+
+// The static /visitors/form-groups route must win over /visitors/:id.
+func TestListFormGroupsRoute_DoesNotHitVisitorByID(t *testing.T) {
+	mockRepo, controller := setupVisitorTest()
+	mockRepo.On("FindFormGroups", (*int)(nil)).Return([]provider.FormGroupRow{}, nil)
+
+	r := gin.New()
+	r.GET("/admin-api/visitors/form-groups", controller.ListFormGroupsHandler())
+	r.GET("/admin-api/visitors/:id", controller.GetVisitorHandler())
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/admin-api/visitors/form-groups", nil))
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.JSONEq(t, `[]`, w.Body.String())
+	mockRepo.AssertNotCalled(t, "FindById", mock.Anything)
+	mockRepo.AssertExpectations(t)
+}
+
+// Regression: a PUT body without "keys" must keep the visitor's keys.
+func TestUpdateVisitorHandler_WithoutKeysKeepsKeys(t *testing.T) {
+	mockRepo, controller := setupVisitorTest()
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	c.Request = httptest.NewRequest(http.MethodPut, "/admin-api/visitors/2048",
+		bytes.NewBufferString(`{"name":"test224","surname":"test222","is_student":false,"grade":null,"form_group":"TEST-Group"}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Params = gin.Params{{Key: "id", Value: "2048"}}
+
+	mockRepo.On("FindById", int32(2048)).Return(&entity.Visitor{Id: 2048, Name: "Old"}, nil)
+	mockRepo.On("SaveVisitor", mock.AnythingOfType("*entity.Visitor")).Return(nil)
+	mockRepo.On("FindKeysByVisitorId", int32(2048)).Return([]string{"KEY1"}, nil)
+
+	controller.UpdateVisitorHandler()(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var result usecase.VisitorResponse
+	assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
+	assert.Equal(t, []string{"KEY1"}, result.Keys)
+	mockRepo.AssertNotCalled(t, "RemoveKeyFromVisitor", mock.Anything, mock.Anything)
+	mockRepo.AssertExpectations(t)
+}

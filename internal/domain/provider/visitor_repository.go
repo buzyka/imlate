@@ -18,6 +18,13 @@ func WithERPYearGroups(yearGroups []int32) VisitorFilterOption {
 	}
 }
 
+// FormGroupRow is one distinct (form group, grade) pair in use by visitors.
+type FormGroupRow struct {
+	FormGroup     string
+	Grade         *int
+	VisitorsCount int
+}
+
 type VisitorRepository interface {
 	GetAll() ([]*entity.Visitor, error)
 	FindAll(opts ...VisitorFilterOption) ([]*entity.Visitor, error)
@@ -31,4 +38,6 @@ type VisitorRepository interface {
 	SaveVisitor(visitor *entity.Visitor) error
 	DeleteVisitor(id int32) error
 	UpdateVisitorImage(id int32, imagePath string) error
+	// FindFormGroups lists form groups of non-deleted visitors, optionally of one grade.
+	FindFormGroups(grade *int) ([]FormGroupRow, error)
 }

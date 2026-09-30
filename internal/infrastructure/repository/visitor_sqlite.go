@@ -501,6 +501,40 @@ func (r *Visitor) UpdateVisitorImage(id int32, imagePath string) error {
 	return nil
 }
 
+func (r *Visitor) FindFormGroups(grade *int) ([]provider.FormGroupRow, error) {
+	query := "SELECT form_group, grade, COUNT(*) FROM visitors WHERE deleted_at IS NULL AND form_group IS NOT NULL"
+	args := make([]interface{}, 0, 1)
+	if grade != nil {
+		query += " AND grade = ?"
+		args = append(args, *grade)
+	}
+	query += " GROUP BY form_group, grade ORDER BY grade IS NULL, grade, form_group"
+
+	rows, err := r.Connection.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query form groups: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	result := make([]provider.FormGroupRow, 0)
+	for rows.Next() {
+		var row provider.FormGroupRow
+		var rowGrade sql.NullInt64
+		if err := rows.Scan(&row.FormGroup, &rowGrade, &row.VisitorsCount); err != nil {
+			return nil, fmt.Errorf("failed to scan form group row: %w", err)
+		}
+		if rowGrade.Valid {
+			g := int(rowGrade.Int64)
+			row.Grade = &g
+		}
+		result = append(result, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("form groups rows iteration error: %w", err)
+	}
+	return result, nil
+}
+
 func (r *Visitor) AddRandomImage(student *entity.Visitor) {
 	source := rand.NewSource(time.Now().UnixNano())
 	rmd := rand.New(source)

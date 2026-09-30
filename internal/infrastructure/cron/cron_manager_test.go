@@ -114,6 +114,10 @@ func (v *visitorRepoSpy) UpdateVisitorImage(_ int32, _ string) error {
 	return nil
 }
 
+func (v *visitorRepoSpy) FindFormGroups(_ *int) ([]provider.FormGroupRow, error) {
+	return nil, nil
+}
+
 func extractYearGroups(values []*int32) []int32 {
 	if values == nil {
 		return nil

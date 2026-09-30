@@ -64,6 +64,9 @@ type VisitorResponse = usecase.VisitorResponse
 // VisitorListResponse documents visitor list payloads.
 type VisitorListResponse = []usecase.VisitorResponse
 
+// FormGroupResponse documents one form group in use.
+type FormGroupResponse = usecase.FormGroupResponse
+
 // PostReportsVisitsRequest is a Swagger-visible alias for the POST reports request body.
 type PostReportsVisitsRequest = usecase.PostReportsVisitsRequest
 
