@@ -58,6 +58,9 @@ type manifest struct {
 }
 
 type slotSpec struct {
+	// FilePrefix names stored asset files. It is a constant, so the request's
+	// slot value never reaches a file path.
+	FilePrefix  string
 	DefaultURL  string
 	AllowedMIME []string
 	MaxInput    int64
@@ -100,7 +103,6 @@ func (s *Service) UploadAsset(slot, filename string, data []byte) (*Response, er
 	if err != nil {
 		return nil, &Error{Message: err.Error(), StatusCode: 400}
 	}
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -114,9 +116,11 @@ func (s *Service) UploadAsset(slot, filename string, data []byte) (*Response, er
 
 	current := m.Assets[slot]
 	now := s.clock()
-	// themeAssetPath is the one place that turns an asset name into a path, so
-	// the write goes through it just like the delete below does.
-	fileName := fmt.Sprintf("%s-%d%s", slot, now.UnixNano(), processed.Extension)
+	fileName, err := themeAssetFileName(spec, now, processed.ContentType)
+	if err != nil {
+		return nil, err
+	}
+	// themeAssetPath still guards the name, like the delete below.
 	filePath, err := s.themeAssetPath(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build theme asset path: %w", err)
@@ -322,6 +326,18 @@ func (s *Service) removeThemeAssetFile(fileName string) {
 	_ = os.Remove(filePath)
 }
 
+// themeAssetFileName builds a stored asset name only from constants and the
+// clock: the prefix comes from the slot spec, the extension from the sniffed
+// content type. Nothing from the request (slot path value, uploaded file name)
+// reaches the file path.
+func themeAssetFileName(spec slotSpec, now time.Time, contentType string) (string, error) {
+	extension, ok := imageutil.ExtensionForContentType(contentType)
+	if !ok {
+		return "", &Error{Message: "unsupported image type", StatusCode: 400}
+	}
+	return fmt.Sprintf("%s-%d%s", spec.FilePrefix, now.UnixNano(), extension), nil
+}
+
 func (s *Service) themeAssetPath(fileName string) (string, error) {
 	if !isPlainThemeAssetFileName(fileName) {
 		return "", fmt.Errorf("invalid theme asset file name %q", fileName)
@@ -348,6 +364,7 @@ func isPlainThemeAssetFileName(fileName string) bool {
 
 var slotSpecs = map[string]slotSpec{
 	"favicon": {
+		FilePrefix:  "favicon",
 		DefaultURL:  DefaultFaviconURL,
 		AllowedMIME: []string{"image/png"},
 		MaxInput:    5 * 1024 * 1024,
@@ -356,6 +373,7 @@ var slotSpecs = map[string]slotSpec{
 		MaxHeight:   256,
 	},
 	"logo_background": {
+		FilePrefix:  "logo_background",
 		DefaultURL:  DefaultLogoBackgroundURL,
 		AllowedMIME: []string{"image/jpeg", "image/png"},
 		MaxInput:    20 * 1024 * 1024,
@@ -364,12 +382,14 @@ var slotSpecs = map[string]slotSpec{
 		MaxHeight:   1080,
 	},
 	"welcome_animation": {
+		FilePrefix:  "welcome_animation",
 		DefaultURL:  DefaultWelcomeAnimationURL,
 		AllowedMIME: []string{"image/gif"},
 		MaxInput:    15 * 1024 * 1024,
 		MaxOutput:   15 * 1024 * 1024,
 	},
 	"goodbye_animation": {
+		FilePrefix:  "goodbye_animation",
 		DefaultURL:  DefaultGoodbyeAnimationURL,
 		AllowedMIME: []string{"image/gif"},
 		MaxInput:    15 * 1024 * 1024,
