@@ -1,0 +1,66 @@
+name: Go Version Check
+
+# Dependabot does not bump the Go toolchain in go.mod, so this job compares it
+# with the latest stable release on go.dev once a month and opens an issue
+# when an upgrade is available.
+
+on:
+  schedule:
+    - cron: "0 8 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    name: Compare go.mod toolchain with latest Go release
+    runs-on: ubuntu-26.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Compare versions
+        id: versions
+        run: |
+          current=$(sed -n 's/^toolchain go//p' go.mod)
+          if [ -z "$current" ]; then
+            current=$(sed -n 's/^go //p' go.mod)
+          fi
+          latest=$(curl -fsSL 'https://go.dev/dl/?mode=json' | jq -r '[.[] | select(.stable)][0].version' | sed 's/^go//')
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          newest=$(printf '%s\n%s\n' "$current" "$latest" | sort -V | tail -n1)
+          if [ "$latest" != "$current" ] && [ "$newest" = "$latest" ]; then
+            echo "outdated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "outdated=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "go.mod toolchain: $current, latest stable: $latest"
+
+      - name: Open upgrade issue
+        if: steps.versions.outputs.outdated == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURRENT: ${{ steps.versions.outputs.current }}
+          LATEST: ${{ steps.versions.outputs.latest }}
+        run: |
+          title="Upgrade Go to ${LATEST}"
+          if gh issue list --state open --search "\"${title}\" in:title" --json number --jq 'length' | grep -qv '^0$'; then
+            echo "Issue \"${title}\" is already open"
+            exit 0
+          fi
+          gh issue create --title "$title" --label dependencies --body "$(cat <<EOF
+          Go ${LATEST} is available; the project uses ${CURRENT}.
+
+          Update together:
+          - \`go.mod\` and \`tools/go.mod\`: \`toolchain go${LATEST}\` (and the \`go\` directive for a new minor version)
+          - \`docker/Dockerfile\`, \`docker/Dockerfile.dev\`: \`golang:<minor>-bookworm\` (Dependabot proposes new minor tags)
+          - Go version mentions in the docs (\`AGENTS.md\`, \`CONTRIBUTING.md\`, \`docs/\`, \`docker/*.md\`)
+
+          CI reads the version from \`go.mod\` automatically.
+          Release notes: https://go.dev/doc/devel/release
+          EOF
+          )"

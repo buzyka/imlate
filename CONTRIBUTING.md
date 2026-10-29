@@ -4,7 +4,7 @@ This guide covers everything you need to set up imlate locally for development a
 
 ## Requirements
 
-- **Go** 1.26+ (included in the Docker dev setup)
+- **Go** 1.27+ (included in the Docker dev setup)
 - **Docker** 20.10+ with Docker Compose v2
 - **Make** (any version)
 
@@ -97,10 +97,17 @@ See the full [Configuration Reference](docs/getting-started/configuration.md) fo
 ├── migrations/                  # SQL migrations (golang-migrate)
 ├── website/                     # Static UI (reader, admin SPA)
 ├── docker/                      # Dockerfiles, scripts, MySQL init
+├── tools/                       # go.mod pinning CLI tools (swag, migrate, golangci-lint, air)
 ├── docs/                        # Developer documentation + Swagger
 ├── docker-compose.yml           # Development environment
 └── Makefile                     # Command shortcuts
 ```
+
+## Dependency and Version Updates
+
+Versions are updated by Dependabot and a monthly Go release check; see
+[Version Management](docs/infrastructure/README.md#version-management) for where each version lives
+and what stays manual.
 
 ## Documentation
 

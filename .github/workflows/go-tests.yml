@@ -11,7 +11,6 @@ permissions:
   contents: read
 
 env:
-  GO_VERSION: 1.26.7
   DATABASE_HOST: 127.0.0.1
   DATABASE_PORT: 3306
   DATABASE_USERNAME: imlate
@@ -29,16 +28,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # The Go version comes from the toolchain directive in go.mod.
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: go.mod
           cache: true
+          cache-dependency-path: |
+            go.sum
+            tools/go.sum
+
+      # golangci-lint is pinned in tools/go.mod (updated by Dependabot), so the
+      # action runs that binary instead of downloading its own version.
+      - name: Install golangci-lint
+        working-directory: tools
+        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          version: v2.13.1
+          install-mode: none
 
   test:
     name: Run Go Tests
@@ -48,7 +57,7 @@ jobs:
 
     services:
       mysql:
-        image: mysql:8.0
+        image: mysql:8.4
         env:
           MYSQL_ROOT_PASSWORD: ${{ env.MYSQL_ROOT }}
           MYSQL_USER: ${{ env.DATABASE_USERNAME }}
@@ -69,8 +78,11 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: go.mod
           cache: true
+          cache-dependency-path: |
+            go.sum
+            tools/go.sum
 
       - name: Download dependencies
         run: go mod download
@@ -79,7 +91,8 @@ jobs:
         run: go mod verify
         
       - name: Install dependencies for tests
-        run: go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1
+        working-directory: tools
+        run: go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate
 
       - name: Run Migrations
         run: ./scripts/migrate-test-db.sh

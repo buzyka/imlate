@@ -1,5 +1,5 @@
 # Build stage - Debian 12 (Bookworm)
-FROM golang:1.26-bookworm AS builder
+FROM golang:1.27-bookworm AS builder
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
@@ -14,6 +14,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsqlite3-dev \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# Build the CLI tools shipped in the image (swag, migrate). Their versions come
+# from tools/go.mod, which Dependabot keeps up to date.
+COPY tools/go.mod tools/go.sum /tools/
+RUN cd /tools && GOBIN=/tools/bin go install -tags 'mysql' \
+    github.com/swaggo/swag/cmd/swag \
+    github.com/golang-migrate/migrate/v4/cmd/migrate
 
 WORKDIR /app
 
@@ -49,10 +56,8 @@ COPY --from=builder /usr/local/go /usr/local/go
 ENV PATH="/usr/local/go/bin:/go/bin:${PATH}"
 ENV GOPATH="/go"
 
-# Install Go tools with pinned versions
-RUN go install github.com/swaggo/swag/cmd/swag@v1.16.6 && \
-    go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1 && \
-    rm -rf /go/pkg /go/src
+# CLI tools built in the builder stage from tools/go.mod
+COPY --from=builder /tools/bin/ /go/bin/
 
 WORKDIR /app
 

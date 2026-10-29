@@ -34,3 +34,47 @@ updates:
       patch-dependencies:
         update-types:
           - "patch"
+
+  # CLI tools (swag, migrate, golangci-lint, air) used by the Dockerfiles and
+  # CI. Kept in a separate module so they never become app dependencies.
+  - package-ecosystem: "gomod"
+    directory: "/tools"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    commit-message:
+      prefix: "chore(deps): "
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "tools"
+    groups:
+      tools:
+        patterns:
+          - "*"
+
+  # Base images in docker/Dockerfile (published to GHCR) and docker/Dockerfile.dev.
+  - package-ecosystem: "docker"
+    directory: "/docker"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    commit-message:
+      prefix: "chore(deps): "
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # Service images in docker-compose.yml (MySQL for local development).
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    commit-message:
+      prefix: "chore(deps): "
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "docker"

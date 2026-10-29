@@ -135,7 +135,7 @@ You can override these by creating a `.env` file in the project root.
 ## Installed Tools
 
 The development container includes:
-- Go 1.26
+- Go 1.27
 - golangci-lint (latest)
 - migrate (golang-migrate/migrate with MySQL support)
 - swag (Swagger documentation generator)

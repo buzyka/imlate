@@ -10,8 +10,8 @@ The development environment uses Docker Compose with two services:
 
 ```mermaid
 graph LR
-  App["imlate-app<br/>Go 1.26<br/>:8080"]
-  MySQL["imlate-mysql<br/>MySQL 8.0<br/>:3307 -> :3306"]
+  App["imlate-app<br/>Go 1.27<br/>:8080"]
+  MySQL["imlate-mysql<br/>MySQL 8.4<br/>:3307 -> :3306"]
 
   App -->|"tcp(mysql:3306)"| MySQL
 ```
@@ -20,7 +20,7 @@ graph LR
 
 | Service | Image | Container | Host Port | Description |
 |---------|-------|-----------|-----------|-------------|
-| `mysql` | `mysql:8.0` | `imlate-mysql` | `3307` | MySQL database with health check |
+| `mysql` | `mysql:8.4` | `imlate-mysql` | `3307` | MySQL database with health check |
 | `app` | Built from `docker/Dockerfile.dev` | `imlate-app` | `8080` | Go application with source mounted |
 
 ### Volumes
@@ -44,14 +44,14 @@ On first start, MySQL creates:
 
 Multi-stage build:
 
-1. **Builder stage** (`golang:1.26-bookworm`) -- downloads dependencies, compiles binary `tracker` with version injection via `-ldflags`.
-2. **Runtime stage** (`debian:bookworm-slim`) -- minimal image with the binary, migrations, website assets, and storage directories. Installs `swag` and `migrate` tools. Runs `./tracker`.
+1. **Builder stage** (`golang:1.27-bookworm`) -- builds `swag` and `migrate` from [`tools/go.mod`](../../tools/go.mod), downloads dependencies, compiles binary `tracker` with version injection via `-ldflags`.
+2. **Runtime stage** (`debian:bookworm-slim`) -- minimal image with the binary, migrations, website assets, storage directories and the `swag`/`migrate` binaries from the builder. Runs `./tracker`.
 
 Build argument `APP_VERSION` defaults to `2.0.x-dev` and can be overridden at build time.
 
 ### Development (`docker/Dockerfile.dev`)
 
-Single-stage image based on `golang:1.26-bookworm` with full development tooling:
+Single-stage image based on `golang:1.27-bookworm` with full development tooling, installed from [`tools/go.mod`](../../tools/go.mod):
 
 - `swag` -- Swagger generation
 - `migrate` -- database migrations
@@ -101,9 +101,9 @@ GitHub Actions workflow: [`.github/workflows/go-tests.yml`](../../.github/workfl
 ### Pipeline Steps
 
 1. **Checkout** code.
-2. **Set up Go** 1.26.7 with module caching.
+2. **Set up Go** with module caching. The version is read from the `toolchain` directive in `go.mod`.
 3. **Download and verify** dependencies.
-4. **Install** `migrate` CLI with MySQL tag.
+4. **Install** `migrate` CLI with MySQL tag from `tools/go.mod`.
 5. **Run migrations** against `tracker_test` database via `scripts/migrate-test-db.sh`.
 6. **Run tests** with `-race`, coverage profile (`coverage.out`).
 7. **Upload coverage** to Codecov.
@@ -111,10 +111,37 @@ GitHub Actions workflow: [`.github/workflows/go-tests.yml`](../../.github/workfl
 
 ### CI MySQL Service
 
-The workflow starts a MySQL 8 container with:
+The workflow starts a MySQL 8.4 container with:
 - User: `imlate`/`imlate`
 - Database: `tracker_test`
 - Port: `3306` on `127.0.0.1`
+
+### Lint Job
+
+Installs `golangci-lint` from `tools/go.mod` and runs it through `golangci-lint-action` with `install-mode: none`, so CI and the dev container use the same linter version.
+
+## Version Management
+
+Every version lives in exactly one place, and automation keeps it current:
+
+| What | Source of truth | Kept up to date by |
+|------|-----------------|--------------------|
+| Go toolchain | `toolchain` in [`go.mod`](../../go.mod) (CI reads it via `go-version-file`) | [`go-version-check.yml`](../../.github/workflows/go-version-check.yml): monthly, opens an "Upgrade Go to X" issue when go.dev has a newer stable release |
+| App dependencies | [`go.mod`](../../go.mod) | Dependabot `gomod` (`/`) |
+| CLI tools: `swag`, `migrate`, `golangci-lint`, `air` | `tool` directives in [`tools/go.mod`](../../tools/go.mod) | Dependabot `gomod` (`/tools`), grouped into one weekly PR |
+| Base images: `golang`, `debian` | [`docker/Dockerfile`](../../docker/Dockerfile), [`docker/Dockerfile.dev`](../../docker/Dockerfile.dev) | Dependabot `docker` (`/docker`) |
+| MySQL image | [`docker-compose.yml`](../../docker-compose.yml) | Dependabot `docker-compose` (`/`) |
+| GitHub Actions | workflow files (pinned by SHA) | Dependabot `github-actions` |
+
+Configuration: [`.github/dependabot.yml`](../../.github/dependabot.yml).
+
+Manual steps that remain:
+
+- **New Go version** (after the issue opens): bump `go`/`toolchain` in `go.mod` and `tools/go.mod`, the `golang:` tag in both Dockerfiles if Dependabot has not already, and the Go version in the docs.
+- **MySQL in CI**: `image: mysql:8.4` in `go-tests.yml` is a service container that Dependabot does not track. Keep it equal to `docker-compose.yml`.
+- **Adding a tool**: `cd tools && go get -tool <package>@<version>`, then install it in the Dockerfile (`go install <package>` inside `tools/`).
+
+The tools share one module, so a Dependabot bump of one tool can move a dependency used by another. CI builds all of them, so such a conflict shows up as a failing Dependabot PR.
 
 ## Database Migration Management
 

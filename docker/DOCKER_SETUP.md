@@ -97,13 +97,13 @@ make rebuild            # Rebuild from scratch
 
 ### Services Included
 1. **App Container**
-   - Go 1.26
+   - Go 1.27
    - All development tools
    - Live code mounting
    - Auto-migration on startup
 
 2. **MySQL Container**
-   - MySQL 8.0
+   - MySQL 8.4 LTS
    - Port 3307 (host) → 3306 (container)
    - Pre-configured databases (tracker, tracker_test)
    - Health checks

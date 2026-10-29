@@ -74,7 +74,7 @@ curl http://localhost:8080/ping
 ```yaml
 services:
   db:
-    image: mysql:8.0
+    image: mysql:8.4
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: tracker
