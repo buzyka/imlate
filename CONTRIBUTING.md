@@ -97,10 +97,17 @@ See the full [Configuration Reference](docs/getting-started/configuration.md) fo
 ├── migrations/                  # SQL migrations (golang-migrate)
 ├── website/                     # Static UI (reader, admin SPA)
 ├── docker/                      # Dockerfiles, scripts, MySQL init
+├── tools/                       # go.mod pinning CLI tools (swag, migrate, golangci-lint, air)
 ├── docs/                        # Developer documentation + Swagger
 ├── docker-compose.yml           # Development environment
 └── Makefile                     # Command shortcuts
 ```
+
+## Dependency and Version Updates
+
+Versions are updated by Dependabot and a monthly Go release check; see
+[Version Management](docs/infrastructure/README.md#version-management) for where each version lives
+and what stays manual.
 
 ## Documentation
 

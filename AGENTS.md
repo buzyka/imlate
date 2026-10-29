@@ -7,6 +7,7 @@ Guide for agentic coding tools working in this repository.
 - Entry point: `cmd/app/main.go`
 - Main stacks: Gin, JWT auth, Swagger, MySQL/SQLite, golang-migrate, zap, testify
 - Core layout: `cmd/`, `internal/{config,domain,usecase,http,infrastructure,isb}`, `migrations/`, `website/`
+- CLI tool versions (swag, migrate, golangci-lint, air) are pinned in `tools/go.mod`; never hard-code `@vX` in Dockerfiles or CI. See [Version Management](docs/infrastructure/README.md#version-management).
 
 ## Developer Documentation
 For detailed documentation beyond this agent guide, see [`docs/`](docs/README.md):
@@ -297,7 +298,7 @@ func (m *MyRepoMock) NewMethod(arg Type) (ReturnType, error) {
 - `ERP_INTEGRATION_ENABLED=false` disables ERP behavior even when other ERP vars are set.
 - DB-backed tests require MySQL + applied migrations; run `make start` before `make got`.
 - Keep MySQL DSN with `?parseTime=true`.
-- `make swag` runs the swaggo CLI directly on the host (not in Docker); `swag` must be in PATH, or use the dev container.
+- `make swag` runs on the host via `go tool -modfile=tools/go.mod swag`, so it needs only Go (no separately installed `swag`).
 - Do not commit: `.env`, `tracker`, `dist/`, `coverage.out`, `coverage-report.html`, `app/`.
 
 ## Command Sources of Truth

@@ -77,7 +77,7 @@ restart-app:
 
 # Swagger
 swag swagg:
-	swag init -g cmd/app/main.go -o docs --parseDependency --parseInternal
+	go tool -modfile=tools/go.mod swag init -g cmd/app/main.go -o docs --parseDependency --parseInternal
 
 # UI
 update-ui:
