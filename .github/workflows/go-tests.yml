@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 env:
-  GO_VERSION: 1.26.7
+  GO_VERSION: 1.27.3
   DATABASE_HOST: 127.0.0.1
   DATABASE_PORT: 3306
   DATABASE_USERNAME: imlate
@@ -38,7 +38,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          version: v2.13.1
+          version: v2.15.0
 
   test:
     name: Run Go Tests
@@ -48,7 +48,7 @@ jobs:
 
     services:
       mysql:
-        image: mysql:8.0
+        image: mysql:8.4
         env:
           MYSQL_ROOT_PASSWORD: ${{ env.MYSQL_ROOT }}
           MYSQL_USER: ${{ env.DATABASE_USERNAME }}

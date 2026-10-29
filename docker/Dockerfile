@@ -1,5 +1,5 @@
 # Build stage - Debian 12 (Bookworm)
-FROM golang:1.26-bookworm AS builder
+FROM golang:1.27-bookworm AS builder
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
@@ -51,7 +51,7 @@ ENV GOPATH="/go"
 
 # Install Go tools with pinned versions
 RUN go install github.com/swaggo/swag/cmd/swag@v1.16.6 && \
-    go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1 && \
+    go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.20.1 && \
     rm -rf /go/pkg /go/src
 
 WORKDIR /app

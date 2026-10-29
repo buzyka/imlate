@@ -3,7 +3,7 @@ Guide for agentic coding tools working in this repository.
 
 ## Project Snapshot
 - Module: `github.com/buzyka/imlate`
-- Go `1.26.7`
+- Go `1.27.3`
 - Entry point: `cmd/app/main.go`
 - Main stacks: Gin, JWT auth, Swagger, MySQL/SQLite, golang-migrate, zap, testify
 - Core layout: `cmd/`, `internal/{config,domain,usecase,http,infrastructure,isb}`, `migrations/`, `website/`
