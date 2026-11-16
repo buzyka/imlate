@@ -66,7 +66,7 @@ updates:
       - "dependencies"
       - "docker"
 
-  # Service images in docker-compose.yml (MySQL for local development).
+  # Service images in docker-compose.yml.
   - package-ecosystem: "docker-compose"
     directory: "/"
     schedule:
@@ -78,3 +78,9 @@ updates:
     labels:
       - "dependencies"
       - "docker"
+    ignore:
+      # MySQL is pinned to the LTS line (8.4) on purpose. Dependabot would
+      # otherwise propose Innovation releases (e.g. 9.x, 26.x), which are not
+      # LTS and can break the schema or the driver. Upgrade MySQL manually,
+      # together with go-tests.yml and the docs.
+      - dependency-name: "mysql"
