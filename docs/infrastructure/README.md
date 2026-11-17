@@ -130,7 +130,7 @@ Every version lives in exactly one place, and automation keeps it current:
 | App dependencies | [`go.mod`](../../go.mod) | Dependabot `gomod` (`/`) |
 | CLI tools: `swag`, `migrate`, `golangci-lint`, `air` | `tool` directives in [`tools/go.mod`](../../tools/go.mod) | Dependabot `gomod` (`/tools`), grouped into one weekly PR |
 | Base images: `golang`, `debian` | [`docker/Dockerfile`](../../docker/Dockerfile), [`docker/Dockerfile.dev`](../../docker/Dockerfile.dev) | Dependabot `docker` (`/docker`) |
-| MySQL image | [`docker-compose.yml`](../../docker-compose.yml) | Dependabot `docker-compose` (`/`) |
+| MySQL image | [`docker-compose.yml`](../../docker-compose.yml) | Manual: pinned to the 8.4 LTS line; Dependabot `docker-compose` (`/`) ignores `mysql` |
 | GitHub Actions | workflow files (pinned by SHA) | Dependabot `github-actions` |
 
 Configuration: [`.github/dependabot.yml`](../../.github/dependabot.yml).
@@ -138,7 +138,7 @@ Configuration: [`.github/dependabot.yml`](../../.github/dependabot.yml).
 Manual steps that remain:
 
 - **New Go version** (after the issue opens): bump `go`/`toolchain` in `go.mod` and `tools/go.mod`, the `golang:` tag in both Dockerfiles if Dependabot has not already, and the Go version in the docs.
-- **MySQL in CI**: `image: mysql:8.4` in `go-tests.yml` is a service container that Dependabot does not track. Keep it equal to `docker-compose.yml`.
+- **MySQL version**: the project stays on the MySQL 8.4 LTS line, so Dependabot is told to ignore `mysql` (it would otherwise propose non-LTS Innovation releases such as `26.10`). To upgrade, change the tag in `docker-compose.yml`, `.github/workflows/go-tests.yml` (service container, not tracked by Dependabot) and `docs/getting-started/docker-image.md` together.
 - **Adding a tool**: `cd tools && go get -tool <package>@<version>`, then install it in the Dockerfile (`go install <package>` inside `tools/`).
 
 The tools share one module, so a Dependabot bump of one tool can move a dependency used by another. CI builds all of them, so such a conflict shows up as a failing Dependabot PR.
